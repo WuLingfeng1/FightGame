@@ -16,6 +16,7 @@ qt_add_qml_module(appFightGame
     VERSION 1.0
     SOURCES     main.cpp
     QML_FILES   Main.qml
+    QML_FILES SelectScreen.qml
 )
 target_compile_features(appFightGame PRIVATE cxx_std_23)
 target_link_libraries(appFightGame
