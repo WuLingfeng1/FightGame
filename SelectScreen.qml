@@ -1,6 +1,6 @@
 // Module
 // File: SelectScreen.qml   Version: 0.1.0   License: AGPLv3
-// Created:Linfeng Wu       2026-06-07 21:17:21
+// Created:Linfeng Wu       2026-06-07 18:17:21
 // Description:
 //     Created the character selection screen
 import QtQuick
@@ -36,9 +36,13 @@ Item {
     function refresh() {
         var colors = [], borders = []
         for (var i = 0; i < 6; i++) {
+              // 情况 A：这个角色被某个人锁定了 - 金边框
             if (i === lockedP1 || i === lockedP2)             { colors[i] = "black";          borders[i] = "darkgoldenrod" }
+             // 情况 B：P1 正在预览这个角色 - 暗红边框
             else if (i === previewP1 && currentTurn === 1)    { colors[i] = "black";          borders[i] = "darkred" }
+             // 情况 C：P2 正在预览这个角色 - 深蓝边框
             else if (i === previewP2 && currentTurn === 2)    { colors[i] = "black";          borders[i] = "midnightblue" }
+             // 情况 D：没被任何人关注 - 灰色边框
             else                                               { colors[i] = "black";          borders[i] = "dimgray" }
         }
         ac0 = colors[0]; bc0 = borders[0]
