@@ -3,6 +3,9 @@
 // Created:Linfeng Wu       2026-06-07 18:17:21
 // Description:
 //     Created the character selection screen
+// Change Log:
+//     [v0.1.1]     2026-06-10 18:53:19
+//   Add a jump from the Fight button to the FightScreen interface
 import QtQuick
 import QtQuick.Controls
 
@@ -226,15 +229,18 @@ Item {
                 if (!stackViewRef) return
                 var p1 = characters[lockedP1]
                 var p2 = characters[lockedP2]
-                stackViewRef.push("qrc:/qt/qml/FightGame/FightScreen.qml", {
+                stackViewRef.push("file:///wlf/FightGame/FightScreen.qml", {
                     "stackViewRef": stackViewRef,
-                    "p1Name": p1.name,
-                    "p1Avatar": p1.avatar,
+                    "p1Name":     p1.name,
+                    "p1Avatar":   p1.avatar,
                     "p1Portrait": p1.portrait,
-                    "p2Name": p2.name,
-                    "p2Avatar": p2.avatar,
-                    "p2Portrait": p2.portrait
+                    "p1CharId":   p1.cid,
+                    "p2Name":     p2.name,
+                    "p2Avatar":   p2.avatar,
+                    "p2Portrait": p2.portrait,
+                    "p2CharId":   p2.cid
                 })
+
             }
 
             contentItem: Text { text: btnFight.text; font.pixelSize: 18; font.bold: true; color: btnFight.enabled ? "silver" : "dimgray"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }

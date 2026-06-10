@@ -18,7 +18,7 @@ qt_add_qml_module(appFightGame
     QML_FILES   Main.qml
     QML_FILES SelectScreen.qml
     QML_FILES FightScreen.qml
-    #SOURCES animator.h animator.cpp
+    SOURCES fightermodel.h fightermodel.cpp
 )
 target_compile_features(appFightGame PRIVATE cxx_std_23)
 target_link_libraries(appFightGame
