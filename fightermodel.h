@@ -2,7 +2,7 @@
 // File: fightermodel.h   Version: 0.1.0   License: AGPLv3
 // Created:Linfeng Wu       2026-06-10 19:00:39
 // Description:
-//     The standing idle animation is finished
+//
 #pragma once
 
 #include <QObject>
@@ -14,6 +14,7 @@ class FighterModel : public QObject
     Q_OBJECT
     Q_PROPERTY(QString charId READ charId WRITE setCharId NOTIFY charIdChanged)
     Q_PROPERTY(int currentFrame READ currentFrame NOTIFY currentFrameChanged)
+    Q_PROPERTY(int totalFrames READ totalFrames WRITE setTotalFrames NOTIFY totalFramesChanged)
 
     QML_ELEMENT
 public:
@@ -22,6 +23,8 @@ public:
 
     QString charId() const;
     int currentFrame() const;
+    int totalFrames() const;
+    void setTotalFrames(int n);
 
 public slots:
     void setCharId(const QString &id);
@@ -29,6 +32,7 @@ public slots:
 signals:
     void charIdChanged();
     void currentFrameChanged();
+    void totalFramesChanged();
 
 private slots:
     void onFrameTick();
@@ -36,9 +40,8 @@ private slots:
 private:
     QString m_charId;
     int     m_currentFrame = 0;
+    int     m_totalFrames = 9;
     QTimer *m_frameTimer = nullptr;
 
-    // 当前 9 帧、111ms 保持一致
-    const int m_totalFrames = 9;
-    const int m_frameInterval = 111;
+    static constexpr int m_frameInterval = 111;
 };

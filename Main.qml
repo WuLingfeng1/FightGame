@@ -24,7 +24,7 @@ ApplicationWindow {
         initialItem: Item {
             Image {
                 anchors.fill: parent
-                source: "file:///wlf/FightGame/images/background.jpg"
+                source: "qrc:/images/background.jpg"
                 fillMode: Image.PreserveAspectFit
                 z: -1
             }
@@ -67,7 +67,7 @@ ApplicationWindow {
                     }
 
                     onClicked: stackView.push(
-                        "file:///wlf/FightGame/SelectScreen.qml",
+                        "SelectScreen.qml",
                         { "stackViewRef": stackView }
                     )
                 }
