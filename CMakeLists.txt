@@ -8,7 +8,7 @@ project(FightGame VERSION 0.1 LANGUAGES CXX)
 set(QT_QML_GENERATE_QMLLS_INI ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Quick)
-qt_standard_project_setup(REQUIRES 6.11)
+qt_standard_project_setup(REQUIRES 6.9)
 
 qt_add_executable(appFightGame  WIN32)
 qt_add_qml_module(appFightGame
@@ -18,12 +18,15 @@ qt_add_qml_module(appFightGame
     QML_FILES   Main.qml
     QML_FILES SelectScreen.qml
     QML_FILES FightScreen.qml
-    SOURCES fightermodel.h fightermodel.cpp
+    SOURCES charactermodel.h charactermodel.cpp
+    SOURCES fightdirector.h fightdirector.cpp
+    SOURCES characterconfig.h characterconfig.cpp
 )
 qt_add_resources(appFightGame "appresources"
     PREFIX "/"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}"
     FILES
+        config/characters.json
         images/background.jpg
         images/background2.jpg
         images/avatar/Kdash.jpg
@@ -56,22 +59,22 @@ qt_add_resources(appFightGame "appresources"
         images/character/Yagami/StandAttack.png
         images/character/Yagami/StandBlock.png
         images/character/Yagami/SuperMove.png
-        images/character/Yagami/挨打1.png
-        images/character/Yagami/挨打2.png
-        images/character/Yagami/挨打3.png
-        images/character/Yagami/挨打4.png
-        images/character/Yagami/挨打5.png
-        images/character/Yagami/暗勾手.png
-        images/character/Yagami/超重击.png
-        images/character/Yagami/蹲攻.png
-        images/character/Yagami/疾进.png
-        images/character/Yagami/疾退.png
-        images/character/Yagami/近攻.png
-        images/character/Yagami/空防.png
-        images/character/Yagami/空中超重击.png
-        images/character/Yagami/逆剥.png
-        images/character/Yagami/逆逆剥.png
-        images/character/Yagami/跳攻.png
+        images/character/Yagami/Hurt1.png
+        images/character/Yagami/Hurt2.png
+        images/character/Yagami/Hurt3.png
+        images/character/Yagami/Hurt4.png
+        images/character/Yagami/Hurt5.png
+        images/character/Yagami/DarkThrust.png
+        images/character/Yagami/HeavyPunch.png
+        images/character/Yagami/CrouchAttack.png
+        images/character/Yagami/DashForward.png
+        images/character/Yagami/DashBackward.png
+        images/character/Yagami/CloseAttack.png
+        images/character/Yagami/AirBlock.png
+        images/character/Yagami/AirHeavyPunch.png
+        images/character/Yagami/ReverseStrike.png
+        images/character/Yagami/ReverseStrike2.png
+        images/character/Yagami/JumpAttack.png
         images/FightBackGround/AmusementPark.gif
         images/FightBackGround/Bali.gif
         images/FightBackGround/Gyeongbokgung.gif

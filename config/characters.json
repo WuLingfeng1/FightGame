@@ -1,0 +1,48 @@
+{
+    "Orochi": {
+        "facingLeft": false,
+        "posX": 0.78,
+        "opening": {
+            "cols": 70,
+            "fw": 384,
+            "fh": 512,
+            "interval": 50,
+            "path": "qrc:/images/character/Orochi/opening.png"
+        },
+        "stand": {
+            "cols": 27,
+            "fw": 251,
+            "fh": 335,
+            "interval": 100,
+            "path": "qrc:/images/character/Orochi/Stand.png",
+            "feetBottom": 327,
+            "feetMargin": 82
+        }
+    },
+    "Yagami": {
+        "facingLeft": false,
+        "posX": 0.22,
+        "opening": {
+            "cols": 12,
+            "fw": 251,
+            "fh": 335,
+            "interval": 100,
+            "path": "qrc:/images/character/Yagami/opening.png"
+        },
+        "stand": {
+            "cols": 9,
+            "fw": 251,
+            "fh": 335,
+            "interval": 150,
+            "path": "qrc:/images/character/Yagami/Stand.png"
+        },
+        "forward": {
+            "cols": 10,
+            "fw": 251,
+            "fh": 335,
+            "interval": 50,
+            "path": "qrc:/images/character/Yagami/Forward.png",
+            "loop": true
+        }
+    }
+}
