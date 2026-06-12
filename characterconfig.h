@@ -4,27 +4,30 @@
 #include <QString>
 #include <QJsonObject>
 
+// 动画参数: 描述一个动作的精灵表(sprite sheet)元数据
 struct AnimParams {
-    int cols = 0;
-    int fw = 0;
-    int fh = 0;
-    int interval = 50;
-    QString path;
-    bool loop = true;
-    // stand-specific feet alignment (Orochi)
-    int feetBottom = 0;
-    int feetMargin = 0;
+    int cols = 0;          // 帧数(精灵表列数)
+    int fw = 0;            // 单帧宽度(像素)
+    int fh = 0;            // 单帧高度(像素)
+    int interval = 50;     // 帧间隔(毫秒), 控制播放速度
+    QString path;          // 精灵表图片的 Qt 资源路径
+    bool loop = true;      // 是否循环播放(站立/行走为true, 开场为false)
+    int feetBottom = 0;    // 站立时脚底到精灵表底部的距离(用于脚部对齐, Orochi专用)
+    int feetMargin = 0;    // 站立时脚底到窗口底部的边距(用于脚部对齐, Orochi专用)
 };
 
+// 角色配置: 包含一个角色的所有动画参数和初始属性
 struct CharacterConfig {
-    QString id;
-    bool facingLeft = false;
-    double posX = 0.5;
-    AnimParams opening;
-    AnimParams stand;
-    AnimParams forward;
+    QString id;                   // 角色英文标识符, 如 "Orochi"
+    bool facingLeft = false;      // 初始朝向: false=朝右, true=朝左
+    double posX = 0.5;            // 初始水平位置比例(0.0~1.0)
+    AnimParams opening;           // 开场动画参数
+    AnimParams stand;             // 站立动画参数
+    AnimParams forward;           // 前进行走动画参数
+    AnimParams backward;          // 后退行走动画参数
 };
 
+// 角色配置加载器: 从 JSON 对象解析出 CharacterConfig
 class CharacterConfigLoader
 {
 public:

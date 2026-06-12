@@ -1,6 +1,7 @@
 #include "characterconfig.h"
 #include <QJsonArray>
 
+// 从 JSON 对象解析单个动画参数, 空对象返回默认值
 static AnimParams parseAnim(const QJsonObject &obj)
 {
     AnimParams a;
@@ -16,6 +17,7 @@ static AnimParams parseAnim(const QJsonObject &obj)
     return a;
 }
 
+// 从 JSON 对象加载完整角色配置: 基础属性 + 三个动画段
 CharacterConfig CharacterConfigLoader::load(const QJsonObject &json, const QString &id)
 {
     CharacterConfig cfg;
@@ -25,5 +27,6 @@ CharacterConfig CharacterConfigLoader::load(const QJsonObject &json, const QStri
     cfg.opening    = parseAnim(json.value("opening").toObject());
     cfg.stand      = parseAnim(json.value("stand").toObject());
     cfg.forward    = parseAnim(json.value("forward").toObject());
+    cfg.backward   = parseAnim(json.value("backward").toObject());
     return cfg;
 }
