@@ -1,8 +1,19 @@
-// FightScreen.qml — 纯渲染层, 动画逻辑在 C++ CharacterModel / FightDirector
+// Module
+// File: FightScreen.qml   Version: 0.1.0   License: AGPLv3
+// Created:Linfeng Wu       2026-06-10 14:56:24
+// Description:
+//     Created the Fight screen
+// Change Log:
+//     [v0.1.1]     2026-06-11 22:43:30
+//         * Added character intro animations
+// Change Log:
+//     [v0.1.2]     2026-06-12 13:54:47
+//         * 分离了渲染与功能实现,同时也增加了forward动作,最后微调了一下人物的单帧尺寸使动作衔接更加流畅
 import QtQuick
 import QtQuick.Controls
 import FightGame
 
+// FightScreen.qml — 纯渲染层, 动画逻辑在 C++ CharacterModel / FightDirector
 Item {
     id: root
     focus: true
@@ -41,9 +52,12 @@ Item {
     }
 
     property bool isMoving: false
+    property bool isMoving2: false
 
     property bool moveLeftPressed: false
     property bool moveRightPressed: false
+    property bool moveLeft2Pressed: false
+    property bool moveRight2Pressed: false
 
     function startMoveRight() {
         director.p1Model.facingLeft = false
@@ -98,6 +112,72 @@ Item {
         }
     }
 
+    Timer {
+        id: moveTimer2
+        interval: 16
+        repeat: true
+        running: false
+        property bool moveRight: false
+        property bool moveLeft: false
+        onTriggered: {
+            if (moveRight) director.p2Model.posXRatio += moveStep
+            if (moveLeft)  director.p2Model.posXRatio -= moveStep
+        }
+    }
+
+    function startMoveRight2() {
+        director.p2Model.facingLeft = false
+        moveRight2Pressed = true
+        moveTimer2.moveLeft = false
+        moveTimer2.moveRight = true
+        if (!isMoving2) {
+            isMoving2 = true
+            director.p2Model.playForward()
+            moveTimer2.start()
+        }
+    }
+    function startMoveLeft2() {
+        director.p2Model.facingLeft = true
+        moveLeft2Pressed = true
+        moveTimer2.moveRight = false
+        moveTimer2.moveLeft = true
+        if (!isMoving2) {
+            isMoving2 = true
+            director.p2Model.playForward()
+            moveTimer2.start()
+        }
+    }
+    function stopMoveRight2() {
+        moveRight2Pressed = false
+        if (moveLeft2Pressed) {
+            director.p2Model.facingLeft = true
+            moveTimer2.moveRight = false
+            moveTimer2.moveLeft = true
+        } else {
+            moveTimer2.stop()
+            moveTimer2.moveRight = false
+            moveTimer2.moveLeft = false
+            isMoving2 = false
+            director.p2Model.playStand()
+            director.p2Model.facingLeft = false
+        }
+    }
+    function stopMoveLeft2() {
+        moveLeft2Pressed = false
+        if (moveRight2Pressed) {
+            director.p2Model.facingLeft = false
+            moveTimer2.moveLeft = false
+            moveTimer2.moveRight = true
+        } else {
+            moveTimer2.stop()
+            moveTimer2.moveRight = false
+            moveTimer2.moveLeft = false
+            isMoving2 = false
+            director.p2Model.playStand()
+            director.p2Model.facingLeft = false
+        }
+    }
+
     Keys.onPressed: (event) => {
         if (event.isAutoRepeat) return
         switch (event.key) {
@@ -105,6 +185,10 @@ Item {
             startMoveRight(); break
         case Qt.Key_A:
             startMoveLeft(); break
+        case Qt.Key_Right:
+            startMoveRight2(); break
+        case Qt.Key_Left:
+            startMoveLeft2(); break
         }
     }
     Keys.onReleased: (event) => {
@@ -114,6 +198,10 @@ Item {
             stopMoveRight(); break
         case Qt.Key_A:
             stopMoveLeft(); break
+        case Qt.Key_Right:
+            stopMoveRight2(); break
+        case Qt.Key_Left:
+            stopMoveLeft2(); break
         }
     }
 

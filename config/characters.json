@@ -17,6 +17,14 @@
             "path": "qrc:/images/character/Orochi/Stand.png",
             "feetBottom": 327,
             "feetMargin": 82
+        },
+        "forward": {
+            "cols": 5,
+            "fw": 251,
+            "fh": 335,
+            "interval": 50,
+            "path": "qrc:/images/character/Orochi/Forward.png",
+            "loop": true
         }
     },
     "Yagami": {
