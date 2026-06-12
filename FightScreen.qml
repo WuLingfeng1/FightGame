@@ -6,6 +6,8 @@
 // Change Log:
 //     [v0.1.1]     2026-06-11 22:43:30   Added character intro animations
 //     [v0.1.2]     2026-06-12 13:54:47   分离渲染与功能, 增加forward动作, 微调单帧尺寸
+//     [v0.1.3]     2026-06-12 16:58:12   修改了角色朝向的BUG,补充了角色朝向的状态判定,分别加入了两个角色的backward动作
+//     [v0.1.4]     2026-06-12 17:45:15   实现了镜头跟随机制,修复了移动打断开场动画的Bug
 import QtQuick
 import QtQuick.Controls
 import FightGame
@@ -44,9 +46,18 @@ Item {
         property bool moveRight: false
         property bool moveLeft: false
         onTriggered: {
-            if (moveRight) director.p1Model.posXRatio += moveStep
-            if (moveLeft)  director.p1Model.posXRatio -= moveStep
+            if (moveRight) director.p1Model.posXRatio = Math.min(director.p1Model.posXRatio + moveStep, director.p2Model.posXRatio + 0.95, director.maxCameraOffset + 1.0)
+            if (moveLeft)  director.p1Model.posXRatio = Math.max(director.p1Model.posXRatio - moveStep, director.p2Model.posXRatio - 0.95, 0)
+            director.updateCamera()
             updateFacing()
+            var desired = ""
+            if (moveRight) desired = director.p1Model.facingLeft ? "backward" : "forward"
+            if (moveLeft)  desired = director.p1Model.facingLeft ? "forward" : "backward"
+            if (desired !== "" && desired !== p1CurrentAnim) {
+                p1CurrentAnim = desired
+                if (desired === "forward") director.p1Model.playForward()
+                else director.p1Model.playBackward()
+            }
         }
     }
 
@@ -54,6 +65,7 @@ Item {
     property bool isMoving: false
     property bool moveLeftPressed: false
     property bool moveRightPressed: false
+    property string p1CurrentAnim: ""
 
     // P1 向右移动
     function startMoveRight() {
@@ -62,10 +74,13 @@ Item {
         moveTimer.moveRight = true
         if (!isMoving) {
             isMoving = true
-            if (director.p1Model.facingLeft)
+            if (director.p1Model.facingLeft) {
                 director.p1Model.playBackward()
-            else
+                p1CurrentAnim = "backward"
+            } else {
                 director.p1Model.playForward()
+                p1CurrentAnim = "forward"
+            }
             moveTimer.start()
         }
     }
@@ -76,10 +91,13 @@ Item {
         moveTimer.moveLeft = true
         if (!isMoving) {
             isMoving = true
-            if (director.p1Model.facingLeft)
+            if (director.p1Model.facingLeft) {
                 director.p1Model.playForward()
-            else
+                p1CurrentAnim = "forward"
+            } else {
                 director.p1Model.playBackward()
+                p1CurrentAnim = "backward"
+            }
             moveTimer.start()
         }
     }
@@ -88,15 +106,19 @@ Item {
         if (moveLeftPressed) {
             moveTimer.moveRight = false
             moveTimer.moveLeft = true
-            if (director.p1Model.facingLeft)
+            if (director.p1Model.facingLeft) {
                 director.p1Model.playForward()
-            else
+                p1CurrentAnim = "forward"
+            } else {
                 director.p1Model.playBackward()
+                p1CurrentAnim = "backward"
+            }
         } else {
             moveTimer.stop()
             moveTimer.moveRight = false
             moveTimer.moveLeft = false
             isMoving = false
+            p1CurrentAnim = ""
             director.p1Model.playStand()
         }
     }
@@ -105,15 +127,19 @@ Item {
         if (moveRightPressed) {
             moveTimer.moveLeft = false
             moveTimer.moveRight = true
-            if (director.p1Model.facingLeft)
+            if (director.p1Model.facingLeft) {
                 director.p1Model.playBackward()
-            else
+                p1CurrentAnim = "backward"
+            } else {
                 director.p1Model.playForward()
+                p1CurrentAnim = "forward"
+            }
         } else {
             moveTimer.stop()
             moveTimer.moveRight = false
             moveTimer.moveLeft = false
             isMoving = false
+            p1CurrentAnim = ""
             director.p1Model.playStand()
         }
     }
@@ -127,9 +153,18 @@ Item {
         property bool moveRight: false
         property bool moveLeft: false
         onTriggered: {
-            if (moveRight) director.p2Model.posXRatio += moveStep
-            if (moveLeft)  director.p2Model.posXRatio -= moveStep
+            if (moveRight) director.p2Model.posXRatio = Math.min(director.p2Model.posXRatio + moveStep, director.p1Model.posXRatio + 0.95, director.maxCameraOffset + 1.0)
+            if (moveLeft)  director.p2Model.posXRatio = Math.max(director.p2Model.posXRatio - moveStep, director.p1Model.posXRatio - 0.95, 0)
+            director.updateCamera()
             updateFacing()
+            var desired = ""
+            if (moveRight) desired = director.p2Model.facingLeft ? "backward" : "forward"
+            if (moveLeft)  desired = director.p2Model.facingLeft ? "forward" : "backward"
+            if (desired !== "" && desired !== p2CurrentAnim) {
+                p2CurrentAnim = desired
+                if (desired === "forward") director.p2Model.playForward()
+                else director.p2Model.playBackward()
+            }
         }
     }
 
@@ -137,6 +172,7 @@ Item {
     property bool isMoving2: false
     property bool moveLeft2Pressed: false
     property bool moveRight2Pressed: false
+    property string p2CurrentAnim: ""
 
     // P2 向右移动
     function startMoveRight2() {
@@ -145,10 +181,13 @@ Item {
         moveTimer2.moveRight = true
         if (!isMoving2) {
             isMoving2 = true
-            if (director.p2Model.facingLeft)
+            if (director.p2Model.facingLeft) {
                 director.p2Model.playBackward()
-            else
+                p2CurrentAnim = "backward"
+            } else {
                 director.p2Model.playForward()
+                p2CurrentAnim = "forward"
+            }
             moveTimer2.start()
         }
     }
@@ -159,10 +198,13 @@ Item {
         moveTimer2.moveLeft = true
         if (!isMoving2) {
             isMoving2 = true
-            if (director.p2Model.facingLeft)
+            if (director.p2Model.facingLeft) {
                 director.p2Model.playForward()
-            else
+                p2CurrentAnim = "forward"
+            } else {
                 director.p2Model.playBackward()
+                p2CurrentAnim = "backward"
+            }
             moveTimer2.start()
         }
     }
@@ -171,15 +213,19 @@ Item {
         if (moveLeft2Pressed) {
             moveTimer2.moveRight = false
             moveTimer2.moveLeft = true
-            if (director.p2Model.facingLeft)
+            if (director.p2Model.facingLeft) {
                 director.p2Model.playForward()
-            else
+                p2CurrentAnim = "forward"
+            } else {
                 director.p2Model.playBackward()
+                p2CurrentAnim = "backward"
+            }
         } else {
             moveTimer2.stop()
             moveTimer2.moveRight = false
             moveTimer2.moveLeft = false
             isMoving2 = false
+            p2CurrentAnim = ""
             director.p2Model.playStand()
         }
     }
@@ -188,15 +234,19 @@ Item {
         if (moveRight2Pressed) {
             moveTimer2.moveLeft = false
             moveTimer2.moveRight = true
-            if (director.p2Model.facingLeft)
+            if (director.p2Model.facingLeft) {
                 director.p2Model.playBackward()
-            else
+                p2CurrentAnim = "backward"
+            } else {
                 director.p2Model.playForward()
+                p2CurrentAnim = "forward"
+            }
         } else {
             moveTimer2.stop()
             moveTimer2.moveRight = false
             moveTimer2.moveLeft = false
             isMoving2 = false
+            p2CurrentAnim = ""
             director.p2Model.playStand()
         }
     }
@@ -209,7 +259,7 @@ Item {
 
     // 键盘输入, P1用A/D, P2用方向键
     Keys.onPressed: (event) => {
-        if (event.isAutoRepeat) return
+        if (event.isAutoRepeat || director.phase !== FightDirector.Fighting) return
         switch (event.key) {
         case Qt.Key_D:      startMoveRight();  break
         case Qt.Key_A:      startMoveLeft();   break
@@ -218,7 +268,7 @@ Item {
         }
     }
     Keys.onReleased: (event) => {
-        if (event.isAutoRepeat) return
+        if (event.isAutoRepeat || director.phase !== FightDirector.Fighting) return
         switch (event.key) {
         case Qt.Key_D:      stopMoveRight();  break
         case Qt.Key_A:      stopMoveLeft();   break
@@ -253,7 +303,7 @@ Item {
             paused: false
             horizontalAlignment: Image.AlignLeft
             verticalAlignment: Image.AlignVCenter
-            x: Math.min(0, Math.max(-(width - parent.width), 0))
+            x: Math.min(0, Math.max(-(width - parent.width), -root.width * director.cameraOffset * 0.5))
             y: 0
         }
     }
@@ -261,7 +311,7 @@ Item {
     // P1 角色渲染, 精灵表视口裁剪
     Item {
         id: p1Layer
-        x: root.width * director.p1Model.posXRatio - width / 2
+        x: root.width * (director.p1Model.posXRatio - director.cameraOffset) - width / 2
         y: director.p1Model.positionY
         width: director.p1Model.frameWidth
         height: director.p1Model.frameHeight
@@ -295,7 +345,7 @@ Item {
     // P2 角色渲染
     Item {
         id: p2Layer
-        x: root.width * director.p2Model.posXRatio - width / 2
+        x: root.width * (director.p2Model.posXRatio - director.cameraOffset) - width / 2
         y: director.p2Model.positionY
         width: director.p2Model.frameWidth
         height: director.p2Model.frameHeight

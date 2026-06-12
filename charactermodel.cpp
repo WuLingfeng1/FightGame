@@ -20,8 +20,8 @@ void CharacterModel::configure(const CharacterConfig &cfg)
     m_stand        = cfg.stand;
     m_forward      = cfg.forward;
     m_backward     = cfg.backward;
-    m_facingLeft   = cfg.facingLeft;
-    m_cfgPosX      = cfg.posX;
+    setFacingLeft(cfg.facingLeft);
+    setPosXRatio(cfg.posX);
     m_state        = Waiting;
     m_currentFrame = 0;
 }
@@ -142,6 +142,18 @@ void CharacterModel::setPosY()
 // Stand状态:  循环回到第0帧
 void CharacterModel::onTick()
 {
+    if (m_state == Opening && m_opening.pauseFrame > 0) {
+        if (m_currentFrame == m_opening.pauseFrame - 1) {
+            m_currentFrame++;
+            emit frameChanged();
+            m_timer.setInterval(m_opening.pauseDuration);
+            return;
+        }
+        if (m_currentFrame == m_opening.pauseFrame) {
+            m_timer.setInterval(m_opening.interval);
+        }
+    }
+
     m_currentFrame++;
     if (m_state == Opening && m_currentFrame >= m_totalFrames) {
         m_currentFrame = m_totalFrames - 1;   // 冻结在最后一帧

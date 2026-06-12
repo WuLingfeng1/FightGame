@@ -12,6 +12,8 @@ static AnimParams parseAnim(const QJsonObject &obj)
     a.interval = obj.value("interval").toInt(50);
     a.path     = obj.value("path").toString();
     a.loop     = obj.value("loop").toBool(true);
+    a.pauseFrame   = obj.value("pauseFrame").toInt(-1);
+    a.pauseDuration = obj.value("pauseDuration").toInt(0);
     a.feetBottom = obj.value("feetBottom").toInt(0);
     a.feetMargin = obj.value("feetMargin").toInt(0);
     return a;

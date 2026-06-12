@@ -12,6 +12,8 @@ struct AnimParams {
     int interval = 50;     // 帧间隔(毫秒), 控制播放速度
     QString path;          // 精灵表图片的 Qt 资源路径
     bool loop = true;      // 是否循环播放(站立/行走为true, 开场为false)
+    int pauseFrame = -1;   // 开场暂停帧索引(-1=不暂停)
+    int pauseDuration = 0; // 暂停时长(毫秒)
     int feetBottom = 0;    // 站立时脚底到精灵表底部的距离(用于脚部对齐, Orochi专用)
     int feetMargin = 0;    // 站立时脚底到窗口底部的边距(用于脚部对齐, Orochi专用)
 };
