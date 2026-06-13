@@ -46,9 +46,11 @@ qt_add_resources(appFightGame "appresources"
         images/character/Orochi/opening.png
         images/character/Orochi/Forward.png
         images/character/Orochi/Backward.png
+        images/character/Orochi/Jump.png
+        images/character/Orochi/DiagonalJump.png
         images/character/Yagami/Stand.png
         images/character/Yagami/opening.png
-        images/character/Yagami/BackWard.png
+        images/character/Yagami/Backward.png
         images/character/Yagami/Crouch.png
         images/character/Yagami/DiagonalJump.png
         images/character/Yagami/Dodge.png

@@ -16,6 +16,7 @@ static AnimParams parseAnim(const QJsonObject &obj)
     a.pauseDuration = obj.value("pauseDuration").toInt(0);
     a.feetBottom = obj.value("feetBottom").toInt(0);
     a.feetMargin = obj.value("feetMargin").toInt(0);
+    a.jumpHeight = obj.value("jumpHeight").toInt(200);
     return a;
 }
 
@@ -30,5 +31,6 @@ CharacterConfig CharacterConfigLoader::load(const QJsonObject &json, const QStri
     cfg.stand      = parseAnim(json.value("stand").toObject());
     cfg.forward    = parseAnim(json.value("forward").toObject());
     cfg.backward   = parseAnim(json.value("backward").toObject());
+    cfg.jump       = parseAnim(json.value("jump").toObject());
     return cfg;
 }

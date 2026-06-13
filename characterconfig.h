@@ -16,6 +16,7 @@ struct AnimParams {
     int pauseDuration = 0; // 暂停时长(毫秒)
     int feetBottom = 0;    // 站立时脚底到精灵表底部的距离(用于脚部对齐, Orochi专用)
     int feetMargin = 0;    // 站立时脚底到窗口底部的边距(用于脚部对齐, Orochi专用)
+    int jumpHeight = 200;  // 跳跃抛物线峰值高度(像素)
 };
 
 // 角色配置: 包含一个角色的所有动画参数和初始属性
@@ -27,6 +28,7 @@ struct CharacterConfig {
     AnimParams stand;             // 站立动画参数
     AnimParams forward;           // 前进行走动画参数
     AnimParams backward;          // 后退行走动画参数
+    AnimParams jump;              // 直跳动画参数
 };
 
 // 角色配置加载器: 从 JSON 对象解析出 CharacterConfig

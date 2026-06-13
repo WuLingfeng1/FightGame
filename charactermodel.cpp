@@ -20,6 +20,8 @@ void CharacterModel::configure(const CharacterConfig &cfg)
     m_stand        = cfg.stand;
     m_forward      = cfg.forward;
     m_backward     = cfg.backward;
+    m_jump         = cfg.jump;
+    m_jumpHeight   = cfg.jump.jumpHeight;
     setFacingLeft(cfg.facingLeft);
     setPosXRatio(cfg.posX);
     m_state        = Waiting;
@@ -90,6 +92,24 @@ void CharacterModel::playBackward()
     emit positionChanged();
 }
 
+// 切换到直跳动画: 从第0帧开始, 不循环, 播完自动切 Stand
+void CharacterModel::playJump()
+{
+    if (m_jump.cols <= 0) return;
+    m_timer.stop();
+    m_state = Jump;
+    m_currentFrame = 0;
+    applyAnim(m_jump);
+    m_loopAnim = m_jump.loop;
+    m_jumpHeight = m_jump.jumpHeight;
+    m_timer.setInterval(m_jump.interval);
+    m_timer.start();
+    emit frameChanged();
+    emit sourcePathChanged();
+    emit sizeChanged();
+    emit positionChanged();
+}
+
 // 重置角色到初始状态
 void CharacterModel::reset()
 {
@@ -124,7 +144,16 @@ void CharacterModel::applyAnim(const AnimParams &p)
 // 2. 站立/行走: 脚部对齐(如果配置了feetMargin/feetBottom), 否则底部对齐
 void CharacterModel::setPosY()
 {
-    if (m_state == Opening || m_state == Waiting) {
+    if (m_state == Jump) {
+        double t = (m_totalFrames > 1) ? (double)m_currentFrame / (m_totalFrames - 1) : 0;
+        double easedT = t * t * (3.0 - 2.0 * t);
+        double arcOffset = -m_jumpHeight * 4.0 * easedT * (1.0 - easedT);
+        double groundY = m_rootHeight - m_frameHeight - 60.0;
+        if (m_stand.feetMargin > 0 && m_stand.feetBottom > 0) {
+            groundY = m_rootHeight - m_stand.feetMargin - m_stand.feetBottom;
+        }
+        m_posY = groundY + arcOffset;
+    } else if (m_state == Opening || m_state == Waiting) {
         m_posY = m_rootHeight - m_frameHeight - 60.0;
     } else {
         if (m_stand.feetMargin > 0 && m_stand.feetBottom > 0) {
@@ -179,8 +208,17 @@ void CharacterModel::onTick()
             return;
         }
     }
+    if (m_state == Jump && m_currentFrame >= m_totalFrames) {
+        m_currentFrame = m_totalFrames - 1;
+        playStand();
+        emit jumpFinished();
+        return;
+    }
     if (m_state == Stand && m_currentFrame >= m_totalFrames) {
         m_currentFrame = 0;                   // 站立动画循环
+    }
+    if (m_state == Jump) {
+        setPosY();                            // 跳跃期间逐帧重算抛物线Y坐标
     }
     emit frameChanged();
 }
