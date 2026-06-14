@@ -17,6 +17,13 @@ static AnimParams parseAnim(const QJsonObject &obj)
     a.feetBottom = obj.value("feetBottom").toInt(0);
     a.feetMargin = obj.value("feetMargin").toInt(0);
     a.jumpHeight = obj.value("jumpHeight").toInt(200);
+    a.divFrame  = obj.value("divFrame").toInt(0);
+    a.jumpDistance = obj.value("jumpDistance").toDouble(0.15);
+    a.offsetXFwd = obj.value("offsetXFwd").toInt(0);
+    a.offsetXLast = obj.value("offsetXLast").toInt(0);
+    a.offsetXBwd = obj.value("offsetXBwd").toInt(0);
+    a.offsetXBwdLast = obj.value("offsetXBwdLast").toInt(0);
+    a.visualScale = obj.value("visualScale").toDouble(1.0);
     return a;
 }
 
@@ -32,5 +39,6 @@ CharacterConfig CharacterConfigLoader::load(const QJsonObject &json, const QStri
     cfg.forward    = parseAnim(json.value("forward").toObject());
     cfg.backward   = parseAnim(json.value("backward").toObject());
     cfg.jump       = parseAnim(json.value("jump").toObject());
+    cfg.diagonalJump = parseAnim(json.value("diagonalJump").toObject());
     return cfg;
 }

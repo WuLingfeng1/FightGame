@@ -41,17 +41,20 @@
             "interval": 30,
             "path": "qrc:/images/character/Orochi/Jump.png",
             "loop": false,
-            "jumpHeight": 360
+            "jumpHeight": 450
         },
         "diagonalJump": {
             "cols": 42,
-            "fw": 384,
-            "fh": 512,
+            "fw": 251,
+            "fh": 335,
             "interval": 30,
             "path": "qrc:/images/character/Orochi/DiagonalJump.png",
             "loop": false,
-            "jumpHeight": 360,
-            "divFrame": 21
+            "jumpHeight": 480,
+            "jumpDistance": 0.40,
+            "divFrame": 21,
+            "feetBottom": 327,
+            "feetMargin": 82
         }
     },
     "Yagami": {
@@ -70,6 +73,8 @@
             "cols": 9,
             "fw": 251,
             "fh": 335,
+            "feetBottom": 327,
+            "feetMargin": 82,
             "interval": 150,
             "path": "qrc:/images/character/Yagami/Stand.png"
         },
@@ -77,6 +82,8 @@
             "cols": 10,
             "fw": 251,
             "fh": 335,
+            "feetBottom": 327,
+            "feetMargin": 82,
             "interval": 80,
             "path": "qrc:/images/character/Yagami/Forward.png",
             "loop": true
@@ -85,28 +92,39 @@
             "cols": 9,
             "fw": 251,
             "fh": 335,
+            "feetBottom": 327,
+            "feetMargin": 82,
             "interval": 80,
             "path": "qrc:/images/character/Yagami/Backward.png",
             "loop": true
         },
         "jump": {
             "cols": 13,
-            "fw": 384,
-            "fh": 512,
+            "fw": 251,
+            "fh": 335,
             "interval": 50,
             "path": "qrc:/images/character/Yagami/Jump.png",
             "loop": false,
-            "jumpHeight": 60
+            "jumpHeight": 450,
+            "visualScale": 1.28
         },
         "diagonalJump": {
             "cols": 32,
-            "fw": 384,
-            "fh": 512,
+            "fw": 251,
+            "fh": 335,
+            "feetBottom": 327,
+            "feetMargin": 82,
             "interval": 50,
             "path": "qrc:/images/character/Yagami/DiagonalJump.png",
             "loop": false,
-            "jumpHeight": 60,
-            "divFrame": 17
+            "jumpHeight": 480,
+            "jumpDistance": 0.45,
+            "visualScale": 1.15,
+            "divFrame": 17,
+            "offsetXFwd": 0,
+            "offsetXLast": 0,
+            "offsetXBwd": 0,
+            "offsetXBwdLast": 0
         }
     }
 }

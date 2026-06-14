@@ -17,6 +17,9 @@ class CharacterModel : public QObject
     Q_PROPERTY(int frameWidth READ frameWidth NOTIFY sizeChanged)             // 单帧宽度
     Q_PROPERTY(int frameHeight READ frameHeight NOTIFY sizeChanged)           // 单帧高度
     Q_PROPERTY(int totalFrames READ totalFrames NOTIFY sizeChanged)           // 总帧数
+    Q_PROPERTY(int refFrameWidth READ refFrameWidth NOTIFY sizeChanged)       // 参考帧宽(站立), 用于居中
+    Q_PROPERTY(int animOffsetX READ animOffsetX NOTIFY sizeChanged)           // 当前动画水平偏移
+    Q_PROPERTY(double visualScale READ visualScale NOTIFY sizeChanged)          // 视觉缩放补偿
     Q_PROPERTY(double positionX READ positionX NOTIFY positionChanged)        // 像素X坐标
     Q_PROPERTY(double positionY READ positionY NOTIFY positionChanged)        // 像素Y坐标(底部对齐)
     Q_PROPERTY(double posXRatio READ posXRatio WRITE setPosXRatio NOTIFY posXRatioChanged)  // 水平位置比例
@@ -24,7 +27,7 @@ class CharacterModel : public QObject
 
     QML_ELEMENT
 public:
-    enum State { Waiting, Opening, Stand, Forward, Backward, Jump };
+    enum State { Waiting, Opening, Stand, Forward, Backward, Jump, DiagonalJump };
     Q_ENUM(State)
 
     explicit CharacterModel(QObject *parent = nullptr);
@@ -35,6 +38,9 @@ public:
     int frameWidth() const { return m_frameWidth; }
     int frameHeight() const { return m_frameHeight; }
     int totalFrames() const { return m_totalFrames; }
+    int refFrameWidth() const { return m_refFrameWidth; }
+    int animOffsetX() const { return m_animOffsetX; }
+    double visualScale() const { return m_visualScale; }
     double positionX() const { return m_posX; }
     double positionY() const { return m_posY; }
     double posXRatio() const { return m_cfgPosX; }
@@ -48,6 +54,7 @@ public:
     Q_INVOKABLE void playForward();               // 切换到前进行走动画
     Q_INVOKABLE void playBackward();              // 切换到后退行走动画
     Q_INVOKABLE void playJump();                  // 切换到直跳动画
+    Q_INVOKABLE void playDiagonalJump(bool forward); // 切换到对角跳动画(forward=true前跳 false后跳)
     void reset();                                 // 重置到初始状态
     void updateRootHeight(double h);              // 更新窗口高度(用于Y坐标计算)
     State state() const { return m_state; }
@@ -85,9 +92,20 @@ private:
     AnimParams m_forward;          // 前进动画参数副本
     AnimParams m_backward;         // 后退动画参数副本
     AnimParams m_jump;             // 跳跃动画参数副本
+    AnimParams m_diagonalJump;     // 对角跳动画参数副本
     bool     m_loopAnim = true;    // 当前动画是否循环
     double   m_cfgPosX = 0.5;     // 水平位置比例(可运行时修改)
     double   m_jumpHeight = 200;  // 跳跃峰值高度(从配置加载)
+    int      m_refFrameWidth = 0;  // 参考帧宽(站立动画), 用于居中计算
+    int      m_djStartFrame = 0;  // 对角跳: 精灵表中起始帧偏移
+    int      m_djTotalFrames = 0; // 对角跳: 本段帧数
+    bool     m_djIsForward = false; // 对角跳: 方向标识
+    double   m_djStartXRatio = 0.0; // 对角跳: 起跳时X比例
+    double   m_djDistance = 0.15;   // 对角跳: 水平距离
+    int      m_djOffsetFirst = 0;  // 对角跳前跳: 首帧偏移
+    int      m_djOffsetLast = 0;   // 对角跳前跳: 末帧偏移
+    int      m_animOffsetX = 0;    // 当前动画水平偏移(像素)
+    double   m_visualScale = 1.0;  // 视觉缩放补偿
 
     friend class FightDirector;    // 允许 FightDirector 直接设置 m_rootHeight
     double m_rootHeight = 640;     // 窗口高度(用于Y坐标计算)

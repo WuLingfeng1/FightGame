@@ -21,7 +21,9 @@ void CharacterModel::configure(const CharacterConfig &cfg)
     m_forward      = cfg.forward;
     m_backward     = cfg.backward;
     m_jump         = cfg.jump;
+    m_diagonalJump = cfg.diagonalJump;
     m_jumpHeight   = cfg.jump.jumpHeight;
+    m_refFrameWidth = cfg.stand.fw;
     setFacingLeft(cfg.facingLeft);
     setPosXRatio(cfg.posX);
     m_state        = Waiting;
@@ -50,6 +52,7 @@ void CharacterModel::playStand()
     m_currentFrame = 2;          // 从第2帧开始(避开站立的起始过渡帧)
     applyAnim(m_stand);
     m_loopAnim = true;
+    m_visualScale = 1.0;
     m_timer.setInterval(m_stand.interval);
     m_timer.start();
     emit frameChanged();
@@ -62,11 +65,13 @@ void CharacterModel::playStand()
 void CharacterModel::playForward()
 {
     if (m_forward.cols <= 0) return;   // 未配置行走动画则忽略
+    if (m_state == Forward && m_timer.isActive()) return;  // 已在行走中则跳过
     m_timer.stop();
     m_state = Forward;
     m_currentFrame = 0;
     applyAnim(m_forward);
     m_loopAnim = m_forward.loop;
+    m_visualScale = 1.0;
     m_timer.setInterval(m_forward.interval);
     m_timer.start();
     emit frameChanged();
@@ -79,11 +84,13 @@ void CharacterModel::playForward()
 void CharacterModel::playBackward()
 {
     if (m_backward.cols <= 0) return;   // 未配置后退动画则忽略
+    if (m_state == Backward && m_timer.isActive()) return;  // 已在后退中则跳过
     m_timer.stop();
     m_state = Backward;
     m_currentFrame = 0;
     applyAnim(m_backward);
     m_loopAnim = m_backward.loop;
+    m_visualScale = 1.0;
     m_timer.setInterval(m_backward.interval);
     m_timer.start();
     emit frameChanged();
@@ -99,10 +106,50 @@ void CharacterModel::playJump()
     m_timer.stop();
     m_state = Jump;
     m_currentFrame = 0;
-    applyAnim(m_jump);
     m_loopAnim = m_jump.loop;
     m_jumpHeight = m_jump.jumpHeight;
+    m_visualScale = m_jump.visualScale;
+    applyAnim(m_jump);
     m_timer.setInterval(m_jump.interval);
+    m_timer.start();
+    emit frameChanged();
+    emit sourcePathChanged();
+    emit sizeChanged();
+    emit positionChanged();
+}
+
+// 切换到对角跳动画: forward=true前跳(朝对手) false后跳(背向对手)
+// 帧段由 divFrame 分割: 左半(0~divFrame-1)=右向跳跃 右半(divFrame~cols-1)=左向跳跃
+// 朝向翻转由 QML Scale 处理, 因此前跳始终用左半段 后跳始终用右半段
+void CharacterModel::playDiagonalJump(bool forward)
+{
+    if (m_diagonalJump.cols <= 0 || m_diagonalJump.divFrame <= 0) return;
+    m_timer.stop();
+    m_state = DiagonalJump;
+    m_djIsForward = forward;
+    m_djStartXRatio = m_cfgPosX;
+    if (forward) {
+        m_djStartFrame = 0;
+        m_djTotalFrames = m_diagonalJump.divFrame;
+    } else {
+        m_djStartFrame = m_diagonalJump.divFrame;
+        m_djTotalFrames = m_diagonalJump.cols - m_diagonalJump.divFrame;
+    }
+    m_currentFrame = m_djStartFrame;
+    m_loopAnim = false;
+    m_jumpHeight = m_diagonalJump.jumpHeight;
+    m_djDistance = m_diagonalJump.jumpDistance;
+    applyAnim(m_diagonalJump);
+    if (forward) {
+        m_djOffsetFirst = m_diagonalJump.offsetXFwd;
+        m_djOffsetLast = m_diagonalJump.offsetXLast;
+    } else {
+        m_djOffsetFirst = m_diagonalJump.offsetXBwd;
+        m_djOffsetLast = m_diagonalJump.offsetXBwdLast;
+    }
+    m_animOffsetX = m_djOffsetFirst;
+    m_visualScale = m_diagonalJump.visualScale;
+    m_timer.setInterval(m_diagonalJump.interval);
     m_timer.start();
     emit frameChanged();
     emit sourcePathChanged();
@@ -144,13 +191,21 @@ void CharacterModel::applyAnim(const AnimParams &p)
 // 2. 站立/行走: 脚部对齐(如果配置了feetMargin/feetBottom), 否则底部对齐
 void CharacterModel::setPosY()
 {
-    if (m_state == Jump) {
-        double t = (m_totalFrames > 1) ? (double)m_currentFrame / (m_totalFrames - 1) : 0;
-        double easedT = t * t * (3.0 - 2.0 * t);
-        double arcOffset = -m_jumpHeight * 4.0 * easedT * (1.0 - easedT);
-        double groundY = m_rootHeight - m_frameHeight - 60.0;
+    if (m_state == Jump || m_state == DiagonalJump) {
+        int totalFrames = (m_state == DiagonalJump) ? m_djTotalFrames : m_totalFrames;
+        int localFrame  = (m_state == DiagonalJump) ? (m_currentFrame - m_djStartFrame) : m_currentFrame;
+        double t = (totalFrames > 1) ? (double)localFrame / (totalFrames - 1) : 0;
+        double arcOffset = -m_jumpHeight * 4.0 * t * (1.0 - t);
+        double groundY;
         if (m_stand.feetMargin > 0 && m_stand.feetBottom > 0) {
             groundY = m_rootHeight - m_stand.feetMargin - m_stand.feetBottom;
+        } else {
+            const AnimParams &curAnim = (m_state == DiagonalJump) ? m_diagonalJump : m_jump;
+            if (curAnim.feetMargin > 0 && curAnim.feetBottom > 0) {
+                groundY = m_rootHeight - curAnim.feetMargin - curAnim.feetBottom;
+            } else {
+                groundY = m_rootHeight - m_frameHeight - 60.0;
+            }
         }
         m_posY = groundY + arcOffset;
     } else if (m_state == Opening || m_state == Waiting) {
@@ -210,14 +265,29 @@ void CharacterModel::onTick()
     }
     if (m_state == Jump && m_currentFrame >= m_totalFrames) {
         m_currentFrame = m_totalFrames - 1;
-        playStand();
+        m_timer.stop();
+        emit jumpFinished();
+        return;
+    }
+    if (m_state == DiagonalJump && m_currentFrame >= m_djStartFrame + m_djTotalFrames) {
+        m_currentFrame = m_djStartFrame + m_djTotalFrames - 1;
+        m_timer.stop();
         emit jumpFinished();
         return;
     }
     if (m_state == Stand && m_currentFrame >= m_totalFrames) {
         m_currentFrame = 0;                   // 站立动画循环
     }
-    if (m_state == Jump) {
+    if (m_state == Jump || m_state == DiagonalJump) {
+        if (m_state == DiagonalJump) {
+            int localFrame = m_currentFrame - m_djStartFrame;
+            double t = (m_djTotalFrames > 1) ? (double)localFrame / (m_djTotalFrames - 1) : 0;
+            double xSign = m_facingLeft ? -1.0 : 1.0;
+            double xDelta = xSign * (m_djIsForward ? 1.0 : -1.0);
+            m_cfgPosX = m_djStartXRatio + xDelta * m_djDistance * t;
+            m_animOffsetX = m_djOffsetFirst + (int)((m_djOffsetLast - m_djOffsetFirst) * t);
+            emit posXRatioChanged();
+        }
         setPosY();                            // 跳跃期间逐帧重算抛物线Y坐标
     }
     emit frameChanged();

@@ -72,6 +72,7 @@ Item {
     function startMoveRight() {
         moveRightPressed = true
         if (p1Jumping) return
+        updateFacing()
         moveTimer.moveLeft = false
         moveTimer.moveRight = true
         if (!isMoving) {
@@ -90,6 +91,7 @@ Item {
     function startMoveLeft() {
         moveLeftPressed = true
         if (p1Jumping) return
+        updateFacing()
         moveTimer.moveRight = false
         moveTimer.moveLeft = true
         if (!isMoving) {
@@ -107,6 +109,7 @@ Item {
     function stopMoveRight() {
         moveRightPressed = false
         if (p1Jumping) return
+        updateFacing()
         if (moveLeftPressed) {
             moveTimer.moveRight = false
             moveTimer.moveLeft = true
@@ -129,6 +132,7 @@ Item {
     function stopMoveLeft() {
         moveLeftPressed = false
         if (p1Jumping) return
+        updateFacing()
         if (moveRightPressed) {
             moveTimer.moveLeft = false
             moveTimer.moveRight = true
@@ -149,15 +153,22 @@ Item {
         }
     }
 
-    // P1 跳跃 (纯直跳)
+    // P1 跳跃: 行走中按W触发对角跳(前跳/后跳), 站立时按W触发直跳
     function startJump() {
         if (p1Jumping) return
         p1Jumping = true
-        p1CurrentAnim = ""
+        var wasMoving = isMoving
+        var animBeforeJump = p1CurrentAnim
         moveTimer.moveRight = false
         moveTimer.moveLeft = false
+        moveTimer.stop()
         isMoving = false
-        director.p1Model.playJump()
+        p1CurrentAnim = ""
+        if (wasMoving && (animBeforeJump === "forward" || animBeforeJump === "backward")) {
+            director.p1Model.playDiagonalJump(animBeforeJump === "forward")
+        } else {
+            director.p1Model.playJump()
+        }
     }
 
     // P2 移动定时器
@@ -195,6 +206,7 @@ Item {
     function startMoveRight2() {
         moveRight2Pressed = true
         if (p2Jumping) return
+        updateFacing()
         moveTimer2.moveLeft = false
         moveTimer2.moveRight = true
         if (!isMoving2) {
@@ -213,6 +225,7 @@ Item {
     function startMoveLeft2() {
         moveLeft2Pressed = true
         if (p2Jumping) return
+        updateFacing()
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = true
         if (!isMoving2) {
@@ -230,6 +243,7 @@ Item {
     function stopMoveRight2() {
         moveRight2Pressed = false
         if (p2Jumping) return
+        updateFacing()
         if (moveLeft2Pressed) {
             moveTimer2.moveRight = false
             moveTimer2.moveLeft = true
@@ -252,6 +266,7 @@ Item {
     function stopMoveLeft2() {
         moveLeft2Pressed = false
         if (p2Jumping) return
+        updateFacing()
         if (moveRight2Pressed) {
             moveTimer2.moveLeft = false
             moveTimer2.moveRight = true
@@ -272,15 +287,22 @@ Item {
         }
     }
 
-    // P2 跳跃 (纯直跳)
+    // P2 跳跃: 行走中按↑触发对角跳(前跳/后跳), 站立时按↑触发直跳
     function startJump2() {
         if (p2Jumping) return
         p2Jumping = true
-        p2CurrentAnim = ""
+        var wasMoving = isMoving2
+        var animBeforeJump = p2CurrentAnim
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = false
+        moveTimer2.stop()
         isMoving2 = false
-        director.p2Model.playJump()
+        p2CurrentAnim = ""
+        if (wasMoving && (animBeforeJump === "forward" || animBeforeJump === "backward")) {
+            director.p2Model.playDiagonalJump(animBeforeJump === "forward")
+        } else {
+            director.p2Model.playJump()
+        }
     }
 
     // 动态朝向: 始终面向对手
@@ -357,8 +379,8 @@ Item {
             Scale {
                 origin.x: p1Layer.width / 2
                 origin.y: p1Layer.height
-                xScale: fitScale * (director.p1Model.facingLeft ? -1 : 1)
-                yScale: fitScale
+                xScale: fitScale * (director.p1Model.facingLeft ? -1 : 1) * director.p1Model.visualScale
+                yScale: fitScale * director.p1Model.visualScale
             }
         ]
 
@@ -391,8 +413,8 @@ Item {
             Scale {
                 origin.x: p2Layer.width / 2
                 origin.y: p2Layer.height
-                xScale: fitScale * (director.p2Model.facingLeft ? -1 : 1)
-                yScale: fitScale
+                xScale: fitScale * (director.p2Model.facingLeft ? -1 : 1) * director.p2Model.visualScale
+                yScale: fitScale * director.p2Model.visualScale
             }
         ]
 
@@ -816,6 +838,8 @@ Item {
         target: director.p1Model
         function onJumpFinished() {
             p1Jumping = false
+            updateFacing()
+            director.updateCamera()
             if (moveRightPressed && !moveLeftPressed) {
                 isMoving = true
                 moveTimer.moveLeft = false
@@ -827,6 +851,7 @@ Item {
                     director.p1Model.playForward()
                     p1CurrentAnim = "forward"
                 }
+                moveTimer.start()
             } else if (moveLeftPressed && !moveRightPressed) {
                 isMoving = true
                 moveTimer.moveRight = false
@@ -838,6 +863,7 @@ Item {
                     director.p1Model.playBackward()
                     p1CurrentAnim = "backward"
                 }
+                moveTimer.start()
             } else if (moveRightPressed || moveLeftPressed) {
                 isMoving = true
                 moveTimer.moveRight = moveRightPressed
@@ -849,7 +875,9 @@ Item {
                     director.p1Model.playForward()
                     p1CurrentAnim = "forward"
                 }
+                moveTimer.start()
             } else {
+                director.p1Model.playStand()
                 moveTimer.moveRight = false
                 moveTimer.moveLeft = false
                 isMoving = false
@@ -861,6 +889,8 @@ Item {
         target: director.p2Model
         function onJumpFinished() {
             p2Jumping = false
+            updateFacing()
+            director.updateCamera()
             if (moveRight2Pressed && !moveLeft2Pressed) {
                 isMoving2 = true
                 moveTimer2.moveLeft = false
@@ -872,6 +902,7 @@ Item {
                     director.p2Model.playForward()
                     p2CurrentAnim = "forward"
                 }
+                moveTimer2.start()
             } else if (moveLeft2Pressed && !moveRight2Pressed) {
                 isMoving2 = true
                 moveTimer2.moveRight = false
@@ -883,6 +914,7 @@ Item {
                     director.p2Model.playBackward()
                     p2CurrentAnim = "backward"
                 }
+                moveTimer2.start()
             } else if (moveRight2Pressed || moveLeft2Pressed) {
                 isMoving2 = true
                 moveTimer2.moveRight = moveRight2Pressed
@@ -894,11 +926,23 @@ Item {
                     director.p2Model.playForward()
                     p2CurrentAnim = "forward"
                 }
+                moveTimer2.start()
             } else {
+                director.p2Model.playStand()
                 moveTimer2.moveRight = false
                 moveTimer2.moveLeft = false
                 isMoving2 = false
             }
         }
+    }
+
+    Connections {
+        target: director.p1Model
+        function onPosXRatioChanged() { director.updateCamera() }
+    }
+
+    Connections {
+        target: director.p2Model
+        function onPosXRatioChanged() { director.updateCamera() }
     }
 }
