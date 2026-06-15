@@ -25,8 +25,8 @@ FightScreen 持有 FightDirector 实例，FightDirector 管理两个 CharacterMo
 ### 2.3 FightScreen.qml — 战斗主界面
 
 **输入系统**
-- P1：A（左）、D（右）、W（跳跃）
-- P2：Left（左）、Right（右）、Up（跳跃）
+- P1：A（左）、D（右）、W（跳跃）、J（轻拳）、K（轻腿）、U（重拳）、L（重腿）
+- P2：Left（左）、Right（右）、Up（跳跃）、小键盘1（轻拳）、小键盘2（轻腿）、小键盘3（重拳）、小键盘0（重腿）
 - 16ms 定时器驱动移动（约 60fps）
 
 **移动系统**
@@ -49,9 +49,9 @@ FightScreen 持有 FightDirector 实例，FightDirector 管理两个 CharacterMo
 
 ### 2.4 CharacterModel — 角色动画状态机
 
-7 种状态：Waiting → Opening → Stand ↔ Forward/Backward，Stand ↕ Jump/DiagonalJump
+10 种状态：Waiting → Opening → Stand ↔ Forward/Backward，Stand ↕ Jump/DiagonalJump，Stand → LightPunch/LightKick/HeavyPunch/HeavyKick → Stand
 
-关键 Q_PROPERTY：currentFrame、sourcePath、frameWidth/Height、totalFrames、posXRatio、positionY、facingLeft、visualScale
+关键 Q_PROPERTY：currentFrame、sourcePath、frameWidth/Height、totalFrames、posXRatio、positionY、facingLeft、visualScale、animOffsetX
 
 **跳跃抛物线**（setPosY）：
 ```
@@ -83,7 +83,7 @@ offset += diff * factor
 
 ### 2.6 CharacterConfig — 配置加载器
 
-从 characters.json 解析 AnimParams 结构体：path、cols、fw/fh、interval、loop、divFrame、jumpHeight、jumpDistance、visualScale、feetBottom、feetMargin。
+从 characters.json 解析 AnimParams 结构体：path、cols、fw/fh、interval、loop、divFrame、jumpHeight、jumpDistance、visualScale、feetBottom、feetMargin、offsetX。
 
 ## 3. 操作说明
 
@@ -94,6 +94,10 @@ offset += diff * factor
 | 直跳 | W（站立时） | Up（站立时） |
 | 前跳 | W（向前行走中） | Up（向前行走中） |
 | 后跳 | W（向后行走中） | Up（向后行走中） |
+| 轻拳 | J | 小键盘1 |
+| 轻腿 | K | 小键盘2 |
+| 重拳 | U | 小键盘3 |
+| 重腿 | L | 小键盘0 |
 
 ## 4. 资源清单
 
@@ -101,19 +105,19 @@ offset += diff * factor
 
 | 角色 | CID | 精灵表 |
 |------|-----|--------|
-| 大蛇 | Orochi | Stand/Forward/Backward/Jump/DiagonalJump/opening |
-| 八神庵 | Yagami | Stand/Forward/Backward/Jump/DiagonalJump/opening |
+| 大蛇 | Orochi | Stand/Forward/Backward/Jump/DiagonalJump/opening/LightPunch/LightKick/HeavyPunch/HeavyKick |
+| 八神庵 | Yagami | Stand/Forward/Backward/Jump/DiagonalJump/opening/LightPunch/LightKick/HeavyPunch/HeavyKick |
 
 **未接入角色**（有头像/立绘，缺精灵表）：草薙京、库拉、不知火舞、K
 
 **战斗背景**（5个，已全部接入）：Monaco（当前使用）、AmusementPark、Bali、Gyeongbokgung、OrochiShermie
 
-**已有未使用的精灵表**：LightPunch、HeavyPunch、LightKick、HeavyKick、CrouchAttack、JumpAttack、StandBlock、AirBlock、Dodge、DashForward、DashBackward、PowerUp、SuperMove、Knockdown、Hurt1~5
+**已有未使用的精灵表**：CrouchAttack、JumpAttack、StandBlock、AirBlock、Dodge、DashForward、DashBackward、PowerUp、SuperMove、Knockdown、Hurt1~5
 
 ## 5. 已知限制
 
 1. 仅 2 个角色可选（Orochi/Yagami），其余 4 个角色选入后会报错
-2. 无攻击系统、无碰撞检测、无伤害系统
+2. 无碰撞检测、无伤害系统
 3. 无胜负判定、无回合系统
 4. Online Two-Player 未实现
 5. 战斗背景硬编码为 Monaco.gif
