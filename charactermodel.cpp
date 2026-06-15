@@ -1,4 +1,5 @@
 #include "charactermodel.h"
+#include <algorithm>
 
 // 构造函数: 创建重复触发的定时器, 绑定 onTick 回调
 CharacterModel::CharacterModel(QObject *parent)
@@ -128,6 +129,7 @@ void CharacterModel::playDiagonalJump(bool forward)
     m_state = DiagonalJump;
     m_djIsForward = forward;
     m_djStartXRatio = m_cfgPosX;
+    m_djInitialFacingLeft = m_facingLeft;
     if (forward) {
         m_djStartFrame = 0;
         m_djTotalFrames = m_diagonalJump.divFrame;
@@ -282,13 +284,19 @@ void CharacterModel::onTick()
         if (m_state == DiagonalJump) {
             int localFrame = m_currentFrame - m_djStartFrame;
             double t = (m_djTotalFrames > 1) ? (double)localFrame / (m_djTotalFrames - 1) : 0;
-            double xSign = m_facingLeft ? -1.0 : 1.0;
+            double xSign = m_djInitialFacingLeft ? -1.0 : 1.0;
             double xDelta = xSign * (m_djIsForward ? 1.0 : -1.0);
-            m_cfgPosX = m_djStartXRatio + xDelta * m_djDistance * t;
+            double newX = m_djStartXRatio + xDelta * m_djDistance * t;
+            newX = std::max(0.0, std::min(newX, 3.0));
+            if (m_opponent)
+                m_facingLeft = (newX > m_opponent->posXRatio());
+            m_cfgPosX = newX;
             m_animOffsetX = m_djOffsetFirst + (int)((m_djOffsetLast - m_djOffsetFirst) * t);
             emit posXRatioChanged();
         }
-        setPosY();                            // 跳跃期间逐帧重算抛物线Y坐标
+        if (m_state == Jump && m_opponent)
+            m_facingLeft = (m_cfgPosX > m_opponent->posXRatio());
+        setPosY();
     }
     emit frameChanged();
 }

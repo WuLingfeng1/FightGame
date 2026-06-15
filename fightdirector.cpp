@@ -3,6 +3,7 @@
 #include "characterconfig.h"
 #include <QDebug>
 #include <algorithm>
+#include <cmath>
 
 // 构造函数: 创建P1/P2角色模型, 连接开场完成信号, 加载JSON角色配置
 FightDirector::FightDirector(QObject *parent)
@@ -46,6 +47,9 @@ void FightDirector::start(const QString &p1CharId, const QString &p2CharId)
     loadConfig(p1CharId, m_p1Model);
     loadConfig(p2CharId, m_p2Model);
 
+    m_p1Model->setOpponent(m_p2Model);
+    m_p2Model->setOpponent(m_p1Model);
+
     m_p1Model->m_rootHeight = m_rootHeight;
     m_p2Model->m_rootHeight = m_rootHeight;
 
@@ -85,6 +89,7 @@ void FightDirector::onP2OpeningFinished()
 }
 
 // 格斗运镜: 始终确保两角色在屏内, 容不下时回退中点跟随
+// 小幅抖动通过平滑插值消除, 大幅移动直接跟随
 void FightDirector::updateCamera()
 {
     if (!m_p1Model || !m_p2Model) return;
@@ -106,6 +111,12 @@ void FightDirector::updateCamera()
 
     target = std::max(0.0, std::min(target, kStageWidth - 1.0));
 
-    m_cameraOffset = target;
+    double diff = target - m_cameraOffset;
+    if (std::abs(diff) < 0.01) {
+        m_cameraOffset += diff * 0.3;
+    } else {
+        m_cameraOffset = target;
+    }
+
     emit cameraOffsetChanged();
 }

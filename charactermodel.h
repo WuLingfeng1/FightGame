@@ -49,6 +49,7 @@ public:
     void setFacingLeft(bool f) { m_facingLeft = f; emit facingChanged(); }
 
     void configure(const CharacterConfig &cfg);   // 从配置初始化模型
+    void setOpponent(CharacterModel *opp) { m_opponent = opp; }  // 设置对手引用
     Q_INVOKABLE void playOpening();               // 播放开场动画
     Q_INVOKABLE void playStand();                 // 切换到站立动画
     Q_INVOKABLE void playForward();               // 切换到前进行走动画
@@ -100,6 +101,7 @@ private:
     int      m_djStartFrame = 0;  // 对角跳: 精灵表中起始帧偏移
     int      m_djTotalFrames = 0; // 对角跳: 本段帧数
     bool     m_djIsForward = false; // 对角跳: 方向标识
+    bool     m_djInitialFacingLeft = false; // 对角跳: 起跳时朝向(固定移动方向)
     double   m_djStartXRatio = 0.0; // 对角跳: 起跳时X比例
     double   m_djDistance = 0.15;   // 对角跳: 水平距离
     int      m_djOffsetFirst = 0;  // 对角跳前跳: 首帧偏移
@@ -107,6 +109,7 @@ private:
     int      m_animOffsetX = 0;    // 当前动画水平偏移(像素)
     double   m_visualScale = 1.0;  // 视觉缩放补偿
 
+    CharacterModel *m_opponent = nullptr;  // 对手角色引用, 用于跳跃朝向更新
     friend class FightDirector;    // 允许 FightDirector 直接设置 m_rootHeight
     double m_rootHeight = 640;     // 窗口高度(用于Y坐标计算)
 };
