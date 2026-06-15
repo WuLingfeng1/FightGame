@@ -112,11 +112,8 @@ void FightDirector::updateCamera()
     target = std::max(0.0, std::min(target, kStageWidth - 1.0));
 
     double diff = target - m_cameraOffset;
-    if (std::abs(diff) < 0.01) {
-        m_cameraOffset += diff * 0.3;
-    } else {
-        m_cameraOffset = target;
-    }
+    double factor = (std::abs(diff) < 0.015) ? 0.2 : 0.7;
+    m_cameraOffset += diff * factor;
 
     emit cameraOffsetChanged();
 }

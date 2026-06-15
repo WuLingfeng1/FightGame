@@ -55,6 +55,50 @@
             "divFrame": 21,
             "feetBottom": 327,
             "feetMargin": 82
+        },
+        "lightPunch": {
+            "cols": 12,
+            "fw": 251,
+            "fh": 335,
+            "interval": 50,
+            "path": "qrc:/images/character/Orochi/LightPunch.png",
+            "loop": false,
+            "visualScale": 1.3,
+            "feetBottom": 283,
+            "feetMargin": 82
+        },
+        "lightKick": {
+            "cols": 10,
+            "fw": 251,
+            "fh": 335,
+            "interval": 50,
+            "path": "qrc:/images/character/Orochi/LightKick.png",
+            "loop": false,
+            "visualScale": 1.92,
+            "feetBottom": 240,
+            "feetMargin": 82
+        },
+        "heavyPunch": {
+            "cols": 13,
+            "fw": 251,
+            "fh": 335,
+            "interval": 50,
+            "path": "qrc:/images/character/Orochi/HeavyPunch.png",
+            "loop": false,
+            "visualScale": 1.97,
+            "feetBottom": 218,
+            "feetMargin": 82
+        },
+        "heavyKick": {
+            "cols": 10,
+            "fw": 251,
+            "fh": 335,
+            "interval": 50,
+            "path": "qrc:/images/character/Orochi/HeavyKick.png",
+            "loop": false,
+            "visualScale": 1.42,
+            "feetBottom": 308,
+            "feetMargin": 82
         }
     },
     "Yagami": {
@@ -86,7 +130,8 @@
             "feetMargin": 82,
             "interval": 80,
             "path": "qrc:/images/character/Yagami/Forward.png",
-            "loop": true
+            "loop": true,
+            "visualScale": 1.52
         },
         "backward": {
             "cols": 9,
@@ -96,7 +141,8 @@
             "feetMargin": 82,
             "interval": 80,
             "path": "qrc:/images/character/Yagami/Backward.png",
-            "loop": true
+            "loop": true,
+            "visualScale": 1.52
         },
         "jump": {
             "cols": 13,
@@ -125,6 +171,54 @@
             "offsetXLast": 0,
             "offsetXBwd": 0,
             "offsetXBwdLast": 0
+        },
+        "lightPunch": {
+            "cols": 6,
+            "fw": 251,
+            "fh": 335,
+            "interval": 50,
+            "path": "qrc:/images/character/Yagami/StandAttack_LightPunch.png",
+            "loop": false,
+            "visualScale": 1.8,
+            "feetBottom": 205,
+            "feetMargin": 82,
+            "offsetX": 38
+        },
+        "lightKick": {
+            "cols": 7,
+            "fw": 251,
+            "fh": 335,
+            "interval": 50,
+            "path": "qrc:/images/character/Yagami/StandAttack_LightKick.png",
+            "loop": false,
+            "visualScale": 1.8,
+            "feetBottom": 205,
+            "feetMargin": 82,
+            "offsetX": 38
+        },
+        "heavyPunch": {
+            "cols": 10,
+            "fw": 251,
+            "fh": 335,
+            "interval": 50,
+            "path": "qrc:/images/character/Yagami/StandAttack_HeavyPunch.png",
+            "loop": false,
+            "visualScale": 1.8,
+            "feetBottom": 205,
+            "feetMargin": 82,
+            "offsetX": 38
+        },
+        "heavyKick": {
+            "cols": 11,
+            "fw": 251,
+            "fh": 335,
+            "interval": 50,
+            "path": "qrc:/images/character/Yagami/StandAttack_HeavyKick.png",
+            "loop": false,
+            "visualScale": 1.8,
+            "feetBottom": 205,
+            "feetMargin": 82,
+            "offsetX": 38
         }
     }
 }

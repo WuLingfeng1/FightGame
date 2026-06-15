@@ -24,6 +24,7 @@ struct AnimParams {
     int offsetXBwd = 0;    // 对角跳后跳段首帧水平偏移
     int offsetXBwdLast = 0;// 对角跳后跳段末帧水平偏移
     double visualScale = 1.0; // 视觉缩放补偿(斜跳帧图缩小时用)
+    int offsetX = 0;       // 角色在帧内的水平偏移补偿(像素, 用于居中对齐)
 };
 
 // 角色配置: 包含一个角色的所有动画参数和初始属性
@@ -37,6 +38,10 @@ struct CharacterConfig {
     AnimParams backward;          // 后退行走动画参数
     AnimParams jump;              // 直跳动画参数
     AnimParams diagonalJump;      // 对角跳动画参数
+    AnimParams lightPunch;        // 轻拳攻击动画参数
+    AnimParams lightKick;         // 轻腿攻击动画参数
+    AnimParams heavyPunch;        // 重拳攻击动画参数
+    AnimParams heavyKick;         // 重腿攻击动画参数
 };
 
 // 角色配置加载器: 从 JSON 对象解析出 CharacterConfig

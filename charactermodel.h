@@ -27,7 +27,7 @@ class CharacterModel : public QObject
 
     QML_ELEMENT
 public:
-    enum State { Waiting, Opening, Stand, Forward, Backward, Jump, DiagonalJump };
+    enum State { Waiting, Opening, Stand, Forward, Backward, Jump, DiagonalJump, LightPunch, LightKick, HeavyPunch, HeavyKick };
     Q_ENUM(State)
 
     explicit CharacterModel(QObject *parent = nullptr);
@@ -56,6 +56,10 @@ public:
     Q_INVOKABLE void playBackward();              // 切换到后退行走动画
     Q_INVOKABLE void playJump();                  // 切换到直跳动画
     Q_INVOKABLE void playDiagonalJump(bool forward); // 切换到对角跳动画(forward=true前跳 false后跳)
+    Q_INVOKABLE void playLightPunch();             // 切换到轻拳攻击动画
+    Q_INVOKABLE void playLightKick();              // 切换到轻腿攻击动画
+    Q_INVOKABLE void playHeavyPunch();             // 切换到重拳攻击动画
+    Q_INVOKABLE void playHeavyKick();              // 切换到重腿攻击动画
     void reset();                                 // 重置到初始状态
     void updateRootHeight(double h);              // 更新窗口高度(用于Y坐标计算)
     State state() const { return m_state; }
@@ -69,6 +73,7 @@ signals:
     void facingChanged();          // 朝向变更
     void openingFinished();        // 开场动画播放完毕
     void jumpFinished();           // 跳跃动画播放完毕
+    void attackFinished();         // 攻击动画播放完毕
 
 private slots:
     void onTick();                 // 定时器回调: 逐帧推进动画
@@ -94,6 +99,10 @@ private:
     AnimParams m_backward;         // 后退动画参数副本
     AnimParams m_jump;             // 跳跃动画参数副本
     AnimParams m_diagonalJump;     // 对角跳动画参数副本
+    AnimParams m_lightPunch;       // 轻拳攻击动画参数副本
+    AnimParams m_lightKick;        // 轻腿攻击动画参数副本
+    AnimParams m_heavyPunch;       // 重拳攻击动画参数副本
+    AnimParams m_heavyKick;        // 重腿攻击动画参数副本
     bool     m_loopAnim = true;    // 当前动画是否循环
     double   m_cfgPosX = 0.5;     // 水平位置比例(可运行时修改)
     double   m_jumpHeight = 200;  // 跳跃峰值高度(从配置加载)

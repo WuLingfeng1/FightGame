@@ -23,6 +23,10 @@ void CharacterModel::configure(const CharacterConfig &cfg)
     m_backward     = cfg.backward;
     m_jump         = cfg.jump;
     m_diagonalJump = cfg.diagonalJump;
+    m_lightPunch   = cfg.lightPunch;
+    m_lightKick    = cfg.lightKick;
+    m_heavyPunch   = cfg.heavyPunch;
+    m_heavyKick    = cfg.heavyKick;
     m_jumpHeight   = cfg.jump.jumpHeight;
     m_refFrameWidth = cfg.stand.fw;
     setFacingLeft(cfg.facingLeft);
@@ -51,9 +55,10 @@ void CharacterModel::playStand()
     m_timer.stop();
     m_state = Stand;
     m_currentFrame = 2;          // 从第2帧开始(避开站立的起始过渡帧)
-    applyAnim(m_stand);
     m_loopAnim = true;
-    m_visualScale = 1.0;
+    m_visualScale = 1.0;         // 必须在 applyAnim 之前设置, setPosY 依赖此值
+    m_animOffsetX = 0;           // 站立动画无水平偏移
+    applyAnim(m_stand);
     m_timer.setInterval(m_stand.interval);
     m_timer.start();
     emit frameChanged();
@@ -70,9 +75,10 @@ void CharacterModel::playForward()
     m_timer.stop();
     m_state = Forward;
     m_currentFrame = 0;
-    applyAnim(m_forward);
     m_loopAnim = m_forward.loop;
-    m_visualScale = 1.0;
+    m_visualScale = 1.0;         // 必须在 applyAnim 之前设置
+    m_animOffsetX = 0;
+    applyAnim(m_forward);
     m_timer.setInterval(m_forward.interval);
     m_timer.start();
     emit frameChanged();
@@ -89,9 +95,10 @@ void CharacterModel::playBackward()
     m_timer.stop();
     m_state = Backward;
     m_currentFrame = 0;
-    applyAnim(m_backward);
     m_loopAnim = m_backward.loop;
-    m_visualScale = 1.0;
+    m_visualScale = 1.0;         // 必须在 applyAnim 之前设置
+    m_animOffsetX = 0;
+    applyAnim(m_backward);
     m_timer.setInterval(m_backward.interval);
     m_timer.start();
     emit frameChanged();
@@ -159,6 +166,86 @@ void CharacterModel::playDiagonalJump(bool forward)
     emit positionChanged();
 }
 
+// 切换到轻拳攻击动画: 从第0帧开始, 不循环, 播完自动切 Stand
+void CharacterModel::playLightPunch()
+{
+    if (m_lightPunch.cols <= 0) return;
+    if (m_state == LightPunch && m_timer.isActive()) return;
+    m_timer.stop();
+    m_state = LightPunch;
+    m_currentFrame = 0;
+    m_loopAnim = false;
+    m_visualScale = m_lightPunch.visualScale;
+    m_animOffsetX = m_lightPunch.offsetX;  // 轻拳水平偏移补偿
+    applyAnim(m_lightPunch);
+    m_timer.setInterval(m_lightPunch.interval);
+    m_timer.start();
+    emit frameChanged();
+    emit sourcePathChanged();
+    emit sizeChanged();
+    emit positionChanged();
+}
+
+// 切换到轻腿攻击动画
+void CharacterModel::playLightKick()
+{
+    if (m_lightKick.cols <= 0) return;
+    if (m_state == LightKick && m_timer.isActive()) return;
+    m_timer.stop();
+    m_state = LightKick;
+    m_currentFrame = 0;
+    m_loopAnim = false;
+    m_visualScale = m_lightKick.visualScale;
+    m_animOffsetX = m_lightKick.offsetX;
+    applyAnim(m_lightKick);
+    m_timer.setInterval(m_lightKick.interval);
+    m_timer.start();
+    emit frameChanged();
+    emit sourcePathChanged();
+    emit sizeChanged();
+    emit positionChanged();
+}
+
+// 切换到重拳攻击动画
+void CharacterModel::playHeavyPunch()
+{
+    if (m_heavyPunch.cols <= 0) return;
+    if (m_state == HeavyPunch && m_timer.isActive()) return;
+    m_timer.stop();
+    m_state = HeavyPunch;
+    m_currentFrame = 0;
+    m_loopAnim = false;
+    m_visualScale = m_heavyPunch.visualScale;
+    m_animOffsetX = m_heavyPunch.offsetX;
+    applyAnim(m_heavyPunch);
+    m_timer.setInterval(m_heavyPunch.interval);
+    m_timer.start();
+    emit frameChanged();
+    emit sourcePathChanged();
+    emit sizeChanged();
+    emit positionChanged();
+}
+
+// 切换到重腿攻击动画
+void CharacterModel::playHeavyKick()
+{
+    if (m_heavyKick.cols <= 0) return;
+    if (m_state == HeavyKick && m_timer.isActive()) return;
+    m_timer.stop();
+    m_state = HeavyKick;
+    m_currentFrame = 0;
+    m_loopAnim = false;
+    m_visualScale = m_heavyKick.visualScale;
+    m_animOffsetX = m_heavyKick.offsetX;
+    applyAnim(m_heavyKick);
+    m_timer.setInterval(m_heavyKick.interval);
+    m_timer.start();
+    emit frameChanged();
+    emit sourcePathChanged();
+    emit sizeChanged();
+    emit positionChanged();
+}
+
 // 重置角色到初始状态
 void CharacterModel::reset()
 {
@@ -213,8 +300,30 @@ void CharacterModel::setPosY()
     } else if (m_state == Opening || m_state == Waiting) {
         m_posY = m_rootHeight - m_frameHeight - 60.0;
     } else {
-        if (m_stand.feetMargin > 0 && m_stand.feetBottom > 0) {
-            m_posY = m_rootHeight - m_stand.feetMargin - m_stand.feetBottom;
+        // 优先使用当前动画自身的 feetBottom/feetMargin，回退到 stand 的值
+        double fb = 0, fm = 0;
+        switch (m_state) {
+            case LightPunch:
+                fb = m_lightPunch.feetBottom; fm = m_lightPunch.feetMargin; break;
+            case LightKick:
+                fb = m_lightKick.feetBottom;  fm = m_lightKick.feetMargin;  break;
+            case HeavyPunch:
+                fb = m_heavyPunch.feetBottom; fm = m_heavyPunch.feetMargin; break;
+            case HeavyKick:
+                fb = m_heavyKick.feetBottom;  fm = m_heavyKick.feetMargin;  break;
+            case Forward:
+                fb = m_forward.feetBottom;    fm = m_forward.feetMargin;    break;
+            case Backward:
+                fb = m_backward.feetBottom;   fm = m_backward.feetMargin;   break;
+            default:
+                fb = m_stand.feetBottom;      fm = m_stand.feetMargin;      break;
+        }
+        if (fb <= 0 || fm <= 0) { fb = m_stand.feetBottom; fm = m_stand.feetMargin; }
+        if (fb > 0 && fm > 0) {
+            m_posY = m_rootHeight - fm - fb;
+            // 补偿 visualScale 从 Item 底部缩放导致的脚尖上移
+            if (m_visualScale > 1.0)
+                m_posY += (m_frameHeight - fb) * (m_visualScale - 1.0);
         } else {
             m_posY = m_rootHeight - m_frameHeight - 60.0;
         }
@@ -277,6 +386,34 @@ void CharacterModel::onTick()
         emit jumpFinished();
         return;
     }
+    if (m_state == LightPunch && m_currentFrame >= m_totalFrames) {
+        m_currentFrame = m_totalFrames - 1;
+        m_timer.stop();
+        playStand();
+        emit attackFinished();
+        return;
+    }
+    if (m_state == LightKick && m_currentFrame >= m_totalFrames) {
+        m_currentFrame = m_totalFrames - 1;
+        m_timer.stop();
+        playStand();
+        emit attackFinished();
+        return;
+    }
+    if (m_state == HeavyPunch && m_currentFrame >= m_totalFrames) {
+        m_currentFrame = m_totalFrames - 1;
+        m_timer.stop();
+        playStand();
+        emit attackFinished();
+        return;
+    }
+    if (m_state == HeavyKick && m_currentFrame >= m_totalFrames) {
+        m_currentFrame = m_totalFrames - 1;
+        m_timer.stop();
+        playStand();
+        emit attackFinished();
+        return;
+    }
     if (m_state == Stand && m_currentFrame >= m_totalFrames) {
         m_currentFrame = 0;                   // 站立动画循环
     }
@@ -287,7 +424,12 @@ void CharacterModel::onTick()
             double xSign = m_djInitialFacingLeft ? -1.0 : 1.0;
             double xDelta = xSign * (m_djIsForward ? 1.0 : -1.0);
             double newX = m_djStartXRatio + xDelta * m_djDistance * t;
-            newX = std::max(0.0, std::min(newX, 3.0));
+            if (m_opponent) {
+                double oppX = m_opponent->posXRatio();
+                double minX = std::max(0.0, oppX - 0.95);
+                double maxX = std::min(3.0, oppX + 0.95);
+                newX = std::max(minX, std::min(newX, maxX));
+            }
             if (m_opponent)
                 m_facingLeft = (newX > m_opponent->posXRatio());
             m_cfgPosX = newX;

@@ -9,7 +9,7 @@
 //     [v0.1.3]     2026-06-12 16:58:12   修改了角色朝向的BUG,补充了角色朝向的状态判定,分别加入了两个角色的backward动作
 //     [v0.1.4]     2026-06-12 17:45:15   实现了镜头跟随机制,修复了移动打断开场动画的Bug
 //     [v0.1.5]     2026-06-15 02:22:38   实现了跳跃功能,斜跳功能,修改了跳跃高度
-//     [v0.1.6]     2026-06-15 13:28:32   修复了两名角色同时起跳越过对方时产生的镜头晃动和闪屏Bug
+//     [v0.1.6]     2026-06-15 13:28:32   修复了两名角色同时起跳越过对方时产生的镜头晃动和闪屏
 import QtQuick
 import QtQuick.Controls
 import FightGame
@@ -66,6 +66,7 @@ Item {
     // P1 移动状态
     property bool isMoving: false
     property bool p1Jumping: false
+    property bool p1Attacking: false
     property bool moveLeftPressed: false
     property bool moveRightPressed: false
     property string p1CurrentAnim: ""
@@ -73,7 +74,7 @@ Item {
     // P1 向右移动
     function startMoveRight() {
         moveRightPressed = true
-        if (p1Jumping) return
+        if (p1Jumping || p1Attacking) return
         updateFacing()
         moveTimer.moveLeft = false
         moveTimer.moveRight = true
@@ -92,7 +93,7 @@ Item {
     // P1 向左移动
     function startMoveLeft() {
         moveLeftPressed = true
-        if (p1Jumping) return
+        if (p1Jumping || p1Attacking) return
         updateFacing()
         moveTimer.moveRight = false
         moveTimer.moveLeft = true
@@ -110,7 +111,7 @@ Item {
     }
     function stopMoveRight() {
         moveRightPressed = false
-        if (p1Jumping) return
+        if (p1Jumping || p1Attacking) return
         updateFacing()
         if (moveLeftPressed) {
             moveTimer.moveRight = false
@@ -133,7 +134,7 @@ Item {
     }
     function stopMoveLeft() {
         moveLeftPressed = false
-        if (p1Jumping) return
+        if (p1Jumping || p1Attacking) return
         updateFacing()
         if (moveRightPressed) {
             moveTimer.moveLeft = false
@@ -157,7 +158,7 @@ Item {
 
     // P1 跳跃: 行走中按W触发对角跳(前跳/后跳), 站立时按W触发直跳
     function startJump() {
-        if (p1Jumping) return
+        if (p1Jumping || p1Attacking) return
         p1Jumping = true
         var wasMoving = isMoving
         var animBeforeJump = p1CurrentAnim
@@ -171,6 +172,54 @@ Item {
         } else {
             director.p1Model.playJump()
         }
+    }
+
+    // P1 轻拳攻击
+    function startAttack1() {
+        if (p1Jumping || p1Attacking) return
+        p1Attacking = true
+        moveTimer.moveRight = false
+        moveTimer.moveLeft = false
+        moveTimer.stop()
+        isMoving = false
+        p1CurrentAnim = ""
+        director.p1Model.playLightPunch()
+    }
+
+    // P1 轻腿攻击
+    function startAttackLightKick1() {
+        if (p1Jumping || p1Attacking) return
+        p1Attacking = true
+        moveTimer.moveRight = false
+        moveTimer.moveLeft = false
+        moveTimer.stop()
+        isMoving = false
+        p1CurrentAnim = ""
+        director.p1Model.playLightKick()
+    }
+
+    // P1 重拳攻击
+    function startAttackHeavyPunch1() {
+        if (p1Jumping || p1Attacking) return
+        p1Attacking = true
+        moveTimer.moveRight = false
+        moveTimer.moveLeft = false
+        moveTimer.stop()
+        isMoving = false
+        p1CurrentAnim = ""
+        director.p1Model.playHeavyPunch()
+    }
+
+    // P1 重腿攻击
+    function startAttackHeavyKick1() {
+        if (p1Jumping || p1Attacking) return
+        p1Attacking = true
+        moveTimer.moveRight = false
+        moveTimer.moveLeft = false
+        moveTimer.stop()
+        isMoving = false
+        p1CurrentAnim = ""
+        director.p1Model.playHeavyKick()
     }
 
     // P2 移动定时器
@@ -200,6 +249,7 @@ Item {
     // P2 移动状态
     property bool isMoving2: false
     property bool p2Jumping: false
+    property bool p2Attacking: false
     property bool moveLeft2Pressed: false
     property bool moveRight2Pressed: false
     property string p2CurrentAnim: ""
@@ -207,7 +257,7 @@ Item {
     // P2 向右移动
     function startMoveRight2() {
         moveRight2Pressed = true
-        if (p2Jumping) return
+        if (p2Jumping || p2Attacking) return
         updateFacing()
         moveTimer2.moveLeft = false
         moveTimer2.moveRight = true
@@ -226,7 +276,7 @@ Item {
     // P2 向左移动
     function startMoveLeft2() {
         moveLeft2Pressed = true
-        if (p2Jumping) return
+        if (p2Jumping || p2Attacking) return
         updateFacing()
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = true
@@ -244,7 +294,7 @@ Item {
     }
     function stopMoveRight2() {
         moveRight2Pressed = false
-        if (p2Jumping) return
+        if (p2Jumping || p2Attacking) return
         updateFacing()
         if (moveLeft2Pressed) {
             moveTimer2.moveRight = false
@@ -267,7 +317,7 @@ Item {
     }
     function stopMoveLeft2() {
         moveLeft2Pressed = false
-        if (p2Jumping) return
+        if (p2Jumping || p2Attacking) return
         updateFacing()
         if (moveRight2Pressed) {
             moveTimer2.moveLeft = false
@@ -291,7 +341,7 @@ Item {
 
     // P2 跳跃: 行走中按↑触发对角跳(前跳/后跳), 站立时按↑触发直跳
     function startJump2() {
-        if (p2Jumping) return
+        if (p2Jumping || p2Attacking) return
         p2Jumping = true
         var wasMoving = isMoving2
         var animBeforeJump = p2CurrentAnim
@@ -307,22 +357,78 @@ Item {
         }
     }
 
+    // P2 轻拳攻击
+    function startAttack2() {
+        if (p2Jumping || p2Attacking) return
+        p2Attacking = true
+        moveTimer2.moveRight = false
+        moveTimer2.moveLeft = false
+        moveTimer2.stop()
+        isMoving2 = false
+        p2CurrentAnim = ""
+        director.p2Model.playLightPunch()
+    }
+
+    // P2 轻腿攻击
+    function startAttackLightKick2() {
+        if (p2Jumping || p2Attacking) return
+        p2Attacking = true
+        moveTimer2.moveRight = false
+        moveTimer2.moveLeft = false
+        moveTimer2.stop()
+        isMoving2 = false
+        p2CurrentAnim = ""
+        director.p2Model.playLightKick()
+    }
+
+    // P2 重拳攻击
+    function startAttackHeavyPunch2() {
+        if (p2Jumping || p2Attacking) return
+        p2Attacking = true
+        moveTimer2.moveRight = false
+        moveTimer2.moveLeft = false
+        moveTimer2.stop()
+        isMoving2 = false
+        p2CurrentAnim = ""
+        director.p2Model.playHeavyPunch()
+    }
+
+    // P2 重腿攻击
+    function startAttackHeavyKick2() {
+        if (p2Jumping || p2Attacking) return
+        p2Attacking = true
+        moveTimer2.moveRight = false
+        moveTimer2.moveLeft = false
+        moveTimer2.stop()
+        isMoving2 = false
+        p2CurrentAnim = ""
+        director.p2Model.playHeavyKick()
+    }
+
     // 动态朝向: 始终面向对手
     function updateFacing() {
         director.p1Model.facingLeft = (director.p1Model.posXRatio > director.p2Model.posXRatio)
         director.p2Model.facingLeft = (director.p2Model.posXRatio > director.p1Model.posXRatio)
     }
 
-    // 键盘输入, P1用A/D, P2用方向键
+    // 键盘输入, P1用A/D/W/J/K/U/L, P2用方向键/小键盘1-3/0
     Keys.onPressed: (event) => {
         if (event.isAutoRepeat || director.phase !== FightDirector.Fighting) return
         switch (event.key) {
         case Qt.Key_D:      startMoveRight();  break
         case Qt.Key_A:      startMoveLeft();   break
         case Qt.Key_W:      startJump();       break
+        case Qt.Key_J:      startAttack1();    break
+        case Qt.Key_K:      startAttackLightKick1();  break
+        case Qt.Key_U:      startAttackHeavyPunch1(); break
+        case Qt.Key_L:      startAttackHeavyKick1();  break
         case Qt.Key_Right:  startMoveRight2(); break
         case Qt.Key_Left:   startMoveLeft2();  break
         case Qt.Key_Up:     startJump2();      break
+        case Qt.Key_1:      if (event.modifiers & Qt.KeypadModifier) startAttack2(); break
+        case Qt.Key_2:      if (event.modifiers & Qt.KeypadModifier) startAttackLightKick2(); break
+        case Qt.Key_3:      if (event.modifiers & Qt.KeypadModifier) startAttackHeavyPunch2(); break
+        case Qt.Key_0:      if (event.modifiers & Qt.KeypadModifier) startAttackHeavyKick2(); break
         }
     }
     Keys.onReleased: (event) => {
@@ -369,7 +475,7 @@ Item {
     // P1 角色渲染, 精灵表视口裁剪
     Item {
         id: p1Layer
-        x: root.width * (director.p1Model.posXRatio - director.cameraOffset) - width / 2
+        x: root.width * (director.p1Model.posXRatio - director.cameraOffset) - width / 2 + director.p1Model.animOffsetX * fitScale * director.p1Model.visualScale * (director.p1Model.facingLeft ? -1 : 1)
         y: director.p1Model.positionY
         width: director.p1Model.frameWidth
         height: director.p1Model.frameHeight
@@ -403,7 +509,7 @@ Item {
     // P2 角色渲染
     Item {
         id: p2Layer
-        x: root.width * (director.p2Model.posXRatio - director.cameraOffset) - width / 2
+        x: root.width * (director.p2Model.posXRatio - director.cameraOffset) - width / 2 + director.p2Model.animOffsetX * fitScale * director.p2Model.visualScale * (director.p2Model.facingLeft ? -1 : 1)
         y: director.p2Model.positionY
         width: director.p2Model.frameWidth
         height: director.p2Model.frameHeight
@@ -888,6 +994,45 @@ Item {
     }
 
     Connections {
+        target: director.p1Model
+        function onAttackFinished() {
+            p1Attacking = false
+            updateFacing()
+            director.updateCamera()
+            if (moveRightPressed && !moveLeftPressed) {
+                isMoving = true
+                moveTimer.moveLeft = false
+                moveTimer.moveRight = true
+                if (director.p1Model.facingLeft) {
+                    director.p1Model.playBackward()
+                    p1CurrentAnim = "backward"
+                } else {
+                    director.p1Model.playForward()
+                    p1CurrentAnim = "forward"
+                }
+                moveTimer.start()
+            } else if (moveLeftPressed && !moveRightPressed) {
+                isMoving = true
+                moveTimer.moveRight = false
+                moveTimer.moveLeft = true
+                if (director.p1Model.facingLeft) {
+                    director.p1Model.playForward()
+                    p1CurrentAnim = "forward"
+                } else {
+                    director.p1Model.playBackward()
+                    p1CurrentAnim = "backward"
+                }
+                moveTimer.start()
+            } else {
+                director.p1Model.playStand()
+                moveTimer.moveRight = false
+                moveTimer.moveLeft = false
+                isMoving = false
+            }
+        }
+    }
+
+    Connections {
         target: director.p2Model
         function onJumpFinished() {
             p2Jumping = false
@@ -927,6 +1072,45 @@ Item {
                 } else {
                     director.p2Model.playForward()
                     p2CurrentAnim = "forward"
+                }
+                moveTimer2.start()
+            } else {
+                director.p2Model.playStand()
+                moveTimer2.moveRight = false
+                moveTimer2.moveLeft = false
+                isMoving2 = false
+            }
+        }
+    }
+
+    Connections {
+        target: director.p2Model
+        function onAttackFinished() {
+            p2Attacking = false
+            updateFacing()
+            director.updateCamera()
+            if (moveRight2Pressed && !moveLeft2Pressed) {
+                isMoving2 = true
+                moveTimer2.moveLeft = false
+                moveTimer2.moveRight = true
+                if (director.p2Model.facingLeft) {
+                    director.p2Model.playBackward()
+                    p2CurrentAnim = "backward"
+                } else {
+                    director.p2Model.playForward()
+                    p2CurrentAnim = "forward"
+                }
+                moveTimer2.start()
+            } else if (moveLeft2Pressed && !moveRight2Pressed) {
+                isMoving2 = true
+                moveTimer2.moveRight = false
+                moveTimer2.moveLeft = true
+                if (director.p2Model.facingLeft) {
+                    director.p2Model.playForward()
+                    p2CurrentAnim = "forward"
+                } else {
+                    director.p2Model.playBackward()
+                    p2CurrentAnim = "backward"
                 }
                 moveTimer2.start()
             } else {
