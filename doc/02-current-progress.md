@@ -30,13 +30,26 @@ FightScreen 持有 FightDirector 实例，FightDirector 管理两个 CharacterMo
 - 16ms 定时器驱动移动（约 60fps）
 
 **移动系统**
-- 移动步长 0.008，边界约束：不能超过对手 +0.95
+- 移动步长 0.008，身体碰撞距离 0.15 单位
 - 移动时自动切换 forward/backward 动画
+- 镜头约束：两角色保持在 0.95 单位内
 
 **跳跃系统**
 - 直跳（站立按 W/Up）：playJump()
 - 斜跳（行走中按 W/Up）：playDiagonalJump(forward/backward)
 - 跳跃期间移动定时器停止
+- 斜跳可自由飞越对手，落地后身体碰撞生效
+
+**攻击系统**
+- 四段攻击：轻拳、轻腿、重拳、重腿
+- 攻击判定框（hitbox）+ 受击判定框（hurtbox）碰撞检测
+- 攻击有效帧范围配置（attackFrames）
+- 同时攻击时双方都能命中
+
+**受击系统**
+- 受击动画：Yagami 3 段（hurt1/hurt2/hurt3），Orochi 1 段
+- 击退效果（knockback）：渐进式，分散到受击动画每帧
+- 击退距离：轻拳/轻腿 30，重拳 80，重腿 120
 
 **朝向系统**
 - updateFacing() 根据双方 posXRatio 自动翻转
@@ -46,12 +59,13 @@ FightScreen 持有 FightDirector 实例，FightDirector 管理两个 CharacterMo
 - 背景：AnimatedImage (Monaco.gif) + 镜头视差
 - 角色：Item + Image，精灵表视口裁剪 + Scale 翻转
 - HUD：头像 + 名字 + 血条 + 能量条 + 倒计时 (60s)
+- 调试判定框可视化（showDebugHitbox，默认关闭）
 
 ### 2.4 CharacterModel — 角色动画状态机
 
-10 种状态：Waiting → Opening → Stand ↔ Forward/Backward，Stand ↕ Jump/DiagonalJump，Stand → LightPunch/LightKick/HeavyPunch/HeavyKick → Stand
+11 种状态：Waiting → Opening → Stand ↔ Forward/Backward，Stand ↕ Jump/DiagonalJump，Stand → LightPunch/LightKick/HeavyPunch/HeavyKick → Stand，任意状态 → Hurt → Stand
 
-关键 Q_PROPERTY：currentFrame、sourcePath、frameWidth/Height、totalFrames、posXRatio、positionY、facingLeft、visualScale、animOffsetX
+关键 Q_PROPERTY：currentFrame、sourcePath、frameWidth/Height、totalFrames、posXRatio、positionY、facingLeft、visualScale、animOffsetX、state、attacking、attackActive、hitboxCenterX/Y、hitboxRadius、hurtboxCenterX/Y
 
 **跳跃抛物线**（setPosY）：
 ```
@@ -66,6 +80,15 @@ xSign = initialFacingLeft ? -1 : 1
 xDelta = xSign * (isForward ? 1 : -1)
 posX = startXRatio + xDelta * jumpDistance * t
 ```
+
+**碰撞检测**（checkCollision）：
+- 攻击框：hitboxX/Y + hitboxRadius
+- 受击框：hurtboxX/Y + hurtboxW/H
+- 双方同时命中判定
+
+**渐进击退**（applyKnockback + onTick）：
+- 击退距离分散到受击动画每帧
+- 每帧移动 step = remaining / frames
 
 ### 2.5 FightDirector — 战斗导演
 
@@ -83,7 +106,7 @@ offset += diff * factor
 
 ### 2.6 CharacterConfig — 配置加载器
 
-从 characters.json 解析 AnimParams 结构体：path、cols、fw/fh、interval、loop、divFrame、jumpHeight、jumpDistance、visualScale、feetBottom、feetMargin、offsetX。
+从 characters.json 解析 AnimParams 结构体：path、cols、fw/fh、interval、loop、divFrame、jumpHeight、jumpDistance、visualScale、feetBottom、feetMargin、offsetX、attackPointX/Y、attackRadius、attackFrames、knockbackDistance。
 
 ## 3. 操作说明
 
@@ -105,19 +128,19 @@ offset += diff * factor
 
 | 角色 | CID | 精灵表 |
 |------|-----|--------|
-| 大蛇 | Orochi | Stand/Forward/Backward/Jump/DiagonalJump/opening/LightPunch/LightKick/HeavyPunch/HeavyKick |
-| 八神庵 | Yagami | Stand/Forward/Backward/Jump/DiagonalJump/opening/LightPunch/LightKick/HeavyPunch/HeavyKick |
+| 大蛇 | Orochi | Stand/Forward/Backward/Jump/DiagonalJump/opening/LightPunch/LightKick/HeavyPunch/HeavyKick/Hurt |
+| 八神庵 | Yagami | Stand/Forward/Backward/Jump/DiagonalJump/opening/LightPunch/LightKick/HeavyPunch/HeavyKick/Hurt1_std/Hurt2_std/Hurt3_std |
 
 **未接入角色**（有头像/立绘，缺精灵表）：草薙京、库拉、不知火舞、K
 
 **战斗背景**（5个，已全部接入）：Monaco（当前使用）、AmusementPark、Bali、Gyeongbokgung、OrochiShermie
 
-**已有未使用的精灵表**：CrouchAttack、JumpAttack、StandBlock、AirBlock、Dodge、DashForward、DashBackward、PowerUp、SuperMove、Knockdown、Hurt1~5
+**已有未使用的精灵表**：CrouchAttack、JumpAttack、StandBlock、AirBlock、Dodge、DashForward、DashBackward、PowerUp、SuperMove、Knockdown
 
 ## 5. 已知限制
 
 1. 仅 2 个角色可选（Orochi/Yagami），其余 4 个角色选入后会报错
-2. 无碰撞检测、无伤害系统
+2. 无伤害数值系统（攻击只触发动画，不扣血）
 3. 无胜负判定、无回合系统
 4. Online Two-Player 未实现
 5. 战斗背景硬编码为 Monaco.gif
