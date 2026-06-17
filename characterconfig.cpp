@@ -50,6 +50,7 @@ CharacterConfig CharacterConfigLoader::load(const QJsonObject &json, const QStri
     cfg.lightKick   = parseAnim(json.value("lightKick").toObject());
     cfg.heavyPunch  = parseAnim(json.value("heavyPunch").toObject());
     cfg.heavyKick   = parseAnim(json.value("heavyKick").toObject());
+    cfg.heavyStrike = parseAnim(json.value("heavyStrike").toObject());
     cfg.hurt        = parseAnim(json.value("hurt").toObject());
     cfg.hurt1       = parseAnim(json.value("hurt1").toObject());
     cfg.hurt2       = parseAnim(json.value("hurt2").toObject());

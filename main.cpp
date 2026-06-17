@@ -4,7 +4,6 @@
 // Description:
 //     应用程序入口: 创建 Qt6 Quick 窗口, 加载 Main.qml 主菜单界面
 //
-
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 

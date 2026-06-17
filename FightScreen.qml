@@ -11,7 +11,7 @@
 //     [v0.1.5]     2026-06-15 02:22:38   实现了跳跃功能,斜跳功能,修改了跳跃高度
 //     [v0.1.6]     2026-06-15 13:28:32   修复了两名角色同时起跳越过对方时产生的镜头晃动和闪屏
 //     [v0.1.7]     2026-06-15 21:06:43   角色同时新增轻拳,轻腿,重拳,重腿这些攻击动作
-//     [v0.1.1]     2026-06-17 09:51:57   新增碰撞检测功能,同时也加入了受击动作,实现了攻击响应击退效果
+//     [v0.1.8]     2026-06-17 09:51:57   新增碰撞检测功能,同时也加入了受击动作,实现了攻击响应击退效果
 
 import QtQuick
 import QtQuick.Controls
@@ -266,6 +266,18 @@ Item {
         director.p1Model.playHeavyKick()
     }
 
+    // P1 超重击攻击
+    function startAttackHeavyStrike1() {
+        if (p1Jumping || p1Attacking) return
+        p1Attacking = true
+        moveTimer.moveRight = false
+        moveTimer.moveLeft = false
+        moveTimer.stop()
+        isMoving = false
+        p1CurrentAnim = ""
+        director.p1Model.playHeavyStrike()
+    }
+
     // P2 移动定时器
     Timer {
         id: moveTimer2
@@ -459,6 +471,18 @@ Item {
         director.p2Model.playHeavyKick()
     }
 
+    // P2 超重击攻击
+    function startAttackHeavyStrike2() {
+        if (p2Jumping || p2Attacking) return
+        p2Attacking = true
+        moveTimer2.moveRight = false
+        moveTimer2.moveLeft = false
+        moveTimer2.stop()
+        isMoving2 = false
+        p2CurrentAnim = ""
+        director.p2Model.playHeavyStrike()
+    }
+
     // 动态朝向: 始终面向对手
     function updateFacing() {
         director.p1Model.facingLeft = (director.p1Model.posXRatio > director.p2Model.posXRatio)
@@ -476,6 +500,7 @@ Item {
         case Qt.Key_K:      startAttackLightKick1();  break
         case Qt.Key_U:      startAttackHeavyPunch1(); break
         case Qt.Key_L:      startAttackHeavyKick1();  break
+        case Qt.Key_I:      startAttackHeavyStrike1();  break
         case Qt.Key_Right:  startMoveRight2(); break
         case Qt.Key_Left:   startMoveLeft2();  break
         case Qt.Key_Up:     startJump2();      break
@@ -483,6 +508,7 @@ Item {
         case Qt.Key_2:      if (event.modifiers & Qt.KeypadModifier) startAttackLightKick2(); break
         case Qt.Key_3:      if (event.modifiers & Qt.KeypadModifier) startAttackHeavyPunch2(); break
         case Qt.Key_0:      if (event.modifiers & Qt.KeypadModifier) startAttackHeavyKick2(); break
+        case Qt.Key_5:      if (event.modifiers & Qt.KeypadModifier) startAttackHeavyStrike2(); break
         }
     }
     Keys.onReleased: (event) => {

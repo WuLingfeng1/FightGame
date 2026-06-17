@@ -35,7 +35,7 @@ class CharacterModel : public QObject
 
     QML_ELEMENT
 public:
-    enum State { Waiting, Opening, Stand, Forward, Backward, Jump, DiagonalJump, LightPunch, LightKick, HeavyPunch, HeavyKick, Hurt };
+    enum State { Waiting, Opening, Stand, Forward, Backward, Jump, DiagonalJump, LightPunch, LightKick, HeavyPunch, HeavyKick, HeavyStrike, Hurt };
     Q_ENUM(State)
 
     explicit CharacterModel(QObject *parent = nullptr);
@@ -68,6 +68,7 @@ public:
     Q_INVOKABLE void playLightKick();              // 切换到轻腿攻击动画
     Q_INVOKABLE void playHeavyPunch();             // 切换到重拳攻击动画
     Q_INVOKABLE void playHeavyKick();              // 切换到重腿攻击动画
+    Q_INVOKABLE void playHeavyStrike();            // 切换到超重击动画
     Q_INVOKABLE void playHurt();                   // 切换到受击动画(通用)
     Q_INVOKABLE void playHurt1();                  // 切换到轻度受击动画
     Q_INVOKABLE void playHurt2();                  // 切换到中度受击动画
@@ -130,6 +131,7 @@ private:
     AnimParams m_lightKick;        // 轻腿攻击动画参数副本
     AnimParams m_heavyPunch;       // 重拳攻击动画参数副本
     AnimParams m_heavyKick;        // 重腿攻击动画参数副本
+    AnimParams m_heavyStrike;      // 超重击动画参数副本
     AnimParams m_hurt;             // 受击动画参数副本
     AnimParams m_hurt1;            // 轻度受击动画参数副本
     AnimParams m_hurt2;            // 中度受击动画参数副本

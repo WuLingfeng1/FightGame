@@ -120,6 +120,23 @@
             "attackFrames": "7-9",
             "knockbackDistance": 120
         },
+        "heavyStrike": {
+            "cols": 15,
+            "fw": 384,
+            "fh": 512,
+            "interval": 50,
+            "path": "qrc:/images/character/Orochi/HeavyStrike.png",
+            "loop": false,
+            "visualScale": 0.80,
+            "feetBottom": 335,
+            "feetMargin": 75,
+            "offsetX": 25,
+            "attackPointX": 0.2,
+            "attackPointY": 0,
+            "attackRadius": 180,
+            "attackFrames": "5-10",
+            "knockbackDistance": 150
+        },
         "hurt": {
             "cols": 4,
             "fw": 384,
@@ -270,6 +287,23 @@
             "attackRadius": 160,
             "attackFrames": "4-7",
             "knockbackDistance": 120
+        },
+        "heavyStrike": {
+            "cols": 11,
+            "fw": 125,
+            "fh": 103,
+            "interval": 60,
+            "path": "qrc:/images/character/Yagami/HeavyPunch.png",
+            "loop": false,
+            "visualScale": 2.8,
+            "feetBottom": 103,
+            "feetMargin": 82,
+            "offsetX": 0,
+            "attackPointX": 0.2,
+            "attackPointY": 18,
+            "attackRadius": 180,
+            "attackFrames": "4-8",
+            "knockbackDistance": 150
         },
         "hurt": {
             "cols": 8,

@@ -27,6 +27,7 @@ void CharacterModel::configure(const CharacterConfig &cfg)
     m_lightKick    = cfg.lightKick;
     m_heavyPunch   = cfg.heavyPunch;
     m_heavyKick    = cfg.heavyKick;
+    m_heavyStrike  = cfg.heavyStrike;
     m_hurt         = cfg.hurt;
     m_hurt1        = cfg.hurt1;
     m_hurt2        = cfg.hurt2;
@@ -264,6 +265,30 @@ void CharacterModel::playHeavyKick()
     emit stateChanged();
 }
 
+// 切换到超重击动画
+void CharacterModel::playHeavyStrike()
+{
+    if (m_heavyStrike.cols <= 0) return;
+    m_timer.stop();
+    m_state = HeavyStrike;
+    m_currentFrame = 0;
+    m_loopAnim = false;
+    m_visualScale = m_heavyStrike.visualScale;
+    // 从配置读取 offsetX，实现视觉上的位移
+    // QML 中会根据 facingLeft 自动翻转方向
+    m_animOffsetX = m_heavyStrike.offsetX;
+    m_currentAnim = m_heavyStrike;
+    m_hitThisAttack = false;
+    applyAnim(m_heavyStrike);
+    m_timer.setInterval(m_heavyStrike.interval);
+    m_timer.start();
+    emit frameChanged();
+    emit sourcePathChanged();
+    emit sizeChanged();
+    emit positionChanged();
+    emit stateChanged();
+}
+
 // 切换到受击动画
 void CharacterModel::playHurt()
 {
@@ -417,6 +442,8 @@ void CharacterModel::setPosY()
                 fb = m_heavyPunch.feetBottom; fm = m_heavyPunch.feetMargin; break;
             case HeavyKick:
                 fb = m_heavyKick.feetBottom;  fm = m_heavyKick.feetMargin;  break;
+            case HeavyStrike:
+                fb = m_heavyStrike.feetBottom;  fm = m_heavyStrike.feetMargin;  break;
             case Forward:
                 fb = m_forward.feetBottom;    fm = m_forward.feetMargin;    break;
             case Backward:
@@ -428,10 +455,18 @@ void CharacterModel::setPosY()
         }
         if (fb <= 0 || fm <= 0) { fb = m_stand.feetBottom; fm = m_stand.feetMargin; }
         if (fb > 0 && fm > 0) {
-            m_posY = m_rootHeight - fm - fb;
-            // 补偿 visualScale 从 Item 底部缩放导致的脚尖上移
-            if (m_visualScale > 1.0)
-                m_posY += (m_frameHeight - fb) * (m_visualScale - 1.0);
+            // HeavyStrike 特殊处理：确保底部位置与 stand 一致
+            if (m_state == HeavyStrike) {
+                double standBottom = m_rootHeight - m_stand.feetMargin - m_stand.feetBottom + m_stand.fh;
+                m_posY = standBottom - m_frameHeight;
+            } else {
+                m_posY = m_rootHeight - fm - fb;
+                // 补偿 visualScale 从 Item 底部缩放导致的脚尖上移
+                if (m_visualScale > 1.0)
+                    m_posY += (m_frameHeight - fb) * (m_visualScale - 1.0);
+                else if (m_visualScale < 1.0)
+                    m_posY -= (m_frameHeight - fb) * (1.0 - m_visualScale);
+            }
         } else {
             m_posY = m_rootHeight - m_frameHeight - 60.0;
         }
@@ -522,6 +557,13 @@ void CharacterModel::onTick()
         emit attackFinished();
         return;
     }
+    if (m_state == HeavyStrike && m_currentFrame >= m_totalFrames) {
+        m_currentFrame = m_totalFrames - 1;
+        m_timer.stop();
+        playStand();
+        emit attackFinished();
+        return;
+    }
     if (m_state == Hurt && m_currentFrame >= m_totalFrames) {
         m_currentFrame = m_totalFrames - 1;
         m_timer.stop();
@@ -573,6 +615,10 @@ void CharacterModel::onTick()
         
         emit posXRatioChanged();
     }
+    // HeavyStrike 动画播放期间触发镜头更新
+    if (m_state == HeavyStrike) {
+        emit posXRatioChanged();
+    }
     emit frameChanged();
 }
 
@@ -581,7 +627,8 @@ void CharacterModel::onTick()
 bool CharacterModel::isAttacking() const
 {
     return m_state == LightPunch || m_state == LightKick ||
-           m_state == HeavyPunch || m_state == HeavyKick;
+           m_state == HeavyPunch || m_state == HeavyKick ||
+           m_state == HeavyStrike;
 }
 
 bool CharacterModel::isAttackActive() const

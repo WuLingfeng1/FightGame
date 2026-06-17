@@ -47,6 +47,7 @@ struct CharacterConfig {
     AnimParams lightKick;         // 轻腿攻击动画参数
     AnimParams heavyPunch;        // 重拳攻击动画参数
     AnimParams heavyKick;         // 重腿攻击动画参数
+    AnimParams heavyStrike;       // 超重击动画参数
     AnimParams hurt;              // 受击动画参数(通用)
     AnimParams hurt1;             // 轻度受击动画参数
     AnimParams hurt2;             // 中度受击动画参数
