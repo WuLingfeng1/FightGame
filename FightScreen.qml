@@ -10,6 +10,9 @@
 //     [v0.1.4]     2026-06-12 17:45:15   实现了镜头跟随机制,修复了移动打断开场动画的Bug
 //     [v0.1.5]     2026-06-15 02:22:38   实现了跳跃功能,斜跳功能,修改了跳跃高度
 //     [v0.1.6]     2026-06-15 13:28:32   修复了两名角色同时起跳越过对方时产生的镜头晃动和闪屏
+//     [v0.1.7]     2026-06-15 21:06:43   角色同时新增轻拳,轻腿,重拳,重腿这些攻击动作
+//     [v0.1.1]     2026-06-17 09:51:57   新增碰撞检测功能,同时也加入了受击动作,实现了攻击响应击退效果
+
 import QtQuick
 import QtQuick.Controls
 import FightGame
@@ -34,10 +37,41 @@ Item {
     FightDirector {
         id: director
         rootHeight: root.height
+        onHitDetected: function(attacker, damage) {
+            function playHurtByAttackType(targetModel, attackerState) {
+                if (attackerState === 7 || attackerState === 8) {
+                    targetModel.playHurt1()
+                } else if (attackerState === 9) {
+                    targetModel.playHurt3()
+                } else if (attackerState === 10) {
+                    targetModel.playHurt2()
+                } else {
+                    targetModel.playHurt()
+                }
+            }
+            
+            if (attacker === 1) {
+                playHurtByAttackType(director.p2Model, director.p1Model.state)
+            } else {
+                playHurtByAttackType(director.p1Model, director.p2Model.state)
+            }
+        }
+    }
+
+    // 碰撞检测定时器, 每33ms检测一次(约30fps)
+    Timer {
+        id: collisionTimer
+        interval: 33
+        repeat: true
+        running: director.phase === FightDirector.Fighting
+        onTriggered: {
+            director.checkCollision()
+        }
     }
 
     property real fitScale: Math.min(root.width / 900, root.height / 640)
     property real moveStep: 0.008
+    property real bodyCollisionDist: 0.15  // 身体碰撞最小距离
 
     // P1 移动定时器, 每 16ms 更新一次位置
     Timer {
@@ -48,8 +82,18 @@ Item {
         property bool moveRight: false
         property bool moveLeft: false
         onTriggered: {
-            if (moveRight) director.p1Model.posXRatio = Math.min(director.p1Model.posXRatio + moveStep, director.p2Model.posXRatio + 0.95, director.maxCameraOffset + 1.0)
-            if (moveLeft)  director.p1Model.posXRatio = Math.max(director.p1Model.posXRatio - moveStep, director.p2Model.posXRatio - 0.95, 0)
+            var p1 = director.p1Model.posXRatio
+            var p2 = director.p2Model.posXRatio
+            if (moveRight) {
+                var maxPos = (p1 < p2) ? p2 - bodyCollisionDist : p2 + 0.95
+                maxPos = Math.min(maxPos, director.maxCameraOffset + 1.0)
+                director.p1Model.posXRatio = Math.min(p1 + moveStep, maxPos)
+            }
+            if (moveLeft) {
+                var minPos = (p1 > p2) ? p2 + bodyCollisionDist : p2 - 0.95
+                minPos = Math.max(minPos, 0)
+                director.p1Model.posXRatio = Math.max(p1 - moveStep, minPos)
+            }
             director.updateCamera()
             updateFacing()
             var desired = ""
@@ -231,8 +275,18 @@ Item {
         property bool moveRight: false
         property bool moveLeft: false
         onTriggered: {
-            if (moveRight) director.p2Model.posXRatio = Math.min(director.p2Model.posXRatio + moveStep, director.p1Model.posXRatio + 0.95, director.maxCameraOffset + 1.0)
-            if (moveLeft)  director.p2Model.posXRatio = Math.max(director.p2Model.posXRatio - moveStep, director.p1Model.posXRatio - 0.95, 0)
+            var p2 = director.p2Model.posXRatio
+            var p1 = director.p1Model.posXRatio
+            if (moveRight) {
+                var maxPos = (p2 < p1) ? p1 - bodyCollisionDist : p1 + 0.95
+                maxPos = Math.min(maxPos, director.maxCameraOffset + 1.0)
+                director.p2Model.posXRatio = Math.min(p2 + moveStep, maxPos)
+            }
+            if (moveLeft) {
+                var minPos = (p2 > p1) ? p1 + bodyCollisionDist : p1 - 0.95
+                minPos = Math.max(minPos, 0)
+                director.p2Model.posXRatio = Math.max(p2 - moveStep, minPos)
+            }
             director.updateCamera()
             updateFacing()
             var desired = ""
@@ -538,6 +592,63 @@ Item {
             cache: true
             asynchronous: false
         }
+    }
+
+    // Debug 可视化: 判定框
+    property bool showDebugHitbox: false  // 调试判定框显示
+
+    // P1 受击框 (绿色)
+    Rectangle {
+        visible: showDebugHitbox
+        x: root.width * (director.p1Model.hurtboxX - director.cameraOffset) - width / 2
+        y: director.p1Model.hurtboxY - height / 2
+        width: director.p1Model.hurtboxW * fitScale
+        height: director.p1Model.hurtboxH * fitScale
+        color: "transparent"
+        border.color: "lime"
+        border.width: 2
+        z: 20
+    }
+
+    // P2 受击框 (绿色)
+    Rectangle {
+        visible: showDebugHitbox
+        x: root.width * (director.p2Model.hurtboxX - director.cameraOffset) - width / 2
+        y: director.p2Model.hurtboxY - height / 2
+        width: director.p2Model.hurtboxW * fitScale
+        height: director.p2Model.hurtboxH * fitScale
+        color: "transparent"
+        border.color: "lime"
+        border.width: 2
+        z: 20
+    }
+
+    // P1 攻击框 (红色)
+    Rectangle {
+        visible: showDebugHitbox && director.p1Model.attackActive
+        x: root.width * (director.p1Model.hitboxX - director.cameraOffset) - width / 2
+        y: director.p1Model.hitboxY - height / 2
+        width: director.p1Model.hitboxRadius * 2 * fitScale
+        height: director.p1Model.hitboxRadius * 2 * fitScale
+        radius: width / 2
+        color: Qt.rgba(1, 0, 0, 0.3)
+        border.color: "red"
+        border.width: 2
+        z: 20
+    }
+
+    // P2 攻击框 (红色)
+    Rectangle {
+        visible: showDebugHitbox && director.p2Model.attackActive
+        x: root.width * (director.p2Model.hitboxX - director.cameraOffset) - width / 2
+        y: director.p2Model.hitboxY - height / 2
+        width: director.p2Model.hitboxRadius * 2 * fitScale
+        height: director.p2Model.hitboxRadius * 2 * fitScale
+        radius: width / 2
+        color: Qt.rgba(1, 0, 0, 0.3)
+        border.color: "red"
+        border.width: 2
+        z: 20
     }
 
     // HUD 顶部栏
@@ -1030,6 +1141,42 @@ Item {
                 isMoving = false
             }
         }
+        function onHurtFinished() {
+            p1Attacking = false
+            p1Jumping = false
+            updateFacing()
+            director.updateCamera()
+            if (moveRightPressed && !moveLeftPressed) {
+                isMoving = true
+                moveTimer.moveLeft = false
+                moveTimer.moveRight = true
+                if (director.p1Model.facingLeft) {
+                    director.p1Model.playBackward()
+                    p1CurrentAnim = "backward"
+                } else {
+                    director.p1Model.playForward()
+                    p1CurrentAnim = "forward"
+                }
+                moveTimer.start()
+            } else if (moveLeftPressed && !moveRightPressed) {
+                isMoving = true
+                moveTimer.moveRight = false
+                moveTimer.moveLeft = true
+                if (director.p1Model.facingLeft) {
+                    director.p1Model.playForward()
+                    p1CurrentAnim = "forward"
+                } else {
+                    director.p1Model.playBackward()
+                    p1CurrentAnim = "backward"
+                }
+                moveTimer.start()
+            } else {
+                director.p1Model.playStand()
+                moveTimer.moveRight = false
+                moveTimer.moveLeft = false
+                isMoving = false
+            }
+        }
     }
 
     Connections {
@@ -1087,6 +1234,42 @@ Item {
         target: director.p2Model
         function onAttackFinished() {
             p2Attacking = false
+            updateFacing()
+            director.updateCamera()
+            if (moveRight2Pressed && !moveLeft2Pressed) {
+                isMoving2 = true
+                moveTimer2.moveLeft = false
+                moveTimer2.moveRight = true
+                if (director.p2Model.facingLeft) {
+                    director.p2Model.playBackward()
+                    p2CurrentAnim = "backward"
+                } else {
+                    director.p2Model.playForward()
+                    p2CurrentAnim = "forward"
+                }
+                moveTimer2.start()
+            } else if (moveLeft2Pressed && !moveRight2Pressed) {
+                isMoving2 = true
+                moveTimer2.moveRight = false
+                moveTimer2.moveLeft = true
+                if (director.p2Model.facingLeft) {
+                    director.p2Model.playForward()
+                    p2CurrentAnim = "forward"
+                } else {
+                    director.p2Model.playBackward()
+                    p2CurrentAnim = "backward"
+                }
+                moveTimer2.start()
+            } else {
+                director.p2Model.playStand()
+                moveTimer2.moveRight = false
+                moveTimer2.moveLeft = false
+                isMoving2 = false
+            }
+        }
+        function onHurtFinished() {
+            p2Attacking = false
+            p2Jumping = false
             updateFacing()
             director.updateCamera()
             if (moveRight2Pressed && !moveLeft2Pressed) {

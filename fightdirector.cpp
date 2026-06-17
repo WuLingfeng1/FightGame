@@ -117,3 +117,64 @@ void FightDirector::updateCamera()
 
     emit cameraOffsetChanged();
 }
+
+// 碰撞检测: 检查攻击框是否命中对手受击框
+bool FightDirector::checkCollision()
+{
+    // 窗口尺寸
+    const double windowW = 900.0;
+    const double windowH = 640.0;
+    bool anyHit = false;
+
+    // 检查 P1 是否攻击 P2
+    if (m_p1Model->isAttacking() && m_p1Model->isAttackActive()) {
+        double hitNormX = m_p1Model->hitboxX();
+        double hitY = m_p1Model->hitboxY();
+        double hitR = m_p1Model->hitboxRadius();
+
+        double hurtNormX = m_p2Model->hurtboxX();
+        double hurtY = m_p2Model->hurtboxY();
+        double hurtW = m_p2Model->hurtboxW();
+        double hurtH = m_p2Model->hurtboxH();
+
+        double hitPx = hitNormX * windowW;
+        double hurtPx = hurtNormX * windowW;
+
+        bool hitX = (hitPx + hitR >= hurtPx - hurtW/2) && (hitPx - hitR <= hurtPx + hurtW/2);
+        bool hitYRange = (hitY + hitR >= hurtY - hurtH/2) && (hitY - hitR <= hurtY + hurtH/2);
+
+        if (hitX && hitYRange) {
+            m_p1Model->m_hitThisAttack = true;
+            m_p2Model->m_knockbackToApply = m_p1Model->m_currentAnim.knockbackDistance;
+            emit hitDetected(1, 10);
+            anyHit = true;
+        }
+    }
+
+    // 检查 P2 是否攻击 P1
+    if (m_p2Model->isAttacking() && m_p2Model->isAttackActive()) {
+        double hitNormX = m_p2Model->hitboxX();
+        double hitY = m_p2Model->hitboxY();
+        double hitR = m_p2Model->hitboxRadius();
+
+        double hurtNormX = m_p1Model->hurtboxX();
+        double hurtY = m_p1Model->hurtboxY();
+        double hurtW = m_p1Model->hurtboxW();
+        double hurtH = m_p1Model->hurtboxH();
+
+        double hitPx = hitNormX * windowW;
+        double hurtPx = hurtNormX * windowW;
+
+        bool hitX = (hitPx + hitR >= hurtPx - hurtW/2) && (hitPx - hitR <= hurtPx + hurtW/2);
+        bool hitYRange = (hitY + hitR >= hurtY - hurtH/2) && (hitY - hitR <= hurtY + hurtH/2);
+
+        if (hitX && hitYRange) {
+            m_p2Model->m_hitThisAttack = true;
+            m_p1Model->m_knockbackToApply = m_p2Model->m_currentAnim.knockbackDistance;
+            emit hitDetected(2, 10);
+            anyHit = true;
+        }
+    }
+
+    return anyHit;
+}

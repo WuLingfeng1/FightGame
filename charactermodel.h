@@ -24,10 +24,18 @@ class CharacterModel : public QObject
     Q_PROPERTY(double positionY READ positionY NOTIFY positionChanged)        // 像素Y坐标(底部对齐)
     Q_PROPERTY(double posXRatio READ posXRatio WRITE setPosXRatio NOTIFY posXRatioChanged)  // 水平位置比例
     Q_PROPERTY(bool facingLeft READ facingLeft WRITE setFacingLeft NOTIFY facingChanged)     // 是否朝左
+    Q_PROPERTY(bool attacking READ isAttacking NOTIFY stateChanged)          // 是否处于攻击状态
+    Q_PROPERTY(bool attackActive READ isAttackActive NOTIFY frameChanged)    // 当前帧是否有攻击判定
+    Q_PROPERTY(double hurtboxCenterX READ hurtboxX NOTIFY positionChanged)   // 受击框中心X
+    Q_PROPERTY(double hurtboxCenterY READ hurtboxY NOTIFY positionChanged)   // 受击框中心Y
+    Q_PROPERTY(double hitboxCenterX READ hitboxX NOTIFY frameChanged)        // 攻击框中心X
+    Q_PROPERTY(double hitboxCenterY READ hitboxY NOTIFY frameChanged)        // 攻击框中心Y
+    Q_PROPERTY(int hitboxRadius READ hitboxRadius NOTIFY frameChanged)       // 攻击范围半径
+    Q_PROPERTY(int state READ stateInt NOTIFY stateChanged)                  // 当前状态(整数)
 
     QML_ELEMENT
 public:
-    enum State { Waiting, Opening, Stand, Forward, Backward, Jump, DiagonalJump, LightPunch, LightKick, HeavyPunch, HeavyKick };
+    enum State { Waiting, Opening, Stand, Forward, Backward, Jump, DiagonalJump, LightPunch, LightKick, HeavyPunch, HeavyKick, Hurt };
     Q_ENUM(State)
 
     explicit CharacterModel(QObject *parent = nullptr);
@@ -60,9 +68,26 @@ public:
     Q_INVOKABLE void playLightKick();              // 切换到轻腿攻击动画
     Q_INVOKABLE void playHeavyPunch();             // 切换到重拳攻击动画
     Q_INVOKABLE void playHeavyKick();              // 切换到重腿攻击动画
+    Q_INVOKABLE void playHurt();                   // 切换到受击动画(通用)
+    Q_INVOKABLE void playHurt1();                  // 切换到轻度受击动画
+    Q_INVOKABLE void playHurt2();                  // 切换到中度受击动画
+    Q_INVOKABLE void playHurt3();                  // 切换到重度受击动画
     void reset();                                 // 重置到初始状态
     void updateRootHeight(double h);              // 更新窗口高度(用于Y坐标计算)
     State state() const { return m_state; }
+    int stateInt() const { return static_cast<int>(m_state); }  // 状态整数形式(用于QML)
+
+    // 碰撞检测相关
+    bool isAttacking() const;                    // 是否处于攻击状态
+    bool isAttackActive() const;                 // 当前帧是否有攻击判定
+    double hitboxX() const;                      // 攻击框中心X(屏幕坐标)
+    double hitboxY() const;                      // 攻击框中心Y(屏幕坐标)
+    int hitboxRadius() const;                    // 攻击范围半径
+    double hurtboxX() const;                     // 受击框中心X(屏幕坐标)
+    double hurtboxY() const;                     // 受击框中心Y(屏幕坐标)
+    int hurtboxW() const { return m_hurtboxW; }  // 受击框宽度
+    int hurtboxH() const { return m_hurtboxH; }  // 受击框高度
+    void applyKnockback();                       // 被击中时应用击退
 
 signals:
     void frameChanged();           // 帧切换
@@ -74,6 +99,8 @@ signals:
     void openingFinished();        // 开场动画播放完毕
     void jumpFinished();           // 跳跃动画播放完毕
     void attackFinished();         // 攻击动画播放完毕
+    void hurtFinished();           // 受击动画播放完毕
+    void stateChanged();           // 状态变更
 
 private slots:
     void onTick();                 // 定时器回调: 逐帧推进动画
@@ -103,6 +130,10 @@ private:
     AnimParams m_lightKick;        // 轻腿攻击动画参数副本
     AnimParams m_heavyPunch;       // 重拳攻击动画参数副本
     AnimParams m_heavyKick;        // 重腿攻击动画参数副本
+    AnimParams m_hurt;             // 受击动画参数副本
+    AnimParams m_hurt1;            // 轻度受击动画参数副本
+    AnimParams m_hurt2;            // 中度受击动画参数副本
+    AnimParams m_hurt3;            // 重度受击动画参数副本
     bool     m_loopAnim = true;    // 当前动画是否循环
     double   m_cfgPosX = 0.5;     // 水平位置比例(可运行时修改)
     double   m_jumpHeight = 200;  // 跳跃峰值高度(从配置加载)
@@ -117,6 +148,15 @@ private:
     int      m_djOffsetLast = 0;   // 对角跳前跳: 末帧偏移
     int      m_animOffsetX = 0;    // 当前动画水平偏移(像素)
     double   m_visualScale = 1.0;  // 视觉缩放补偿
+
+    // 碰撞检测相关
+    int      m_hurtboxW = 120;     // 受击框宽度(像素)
+    int      m_hurtboxH = 250;     // 受击框高度(像素)
+    AnimParams m_currentAnim;      // 当前动画参数引用(用于读取攻击点)
+    bool     m_hitThisAttack = false;  // 本次攻击是否已命中(防止重复命中)
+    int      m_knockbackToApply = 0;  // 待应用的击退距离(由攻击者设置)
+    double   m_knockbackRemaining = 0.0;  // 剩余击退距离(归一化坐标)
+    int      m_knockbackFrames = 0;       // 剩余击退帧数
 
     CharacterModel *m_opponent = nullptr;  // 对手角色引用, 用于跳跃朝向更新
     friend class FightDirector;    // 允许 FightDirector 直接设置 m_rootHeight

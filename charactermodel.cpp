@@ -27,6 +27,10 @@ void CharacterModel::configure(const CharacterConfig &cfg)
     m_lightKick    = cfg.lightKick;
     m_heavyPunch   = cfg.heavyPunch;
     m_heavyKick    = cfg.heavyKick;
+    m_hurt         = cfg.hurt;
+    m_hurt1        = cfg.hurt1;
+    m_hurt2        = cfg.hurt2;
+    m_hurt3        = cfg.hurt3;
     m_jumpHeight   = cfg.jump.jumpHeight;
     m_refFrameWidth = cfg.stand.fw;
     setFacingLeft(cfg.facingLeft);
@@ -58,6 +62,7 @@ void CharacterModel::playStand()
     m_loopAnim = true;
     m_visualScale = 1.0;         // 必须在 applyAnim 之前设置, setPosY 依赖此值
     m_animOffsetX = 0;           // 站立动画无水平偏移
+    m_hitThisAttack = false;     // 重置命中标志
     applyAnim(m_stand);
     m_timer.setInterval(m_stand.interval);
     m_timer.start();
@@ -65,6 +70,7 @@ void CharacterModel::playStand()
     emit sourcePathChanged();
     emit sizeChanged();
     emit positionChanged();
+    emit stateChanged();
 }
 
 // 切换到前进行走动画: 从第0帧开始, 循环与否由配置决定
@@ -176,7 +182,9 @@ void CharacterModel::playLightPunch()
     m_currentFrame = 0;
     m_loopAnim = false;
     m_visualScale = m_lightPunch.visualScale;
-    m_animOffsetX = m_lightPunch.offsetX;  // 轻拳水平偏移补偿
+    m_animOffsetX = m_lightPunch.offsetX;
+    m_currentAnim = m_lightPunch;
+    m_hitThisAttack = false;  // 重置命中标志
     applyAnim(m_lightPunch);
     m_timer.setInterval(m_lightPunch.interval);
     m_timer.start();
@@ -184,6 +192,7 @@ void CharacterModel::playLightPunch()
     emit sourcePathChanged();
     emit sizeChanged();
     emit positionChanged();
+    emit stateChanged();
 }
 
 // 切换到轻腿攻击动画
@@ -197,6 +206,8 @@ void CharacterModel::playLightKick()
     m_loopAnim = false;
     m_visualScale = m_lightKick.visualScale;
     m_animOffsetX = m_lightKick.offsetX;
+    m_currentAnim = m_lightKick;
+    m_hitThisAttack = false;
     applyAnim(m_lightKick);
     m_timer.setInterval(m_lightKick.interval);
     m_timer.start();
@@ -204,6 +215,7 @@ void CharacterModel::playLightKick()
     emit sourcePathChanged();
     emit sizeChanged();
     emit positionChanged();
+    emit stateChanged();
 }
 
 // 切换到重拳攻击动画
@@ -217,6 +229,8 @@ void CharacterModel::playHeavyPunch()
     m_loopAnim = false;
     m_visualScale = m_heavyPunch.visualScale;
     m_animOffsetX = m_heavyPunch.offsetX;
+    m_currentAnim = m_heavyPunch;
+    m_hitThisAttack = false;
     applyAnim(m_heavyPunch);
     m_timer.setInterval(m_heavyPunch.interval);
     m_timer.start();
@@ -224,6 +238,7 @@ void CharacterModel::playHeavyPunch()
     emit sourcePathChanged();
     emit sizeChanged();
     emit positionChanged();
+    emit stateChanged();
 }
 
 // 切换到重腿攻击动画
@@ -237,6 +252,8 @@ void CharacterModel::playHeavyKick()
     m_loopAnim = false;
     m_visualScale = m_heavyKick.visualScale;
     m_animOffsetX = m_heavyKick.offsetX;
+    m_currentAnim = m_heavyKick;
+    m_hitThisAttack = false;
     applyAnim(m_heavyKick);
     m_timer.setInterval(m_heavyKick.interval);
     m_timer.start();
@@ -244,6 +261,95 @@ void CharacterModel::playHeavyKick()
     emit sourcePathChanged();
     emit sizeChanged();
     emit positionChanged();
+    emit stateChanged();
+}
+
+// 切换到受击动画
+void CharacterModel::playHurt()
+{
+    if (m_hurt.cols <= 0) return;
+    m_timer.stop();
+    m_state = Hurt;
+    m_currentFrame = 0;
+    m_loopAnim = false;
+    m_visualScale = m_hurt.visualScale;
+    m_animOffsetX = 0;
+    m_currentAnim = m_hurt;  // 设置当前动画参数用于位置计算
+    applyAnim(m_hurt);
+    applyKnockback();  // 被击中时应用击退
+    m_timer.setInterval(m_hurt.interval);
+    m_timer.start();
+    emit frameChanged();
+    emit sourcePathChanged();
+    emit sizeChanged();
+    emit positionChanged();
+    emit stateChanged();
+}
+
+// 切换到轻度受击动画
+void CharacterModel::playHurt1()
+{
+    if (m_hurt1.cols <= 0) { playHurt(); return; }
+    m_timer.stop();
+    m_state = Hurt;
+    m_currentFrame = 0;
+    m_loopAnim = false;
+    m_visualScale = m_hurt1.visualScale;
+    m_animOffsetX = 0;
+    m_currentAnim = m_hurt1;  // 设置当前动画参数用于位置计算
+    applyAnim(m_hurt1);
+    applyKnockback();  // 被击中时应用击退
+    m_timer.setInterval(m_hurt1.interval);
+    m_timer.start();
+    emit frameChanged();
+    emit sourcePathChanged();
+    emit sizeChanged();
+    emit positionChanged();
+    emit stateChanged();
+}
+
+// 切换到中度受击动画
+void CharacterModel::playHurt2()
+{
+    if (m_hurt2.cols <= 0) { playHurt(); return; }
+    m_timer.stop();
+    m_state = Hurt;
+    m_currentFrame = 0;
+    m_loopAnim = false;
+    m_visualScale = m_hurt2.visualScale;
+    m_animOffsetX = 0;
+    m_currentAnim = m_hurt2;  // 设置当前动画参数用于位置计算
+    applyAnim(m_hurt2);
+    applyKnockback();  // 被击中时应用击退
+    m_timer.setInterval(m_hurt2.interval);
+    m_timer.start();
+    emit frameChanged();
+    emit sourcePathChanged();
+    emit sizeChanged();
+    emit positionChanged();
+    emit stateChanged();
+}
+
+// 切换到重度受击动画
+void CharacterModel::playHurt3()
+{
+    if (m_hurt3.cols <= 0) { playHurt(); return; }
+    m_timer.stop();
+    m_state = Hurt;
+    m_currentFrame = 0;
+    m_loopAnim = false;
+    m_visualScale = m_hurt3.visualScale;
+    m_animOffsetX = 0;
+    m_currentAnim = m_hurt3;  // 设置当前动画参数用于位置计算
+    applyAnim(m_hurt3);
+    applyKnockback();  // 被击中时应用击退
+    m_timer.setInterval(m_hurt3.interval);
+    m_timer.start();
+    emit frameChanged();
+    emit sourcePathChanged();
+    emit sizeChanged();
+    emit positionChanged();
+    emit stateChanged();
 }
 
 // 重置角色到初始状态
@@ -315,6 +421,8 @@ void CharacterModel::setPosY()
                 fb = m_forward.feetBottom;    fm = m_forward.feetMargin;    break;
             case Backward:
                 fb = m_backward.feetBottom;   fm = m_backward.feetMargin;   break;
+            case Hurt:
+                fb = m_currentAnim.feetBottom; fm = m_currentAnim.feetMargin; break;
             default:
                 fb = m_stand.feetBottom;      fm = m_stand.feetMargin;      break;
         }
@@ -414,6 +522,13 @@ void CharacterModel::onTick()
         emit attackFinished();
         return;
     }
+    if (m_state == Hurt && m_currentFrame >= m_totalFrames) {
+        m_currentFrame = m_totalFrames - 1;
+        m_timer.stop();
+        playStand();
+        emit hurtFinished();
+        return;
+    }
     if (m_state == Stand && m_currentFrame >= m_totalFrames) {
         m_currentFrame = 0;                   // 站立动画循环
     }
@@ -440,5 +555,93 @@ void CharacterModel::onTick()
             m_facingLeft = (m_cfgPosX > m_opponent->posXRatio());
         setPosY();
     }
+    // 渐进式击退: 每帧应用一小部分击退距离
+    if (m_state == Hurt && m_knockbackFrames > 0 && m_knockbackRemaining > 0 && m_opponent) {
+        double step = m_knockbackRemaining / m_knockbackFrames;
+        double oppX = m_opponent->posXRatio();
+        
+        if (m_cfgPosX > oppX) {
+            m_cfgPosX += step;  // 向右退
+        } else {
+            m_cfgPosX -= step;  // 向左退
+        }
+        
+        // 尊重舞台边界
+        m_cfgPosX = std::max(0.0, std::min(m_cfgPosX, 3.0));
+        m_knockbackRemaining -= step;
+        m_knockbackFrames--;
+        
+        emit posXRatioChanged();
+    }
     emit frameChanged();
+}
+
+// 碰撞检测相关方法实现
+
+bool CharacterModel::isAttacking() const
+{
+    return m_state == LightPunch || m_state == LightKick ||
+           m_state == HeavyPunch || m_state == HeavyKick;
+}
+
+bool CharacterModel::isAttackActive() const
+{
+    if (!isAttacking()) return false;
+    if (m_hitThisAttack) return false;  // 本次攻击已命中，不再判定
+    if (m_currentAnim.attackFrames.isEmpty()) return true;  // 未配置则整个动画都生效
+
+    // 解析 attackFrames 格式: "3-5" 或 "3,5,7" 或 "3-5,8-10"
+    QStringList parts = m_currentAnim.attackFrames.split(',');
+    for (const QString &part : parts) {
+        if (part.contains('-')) {
+            QStringList range = part.split('-');
+            int start = range[0].toInt();
+            int end = range[1].toInt();
+            if (m_currentFrame >= start && m_currentFrame <= end) return true;
+        } else {
+            if (m_currentFrame == part.toInt()) return true;
+        }
+    }
+    return false;
+}
+
+double CharacterModel::hitboxX() const
+{
+    if (!isAttacking()) return 0;
+    // 攻击点X = 角色中心X + 攻击点偏移(归一化) * 朝向
+    double offsetX = m_currentAnim.attackPointX;  // 已经是归一化坐标
+    return m_cfgPosX + (m_facingLeft ? -offsetX : offsetX);
+}
+
+double CharacterModel::hitboxY() const
+{
+    if (!isAttacking()) return 0;
+    // 攻击点Y = 角色Y + 帧高度/2 + 攻击点Y偏移
+    return m_posY + m_frameHeight / 2.0 + m_currentAnim.attackPointY;
+}
+
+int CharacterModel::hitboxRadius() const
+{
+    if (!isAttacking()) return 0;
+    return m_currentAnim.attackRadius;
+}
+
+double CharacterModel::hurtboxX() const
+{
+    return m_cfgPosX;
+}
+
+double CharacterModel::hurtboxY() const
+{
+    return m_posY + m_frameHeight / 2.0;
+}
+
+// 被击中时应用击退效果(渐进式, 分散到受击动画的每一帧)
+void CharacterModel::applyKnockback()
+{
+    if (!m_opponent || m_knockbackToApply <= 0) return;
+    
+    m_knockbackRemaining = m_knockbackToApply / 1000.0;
+    m_knockbackFrames = m_currentAnim.cols;  // 分散到整个受击动画
+    m_knockbackToApply = 0;
 }

@@ -52,6 +52,7 @@ qt_add_resources(appFightGame "appresources"
         images/character/Orochi/LightKick.png
         images/character/Orochi/HeavyPunch.png
         images/character/Orochi/HeavyKick.png
+        images/character/Orochi/Hurt.png
         images/character/Yagami/Stand.png
         images/character/Yagami/opening.png
         images/character/Yagami/Backward.png
@@ -70,11 +71,9 @@ qt_add_resources(appFightGame "appresources"
         images/character/Yagami/StandAttack_HeavyKick.png
         images/character/Yagami/StandBlock.png
         images/character/Yagami/SuperMove.png
-        images/character/Yagami/Hurt1.png
-        images/character/Yagami/Hurt2.png
-        images/character/Yagami/Hurt3.png
-        images/character/Yagami/Hurt4.png
-        images/character/Yagami/Hurt5.png
+        images/character/Yagami/Hurt1_std.png
+        images/character/Yagami/Hurt2_std.png
+        images/character/Yagami/Hurt3_std.png
         images/character/Yagami/DarkThrust.png
         images/character/Yagami/HeavyPunch.png
         images/character/Yagami/CrouchAttack.png

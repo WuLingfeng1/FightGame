@@ -25,6 +25,11 @@ static AnimParams parseAnim(const QJsonObject &obj)
     a.offsetXBwdLast = obj.value("offsetXBwdLast").toInt(0);
     a.visualScale = obj.value("visualScale").toDouble(1.0);
     a.offsetX    = obj.value("offsetX").toInt(0);
+    a.attackPointX = obj.value("attackPointX").toInt(0);
+    a.attackPointY = obj.value("attackPointY").toInt(0);
+    a.attackRadius = obj.value("attackRadius").toInt(60);
+    a.attackFrames = obj.value("attackFrames").toString();
+    a.knockbackDistance = obj.value("knockbackDistance").toInt(0);
     return a;
 }
 
@@ -45,5 +50,9 @@ CharacterConfig CharacterConfigLoader::load(const QJsonObject &json, const QStri
     cfg.lightKick   = parseAnim(json.value("lightKick").toObject());
     cfg.heavyPunch  = parseAnim(json.value("heavyPunch").toObject());
     cfg.heavyKick   = parseAnim(json.value("heavyKick").toObject());
+    cfg.hurt        = parseAnim(json.value("hurt").toObject());
+    cfg.hurt1       = parseAnim(json.value("hurt1").toObject());
+    cfg.hurt2       = parseAnim(json.value("hurt2").toObject());
+    cfg.hurt3       = parseAnim(json.value("hurt3").toObject());
     return cfg;
 }

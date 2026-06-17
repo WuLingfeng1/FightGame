@@ -51,7 +51,7 @@
             "path": "qrc:/images/character/Orochi/DiagonalJump.png",
             "loop": false,
             "jumpHeight": 480,
-            "jumpDistance": 0.40,
+            "jumpDistance": 0.4,
             "divFrame": 21,
             "feetBottom": 327,
             "feetMargin": 82
@@ -65,7 +65,12 @@
             "loop": false,
             "visualScale": 1.3,
             "feetBottom": 283,
-            "feetMargin": 82
+            "feetMargin": 82,
+            "attackPointX": 0.1,
+            "attackPointY": 24,
+            "attackRadius": 120,
+            "attackFrames": "3-5",
+            "knockbackDistance": 30
         },
         "lightKick": {
             "cols": 10,
@@ -76,7 +81,12 @@
             "loop": false,
             "visualScale": 1.92,
             "feetBottom": 240,
-            "feetMargin": 82
+            "feetMargin": 82,
+            "attackPointX": 0.1,
+            "attackPointY": 18,
+            "attackRadius": 120,
+            "attackFrames": "1-3",
+            "knockbackDistance": 30
         },
         "heavyPunch": {
             "cols": 13,
@@ -87,7 +97,12 @@
             "loop": false,
             "visualScale": 1.97,
             "feetBottom": 218,
-            "feetMargin": 82
+            "feetMargin": 82,
+            "attackPointX": 0.15,
+            "attackPointY": 0,
+            "attackRadius": 150,
+            "attackFrames": "9-12",
+            "knockbackDistance": 80
         },
         "heavyKick": {
             "cols": 10,
@@ -98,6 +113,22 @@
             "loop": false,
             "visualScale": 1.42,
             "feetBottom": 308,
+            "feetMargin": 82,
+            "attackPointX": 0.12,
+            "attackPointY": 36,
+            "attackRadius": 140,
+            "attackFrames": "7-9",
+            "knockbackDistance": 120
+        },
+        "hurt": {
+            "cols": 4,
+            "fw": 384,
+            "fh": 512,
+            "interval": 60,
+            "path": "qrc:/images/character/Orochi/Hurt.png",
+            "loop": false,
+            "visualScale": 1.95,
+            "feetBottom": 310,
             "feetMargin": 82
         }
     },
@@ -182,7 +213,12 @@
             "visualScale": 1.8,
             "feetBottom": 205,
             "feetMargin": 82,
-            "offsetX": 38
+            "offsetX": 38,
+            "attackPointX": 0.1,
+            "attackPointY": 14,
+            "attackRadius": 120,
+            "attackFrames": "2-4",
+            "knockbackDistance": 30
         },
         "lightKick": {
             "cols": 7,
@@ -194,7 +230,12 @@
             "visualScale": 1.8,
             "feetBottom": 205,
             "feetMargin": 82,
-            "offsetX": 38
+            "offsetX": 38,
+            "attackPointX": 0.1,
+            "attackPointY": 8,
+            "attackRadius": 120,
+            "attackFrames": "2-4",
+            "knockbackDistance": 30
         },
         "heavyPunch": {
             "cols": 10,
@@ -206,7 +247,12 @@
             "visualScale": 1.8,
             "feetBottom": 205,
             "feetMargin": 82,
-            "offsetX": 38
+            "offsetX": 38,
+            "attackPointX": 0.15,
+            "attackPointY": 18,
+            "attackRadius": 150,
+            "attackFrames": "3-6",
+            "knockbackDistance": 80
         },
         "heavyKick": {
             "cols": 11,
@@ -218,7 +264,56 @@
             "visualScale": 1.8,
             "feetBottom": 205,
             "feetMargin": 82,
-            "offsetX": 38
+            "offsetX": 38,
+            "attackPointX": 0.12,
+            "attackPointY": 6,
+            "attackRadius": 160,
+            "attackFrames": "4-7",
+            "knockbackDistance": 120
+        },
+        "hurt": {
+            "cols": 8,
+            "fw": 72,
+            "fh": 112,
+            "interval": 60,
+            "path": "qrc:/images/character/Yagami/Hurt1_std.png",
+            "loop": false,
+            "visualScale": 2.99,
+            "feetBottom": 112,
+            "feetMargin": 82
+        },
+        "hurt1": {
+            "cols": 8,
+            "fw": 72,
+            "fh": 112,
+            "interval": 60,
+            "path": "qrc:/images/character/Yagami/Hurt1_std.png",
+            "loop": false,
+            "visualScale": 2.79,
+            "feetBottom": 112,
+            "feetMargin": 82
+        },
+        "hurt2": {
+            "cols": 7,
+            "fw": 72,
+            "fh": 100,
+            "interval": 60,
+            "path": "qrc:/images/character/Yagami/Hurt2_std.png",
+            "loop": false,
+            "visualScale": 3.0,
+            "feetBottom": 100,
+            "feetMargin": 82
+        },
+        "hurt3": {
+            "cols": 13,
+            "fw": 83,
+            "fh": 113,
+            "interval": 50,
+            "path": "qrc:/images/character/Yagami/Hurt3_std.png",
+            "loop": false,
+            "visualScale": 2.86,
+            "feetBottom": 113,
+            "feetMargin": 82
         }
     }
 }

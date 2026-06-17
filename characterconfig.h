@@ -25,6 +25,11 @@ struct AnimParams {
     int offsetXBwdLast = 0;// 对角跳后跳段末帧水平偏移
     double visualScale = 1.0; // 视觉缩放补偿(斜跳帧图缩小时用)
     int offsetX = 0;       // 角色在帧内的水平偏移补偿(像素, 用于居中对齐)
+    int attackPointX = 0;  // 攻击点X偏移(相对于角色中心, 正值=前方)
+    int attackPointY = 0;  // 攻击点Y偏移(相对于角色中心, 正值=下方)
+    int attackRadius = 60; // 攻击范围半径(像素)
+    QString attackFrames;  // 攻击生效帧范围(如 "3-5" 表示帧3到帧5生效)
+    int knockbackDistance = 0; // 击退距离(归一化坐标×1000, 如50=0.05)
 };
 
 // 角色配置: 包含一个角色的所有动画参数和初始属性
@@ -42,6 +47,10 @@ struct CharacterConfig {
     AnimParams lightKick;         // 轻腿攻击动画参数
     AnimParams heavyPunch;        // 重拳攻击动画参数
     AnimParams heavyKick;         // 重腿攻击动画参数
+    AnimParams hurt;              // 受击动画参数(通用)
+    AnimParams hurt1;             // 轻度受击动画参数
+    AnimParams hurt2;             // 中度受击动画参数
+    AnimParams hurt3;             // 重度受击动画参数
 };
 
 // 角色配置加载器: 从 JSON 对象解析出 CharacterConfig

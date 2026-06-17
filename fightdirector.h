@@ -39,11 +39,13 @@ public:
 
     Q_INVOKABLE void start(const QString &p1CharId, const QString &p2CharId);
     Q_INVOKABLE void updateCamera();   // KOF97中点跟随镜头
+    Q_INVOKABLE bool checkCollision(); // 检测碰撞, 返回是否命中
 
 signals:
     void phaseChanged();
     void rootHeightChanged();
     void cameraOffsetChanged();
+    void hitDetected(int attacker, int damage);  // 命中信号: attacker=1或2, damage=伤害值
 
 private slots:
     void onP1OpeningFinished();   // P1开场完毕 -> 触发P2开场
