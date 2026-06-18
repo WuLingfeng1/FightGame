@@ -54,6 +54,8 @@ qt_add_resources(appFightGame "appresources"
         images/character/Orochi/HeavyKick.png
         images/character/Orochi/HeavyStrike.png
         images/character/Orochi/Hurt.png
+        images/character/Orochi/CrouchAttack.png
+        images/character/Orochi/Crouch.png
         images/character/Yagami/Stand.png
         images/character/Yagami/opening.png
         images/character/Yagami/Backward.png
@@ -91,6 +93,9 @@ qt_add_resources(appFightGame "appresources"
         images/FightBackGround/Gyeongbokgung.gif
         images/FightBackGround/Monaco.gif
         images/FightBackGround/OrochiShermie.gif
+        images/Attack/1.png
+        images/Attack/2.png
+        images/Attack/3.png
 )
 target_compile_features(appFightGame PRIVATE cxx_std_23)
 target_link_libraries(appFightGame

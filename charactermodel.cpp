@@ -32,6 +32,8 @@ void CharacterModel::configure(const CharacterConfig &cfg)
     m_hurt1        = cfg.hurt1;
     m_hurt2        = cfg.hurt2;
     m_hurt3        = cfg.hurt3;
+    m_crouch       = cfg.crouch;
+    m_crouchAttack = cfg.crouchAttack;
     m_jumpHeight   = cfg.jump.jumpHeight;
     m_refFrameWidth = cfg.stand.fw;
     setFacingLeft(cfg.facingLeft);
@@ -57,6 +59,7 @@ void CharacterModel::playOpening()
 // 切换到站立动画: 停止当前动画, 从第2帧开始播放(匹配参考实现), 循环模式
 void CharacterModel::playStand()
 {
+    if (m_crouching) return;
     m_timer.stop();
     m_state = Stand;
     m_currentFrame = 2;          // 从第2帧开始(避开站立的起始过渡帧)
@@ -177,6 +180,7 @@ void CharacterModel::playDiagonalJump(bool forward)
 void CharacterModel::playLightPunch()
 {
     if (m_lightPunch.cols <= 0) return;
+    if (m_crouching) return;
     if (m_state == LightPunch && m_timer.isActive()) return;
     m_timer.stop();
     m_state = LightPunch;
@@ -200,6 +204,7 @@ void CharacterModel::playLightPunch()
 void CharacterModel::playLightKick()
 {
     if (m_lightKick.cols <= 0) return;
+    if (m_crouching) return;
     if (m_state == LightKick && m_timer.isActive()) return;
     m_timer.stop();
     m_state = LightKick;
@@ -223,6 +228,7 @@ void CharacterModel::playLightKick()
 void CharacterModel::playHeavyPunch()
 {
     if (m_heavyPunch.cols <= 0) return;
+    if (m_crouching) return;
     if (m_state == HeavyPunch && m_timer.isActive()) return;
     m_timer.stop();
     m_state = HeavyPunch;
@@ -246,6 +252,7 @@ void CharacterModel::playHeavyPunch()
 void CharacterModel::playHeavyKick()
 {
     if (m_heavyKick.cols <= 0) return;
+    if (m_crouching) return;
     if (m_state == HeavyKick && m_timer.isActive()) return;
     m_timer.stop();
     m_state = HeavyKick;
@@ -269,6 +276,7 @@ void CharacterModel::playHeavyKick()
 void CharacterModel::playHeavyStrike()
 {
     if (m_heavyStrike.cols <= 0) return;
+    if (m_crouching) return;
     m_timer.stop();
     m_state = HeavyStrike;
     m_currentFrame = 0;
@@ -293,6 +301,7 @@ void CharacterModel::playHeavyStrike()
 void CharacterModel::playHurt()
 {
     if (m_hurt.cols <= 0) return;
+    if (m_crouching) return;
     m_timer.stop();
     m_state = Hurt;
     m_currentFrame = 0;
@@ -315,6 +324,7 @@ void CharacterModel::playHurt()
 void CharacterModel::playHurt1()
 {
     if (m_hurt1.cols <= 0) { playHurt(); return; }
+    if (m_crouching) return;
     m_timer.stop();
     m_state = Hurt;
     m_currentFrame = 0;
@@ -337,6 +347,7 @@ void CharacterModel::playHurt1()
 void CharacterModel::playHurt2()
 {
     if (m_hurt2.cols <= 0) { playHurt(); return; }
+    if (m_crouching) return;
     m_timer.stop();
     m_state = Hurt;
     m_currentFrame = 0;
@@ -359,6 +370,7 @@ void CharacterModel::playHurt2()
 void CharacterModel::playHurt3()
 {
     if (m_hurt3.cols <= 0) { playHurt(); return; }
+    if (m_crouching) return;
     m_timer.stop();
     m_state = Hurt;
     m_currentFrame = 0;
@@ -377,6 +389,63 @@ void CharacterModel::playHurt3()
     emit stateChanged();
 }
 
+// 切换到下蹲动画: Orochi冻结在第0帧(蹲姿), Yagami循环播放
+void CharacterModel::playCrouch()
+{
+    if (m_crouch.cols <= 0) return;
+    if (m_state == Crouch || m_state == CrouchAttack) return;
+    m_timer.stop();
+    m_state = Crouch;
+    m_currentFrame = 0;
+    m_crouching = true;
+    m_loopAnim = m_crouch.loop;
+    m_visualScale = m_crouch.visualScale;
+    m_animOffsetX = m_crouch.offsetX;
+    m_currentAnim = m_crouch;
+    applyAnim(m_crouch);
+    if (m_crouch.loop) {
+        m_timer.setInterval(m_crouch.interval);
+        m_timer.start();
+    }
+    emit frameChanged();
+    emit sourcePathChanged();
+    emit sizeChanged();
+    emit positionChanged();
+    emit stateChanged();
+}
+
+// 切换到下蹲攻击动画: 从第0帧开始播放完整动画, 播完回到蹲姿
+void CharacterModel::playCrouchAttack()
+{
+    if (m_crouchAttack.cols <= 0) return;
+    if (m_state == CrouchAttack && m_timer.isActive()) return;
+    m_timer.stop();
+    m_state = CrouchAttack;
+    m_currentFrame = 0;
+    m_loopAnim = false;
+    m_visualScale = m_crouchAttack.visualScale;
+    m_animOffsetX = m_crouchAttack.offsetX;
+    m_currentAnim = m_crouchAttack;
+    m_hitThisAttack = false;
+    applyAnim(m_crouchAttack);
+    m_timer.setInterval(m_crouchAttack.interval);
+    m_timer.start();
+    emit frameChanged();
+    emit sourcePathChanged();
+    emit sizeChanged();
+    emit positionChanged();
+    emit stateChanged();
+}
+
+// 退出下蹲状态: 回到站立
+void CharacterModel::stopCrouch()
+{
+    m_crouching = false;
+    if (m_state == Crouch || m_state == CrouchAttack) {
+        playStand();
+    }
+}
+
 // 重置角色到初始状态
 void CharacterModel::reset()
 {
@@ -387,6 +456,7 @@ void CharacterModel::reset()
     m_frameHeight = 0;
     m_totalFrames = 0;
     m_sourcePath.clear();
+    m_crouching = false;
 }
 
 // 更新窗口高度并重新计算Y坐标
@@ -450,6 +520,10 @@ void CharacterModel::setPosY()
                 fb = m_backward.feetBottom;   fm = m_backward.feetMargin;   break;
             case Hurt:
                 fb = m_currentAnim.feetBottom; fm = m_currentAnim.feetMargin; break;
+            case Crouch:
+                fb = m_crouch.feetBottom;      fm = m_crouch.feetMargin;      break;
+            case CrouchAttack:
+                fb = m_crouchAttack.feetBottom; fm = m_crouchAttack.feetMargin; break;
             default:
                 fb = m_stand.feetBottom;      fm = m_stand.feetMargin;      break;
         }
@@ -571,6 +645,36 @@ void CharacterModel::onTick()
         emit hurtFinished();
         return;
     }
+    if (m_state == Crouch && m_currentFrame >= m_totalFrames) {
+        if (m_loopAnim) {
+            m_currentFrame = 0;
+        } else {
+            m_currentFrame = m_totalFrames - 1;
+            m_timer.stop();
+            return;
+        }
+    }
+    if (m_state == CrouchAttack && m_currentFrame >= m_totalFrames) {
+        m_currentFrame = m_totalFrames - 1;
+        m_timer.stop();
+        // 回到蹲姿冻结在第0帧
+        if (m_crouching && m_crouch.cols > 0) {
+            m_state = Crouch;
+            m_currentFrame = 0;
+            m_loopAnim = m_crouch.loop;
+            m_visualScale = m_crouch.visualScale;
+            m_animOffsetX = m_crouch.offsetX;
+            m_currentAnim = m_crouch;
+            applyAnim(m_crouch);
+            emit sourcePathChanged();
+            emit sizeChanged();
+            emit stateChanged();
+        } else {
+            playStand();
+        }
+        emit attackFinished();
+        return;
+    }
     if (m_state == Stand && m_currentFrame >= m_totalFrames) {
         m_currentFrame = 0;                   // 站立动画循环
     }
@@ -628,7 +732,7 @@ bool CharacterModel::isAttacking() const
 {
     return m_state == LightPunch || m_state == LightKick ||
            m_state == HeavyPunch || m_state == HeavyKick ||
-           m_state == HeavyStrike;
+           m_state == HeavyStrike || m_state == CrouchAttack;
 }
 
 bool CharacterModel::isAttackActive() const

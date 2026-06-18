@@ -55,5 +55,7 @@ CharacterConfig CharacterConfigLoader::load(const QJsonObject &json, const QStri
     cfg.hurt1       = parseAnim(json.value("hurt1").toObject());
     cfg.hurt2       = parseAnim(json.value("hurt2").toObject());
     cfg.hurt3       = parseAnim(json.value("hurt3").toObject());
+    cfg.crouch      = parseAnim(json.value("crouch").toObject());
+    cfg.crouchAttack = parseAnim(json.value("crouchAttack").toObject());
     return cfg;
 }

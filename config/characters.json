@@ -147,6 +147,33 @@
             "visualScale": 1.95,
             "feetBottom": 310,
             "feetMargin": 82
+        },
+        "crouch": {
+            "cols": 1,
+            "fw": 251,
+            "fh": 335,
+            "interval": 50,
+            "path": "qrc:/images/character/Orochi/Crouch.png",
+            "loop": false,
+            "visualScale": 1.3,
+            "feetBottom": 207,
+            "feetMargin": 82
+        },
+        "crouchAttack": {
+            "cols": 10,
+            "fw": 384,
+            "fh": 512,
+            "interval": 50,
+            "path": "qrc:/images/character/Orochi/CrouchAttack.png",
+            "loop": false,
+            "visualScale": 2.0,
+            "feetBottom": 335,
+            "feetMargin": 75,
+            "attackPointX": 0.15,
+            "attackPointY": 0,
+            "attackRadius": 150,
+            "attackFrames": "3-7",
+            "knockbackDistance": 80
         }
     },
     "Yagami": {
@@ -347,6 +374,17 @@
             "loop": false,
             "visualScale": 2.86,
             "feetBottom": 113,
+            "feetMargin": 82
+        },
+        "crouch": {
+            "cols": 6,
+            "fw": 251,
+            "fh": 335,
+            "interval": 150,
+            "path": "qrc:/images/character/Yagami/Crouch.png",
+            "loop": true,
+            "visualScale": 0.75,
+            "feetBottom": 264,
             "feetMargin": 82
         }
     }

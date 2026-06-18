@@ -12,7 +12,7 @@
 //     [v0.1.6]     2026-06-15 13:28:32   修复了两名角色同时起跳越过对方时产生的镜头晃动和闪屏
 //     [v0.1.7]     2026-06-15 21:06:43   角色同时新增轻拳,轻腿,重拳,重腿这些攻击动作
 //     [v0.1.8]     2026-06-17 09:51:57   新增碰撞检测功能,同时也加入了受击动作,实现了攻击响应击退效果
-
+//     [v0.1.9]     2026-06-18 17:34:33   实现下蹲系统（含蹲防无敌机制）和攻击视觉特效系统
 import QtQuick
 import QtQuick.Controls
 import FightGame
@@ -52,8 +52,10 @@ Item {
             
             if (attacker === 1) {
                 playHurtByAttackType(director.p2Model, director.p1Model.state)
+                if (director.p1Model.state >= 7 && director.p1Model.state <= 11) attackVfx.play(director.p1Model, director.p2Model)
             } else {
                 playHurtByAttackType(director.p1Model, director.p2Model.state)
+                if (director.p2Model.state >= 7 && director.p2Model.state <= 11) attackVfx.play(director.p2Model, director.p1Model)
             }
         }
     }
@@ -111,6 +113,7 @@ Item {
     property bool isMoving: false
     property bool p1Jumping: false
     property bool p1Attacking: false
+    property bool p1Crouching: false
     property bool moveLeftPressed: false
     property bool moveRightPressed: false
     property string p1CurrentAnim: ""
@@ -118,7 +121,7 @@ Item {
     // P1 向右移动
     function startMoveRight() {
         moveRightPressed = true
-        if (p1Jumping || p1Attacking) return
+        if (p1Jumping || p1Attacking || p1Crouching) return
         updateFacing()
         moveTimer.moveLeft = false
         moveTimer.moveRight = true
@@ -137,7 +140,7 @@ Item {
     // P1 向左移动
     function startMoveLeft() {
         moveLeftPressed = true
-        if (p1Jumping || p1Attacking) return
+        if (p1Jumping || p1Attacking || p1Crouching) return
         updateFacing()
         moveTimer.moveRight = false
         moveTimer.moveLeft = true
@@ -155,7 +158,7 @@ Item {
     }
     function stopMoveRight() {
         moveRightPressed = false
-        if (p1Jumping || p1Attacking) return
+        if (p1Jumping || p1Attacking || p1Crouching) return
         updateFacing()
         if (moveLeftPressed) {
             moveTimer.moveRight = false
@@ -178,7 +181,7 @@ Item {
     }
     function stopMoveLeft() {
         moveLeftPressed = false
-        if (p1Jumping || p1Attacking) return
+        if (p1Jumping || p1Attacking || p1Crouching) return
         updateFacing()
         if (moveRightPressed) {
             moveTimer.moveLeft = false
@@ -202,7 +205,7 @@ Item {
 
     // P1 跳跃: 行走中按W触发对角跳(前跳/后跳), 站立时按W触发直跳
     function startJump() {
-        if (p1Jumping || p1Attacking) return
+        if (p1Jumping || p1Attacking || p1Crouching) return
         p1Jumping = true
         var wasMoving = isMoving
         var animBeforeJump = p1CurrentAnim
@@ -220,7 +223,7 @@ Item {
 
     // P1 轻拳攻击
     function startAttack1() {
-        if (p1Jumping || p1Attacking) return
+        if (p1Jumping || p1Attacking || p1Crouching) return
         p1Attacking = true
         moveTimer.moveRight = false
         moveTimer.moveLeft = false
@@ -232,7 +235,7 @@ Item {
 
     // P1 轻腿攻击
     function startAttackLightKick1() {
-        if (p1Jumping || p1Attacking) return
+        if (p1Jumping || p1Attacking || p1Crouching) return
         p1Attacking = true
         moveTimer.moveRight = false
         moveTimer.moveLeft = false
@@ -244,7 +247,7 @@ Item {
 
     // P1 重拳攻击
     function startAttackHeavyPunch1() {
-        if (p1Jumping || p1Attacking) return
+        if (p1Jumping || p1Attacking || p1Crouching) return
         p1Attacking = true
         moveTimer.moveRight = false
         moveTimer.moveLeft = false
@@ -256,7 +259,7 @@ Item {
 
     // P1 重腿攻击
     function startAttackHeavyKick1() {
-        if (p1Jumping || p1Attacking) return
+        if (p1Jumping || p1Attacking || p1Crouching) return
         p1Attacking = true
         moveTimer.moveRight = false
         moveTimer.moveLeft = false
@@ -268,7 +271,7 @@ Item {
 
     // P1 超重击攻击
     function startAttackHeavyStrike1() {
-        if (p1Jumping || p1Attacking) return
+        if (p1Jumping || p1Attacking || p1Crouching) return
         p1Attacking = true
         moveTimer.moveRight = false
         moveTimer.moveLeft = false
@@ -276,6 +279,32 @@ Item {
         isMoving = false
         p1CurrentAnim = ""
         director.p1Model.playHeavyStrike()
+    }
+
+    // P1 下蹲
+    function startCrouch1() {
+        if (p1Jumping || p1Attacking) return
+        p1Crouching = true
+        moveRightPressed = false
+        moveLeftPressed = false
+        moveTimer.moveRight = false
+        moveTimer.moveLeft = false
+        moveTimer.stop()
+        isMoving = false
+        p1CurrentAnim = ""
+        director.p1Model.playCrouch()
+    }
+
+    // P1 退出下蹲
+    function stopCrouch1() {
+        p1Crouching = false
+        director.p1Model.stopCrouch()
+        // 恢复移动状态
+        if (moveRightPressed && !moveLeftPressed) {
+            startMoveRight()
+        } else if (moveLeftPressed && !moveRightPressed) {
+            startMoveLeft()
+        }
     }
 
     // P2 移动定时器
@@ -316,6 +345,7 @@ Item {
     property bool isMoving2: false
     property bool p2Jumping: false
     property bool p2Attacking: false
+    property bool p2Crouching: false
     property bool moveLeft2Pressed: false
     property bool moveRight2Pressed: false
     property string p2CurrentAnim: ""
@@ -323,7 +353,7 @@ Item {
     // P2 向右移动
     function startMoveRight2() {
         moveRight2Pressed = true
-        if (p2Jumping || p2Attacking) return
+        if (p2Jumping || p2Attacking || p2Crouching) return
         updateFacing()
         moveTimer2.moveLeft = false
         moveTimer2.moveRight = true
@@ -342,7 +372,7 @@ Item {
     // P2 向左移动
     function startMoveLeft2() {
         moveLeft2Pressed = true
-        if (p2Jumping || p2Attacking) return
+        if (p2Jumping || p2Attacking || p2Crouching) return
         updateFacing()
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = true
@@ -360,7 +390,7 @@ Item {
     }
     function stopMoveRight2() {
         moveRight2Pressed = false
-        if (p2Jumping || p2Attacking) return
+        if (p2Jumping || p2Attacking || p2Crouching) return
         updateFacing()
         if (moveLeft2Pressed) {
             moveTimer2.moveRight = false
@@ -383,7 +413,7 @@ Item {
     }
     function stopMoveLeft2() {
         moveLeft2Pressed = false
-        if (p2Jumping || p2Attacking) return
+        if (p2Jumping || p2Attacking || p2Crouching) return
         updateFacing()
         if (moveRight2Pressed) {
             moveTimer2.moveLeft = false
@@ -407,7 +437,7 @@ Item {
 
     // P2 跳跃: 行走中按↑触发对角跳(前跳/后跳), 站立时按↑触发直跳
     function startJump2() {
-        if (p2Jumping || p2Attacking) return
+        if (p2Jumping || p2Attacking || p2Crouching) return
         p2Jumping = true
         var wasMoving = isMoving2
         var animBeforeJump = p2CurrentAnim
@@ -425,7 +455,7 @@ Item {
 
     // P2 轻拳攻击
     function startAttack2() {
-        if (p2Jumping || p2Attacking) return
+        if (p2Jumping || p2Attacking || p2Crouching) return
         p2Attacking = true
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = false
@@ -437,7 +467,7 @@ Item {
 
     // P2 轻腿攻击
     function startAttackLightKick2() {
-        if (p2Jumping || p2Attacking) return
+        if (p2Jumping || p2Attacking || p2Crouching) return
         p2Attacking = true
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = false
@@ -449,7 +479,7 @@ Item {
 
     // P2 重拳攻击
     function startAttackHeavyPunch2() {
-        if (p2Jumping || p2Attacking) return
+        if (p2Jumping || p2Attacking || p2Crouching) return
         p2Attacking = true
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = false
@@ -461,7 +491,7 @@ Item {
 
     // P2 重腿攻击
     function startAttackHeavyKick2() {
-        if (p2Jumping || p2Attacking) return
+        if (p2Jumping || p2Attacking || p2Crouching) return
         p2Attacking = true
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = false
@@ -473,7 +503,7 @@ Item {
 
     // P2 超重击攻击
     function startAttackHeavyStrike2() {
-        if (p2Jumping || p2Attacking) return
+        if (p2Jumping || p2Attacking || p2Crouching) return
         p2Attacking = true
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = false
@@ -481,6 +511,32 @@ Item {
         isMoving2 = false
         p2CurrentAnim = ""
         director.p2Model.playHeavyStrike()
+    }
+
+    // P2 下蹲
+    function startCrouch2() {
+        if (p2Jumping || p2Attacking) return
+        p2Crouching = true
+        moveRight2Pressed = false
+        moveLeft2Pressed = false
+        moveTimer2.moveRight = false
+        moveTimer2.moveLeft = false
+        moveTimer2.stop()
+        isMoving2 = false
+        p2CurrentAnim = ""
+        director.p2Model.playCrouch()
+    }
+
+    // P2 退出下蹲
+    function stopCrouch2() {
+        p2Crouching = false
+        director.p2Model.stopCrouch()
+        // 恢复移动状态
+        if (moveRight2Pressed && !moveLeft2Pressed) {
+            startMoveRight2()
+        } else if (moveLeft2Pressed && !moveRight2Pressed) {
+            startMoveLeft2()
+        }
     }
 
     // 动态朝向: 始终面向对手
@@ -495,6 +551,7 @@ Item {
         switch (event.key) {
         case Qt.Key_D:      startMoveRight();  break
         case Qt.Key_A:      startMoveLeft();   break
+        case Qt.Key_S:      startCrouch1();    break
         case Qt.Key_W:      startJump();       break
         case Qt.Key_J:      startAttack1();    break
         case Qt.Key_K:      startAttackLightKick1();  break
@@ -503,6 +560,7 @@ Item {
         case Qt.Key_I:      startAttackHeavyStrike1();  break
         case Qt.Key_Right:  startMoveRight2(); break
         case Qt.Key_Left:   startMoveLeft2();  break
+        case Qt.Key_Down:   startCrouch2();    break
         case Qt.Key_Up:     startJump2();      break
         case Qt.Key_1:      if (event.modifiers & Qt.KeypadModifier) startAttack2(); break
         case Qt.Key_2:      if (event.modifiers & Qt.KeypadModifier) startAttackLightKick2(); break
@@ -516,8 +574,10 @@ Item {
         switch (event.key) {
         case Qt.Key_D:      stopMoveRight();  break
         case Qt.Key_A:      stopMoveLeft();   break
+        case Qt.Key_S:      stopCrouch1();    break
         case Qt.Key_Right:  stopMoveRight2(); break
         case Qt.Key_Left:   stopMoveLeft2();  break
+        case Qt.Key_Down:   stopCrouch2();    break
         }
     }
 
@@ -675,6 +735,62 @@ Item {
         border.color: "red"
         border.width: 2
         z: 20
+    }
+
+    // Attack VFX 攻击特效
+    Item {
+        id: attackVfx
+        visible: false
+        z: 15
+        width: 32
+        height: 31
+        scale: fitScale * 3.0
+
+        Image { id: vfx1; source: "qrc:/images/Attack/1.png"; anchors.centerIn: parent }
+        Image { id: vfx2; source: "qrc:/images/Attack/2.png"; anchors.centerIn: parent }
+        Image { id: vfx3; source: "qrc:/images/Attack/3.png"; anchors.centerIn: parent }
+
+        Timer {
+            id: vfxTimer
+            interval: 50
+            repeat: true
+            property int step: 0
+            onTriggered: {
+                vfx1.visible = (step === 0)
+                vfx2.visible = (step === 1)
+                vfx3.visible = (step === 2)
+                step++
+                if (step >= 3) {
+                    stop()
+                    attackVfx.visible = false
+                    step = 0
+                    vfx1.visible = false
+                    vfx2.visible = false
+                    vfx3.visible = false
+                }
+            }
+        }
+
+        function play(atkModel, defModel) {
+            var midX = atkModel.posXRatio * 0.3 + defModel.posXRatio * 0.7
+            var neckY = defModel.positionY + defModel.frameHeight * (1 - defModel.visualScale * 0.8)
+            var s = atkModel.state
+            var offset
+            if (atkModel.visualScale <= 1.5) {
+                offset = -30
+            } else {
+                if (s === 8 || s === 10) offset = 120
+                else offset = 60
+            }
+            x = root.width * (midX - director.cameraOffset) - width / 2
+            y = neckY - height / 2 + offset
+            visible = true
+            vfx1.visible = false
+            vfx2.visible = false
+            vfx3.visible = false
+            vfxTimer.step = 0
+            vfxTimer.restart()
+        }
     }
 
     // HUD 顶部栏
@@ -1136,6 +1252,10 @@ Item {
             p1Attacking = false
             updateFacing()
             director.updateCamera()
+            if (p1Crouching) {
+                // 蹲攻击完毕, 已回到蹲姿, 不做任何操作
+                return
+            }
             if (moveRightPressed && !moveLeftPressed) {
                 isMoving = true
                 moveTimer.moveLeft = false
@@ -1170,6 +1290,7 @@ Item {
         function onHurtFinished() {
             p1Attacking = false
             p1Jumping = false
+            p1Crouching = false
             updateFacing()
             director.updateCamera()
             if (moveRightPressed && !moveLeftPressed) {
@@ -1262,6 +1383,10 @@ Item {
             p2Attacking = false
             updateFacing()
             director.updateCamera()
+            if (p2Crouching) {
+                // 蹲攻击完毕, 已回到蹲姿, 不做任何操作
+                return
+            }
             if (moveRight2Pressed && !moveLeft2Pressed) {
                 isMoving2 = true
                 moveTimer2.moveLeft = false
@@ -1296,6 +1421,7 @@ Item {
         function onHurtFinished() {
             p2Attacking = false
             p2Jumping = false
+            p2Crouching = false
             updateFacing()
             director.updateCamera()
             if (moveRight2Pressed && !moveLeft2Pressed) {

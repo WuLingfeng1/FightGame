@@ -35,7 +35,7 @@ class CharacterModel : public QObject
 
     QML_ELEMENT
 public:
-    enum State { Waiting, Opening, Stand, Forward, Backward, Jump, DiagonalJump, LightPunch, LightKick, HeavyPunch, HeavyKick, HeavyStrike, Hurt };
+    enum State { Waiting, Opening, Stand, Forward, Backward, Jump, DiagonalJump, LightPunch, LightKick, HeavyPunch, HeavyKick, HeavyStrike, Hurt, Crouch, CrouchAttack };
     Q_ENUM(State)
 
     explicit CharacterModel(QObject *parent = nullptr);
@@ -73,6 +73,9 @@ public:
     Q_INVOKABLE void playHurt1();                  // 切换到轻度受击动画
     Q_INVOKABLE void playHurt2();                  // 切换到中度受击动画
     Q_INVOKABLE void playHurt3();                  // 切换到重度受击动画
+    Q_INVOKABLE void playCrouch();                 // 切换到下蹲动画
+    Q_INVOKABLE void playCrouchAttack();           // 切换到下蹲攻击动画
+    Q_INVOKABLE void stopCrouch();                 // 退出下蹲状态
     void reset();                                 // 重置到初始状态
     void updateRootHeight(double h);              // 更新窗口高度(用于Y坐标计算)
     State state() const { return m_state; }
@@ -136,6 +139,9 @@ private:
     AnimParams m_hurt1;            // 轻度受击动画参数副本
     AnimParams m_hurt2;            // 中度受击动画参数副本
     AnimParams m_hurt3;            // 重度受击动画参数副本
+    AnimParams m_crouch;           // 下蹲动画参数副本
+    AnimParams m_crouchAttack;     // 下蹲攻击动画参数副本
+    bool     m_crouching = false;  // 是否处于蹲姿
     bool     m_loopAnim = true;    // 当前动画是否循环
     double   m_cfgPosX = 0.5;     // 水平位置比例(可运行时修改)
     double   m_jumpHeight = 200;  // 跳跃峰值高度(从配置加载)

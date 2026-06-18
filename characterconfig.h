@@ -52,6 +52,8 @@ struct CharacterConfig {
     AnimParams hurt1;             // 轻度受击动画参数
     AnimParams hurt2;             // 中度受击动画参数
     AnimParams hurt3;             // 重度受击动画参数
+    AnimParams crouch;            // 下蹲动画参数
+    AnimParams crouchAttack;      // 下蹲攻击动画参数
 };
 
 // 角色配置加载器: 从 JSON 对象解析出 CharacterConfig
