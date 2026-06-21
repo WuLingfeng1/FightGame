@@ -1,0 +1,74 @@
+FightGame 总体开发思路
+
+1. 项目概述
+
+FightGame是一款仿写拳皇97（KOF '97）的本地双人格斗游戏。
+
+技术栈：Qt 6.11 / QML + C++23
+构建系统：CMake 4.2.3
+作者：Linfeng Wu
+
+2. 技术架构
+
+采用QML 渲染层 + C++ 逻辑层的双层架构，通过 Qt 的 Q_PROPERTY + 信号槽机制桥接。
+
+QML渲染层（Main.qml / SelectScreen.qml / FightScreen.qml）
+精灵表视口裁剪 + Scale 翻转
+HUD（血条/能量条/倒计时）
+键盘输入捕获
+背景视差滚动
+
+Q_PROPERTY + 信号
+
+C++ 逻辑层（CharacterModel / FightDirector / CharacterConfig）
+动画状态机（7状态循环）
+战斗流程管理（开场→战斗）
+跳跃抛物线计算
+镜头跟随算法
+JSON 配置解析
+
+
+3. 分阶段开发路线
+
+已完成阶段
+[v0.1.1]     2026-06-11 22:43:30   Added character intro animations
+[v0.1.2]     2026-06-12 13:54:47   分离渲染与功能, 增加forward动作, 微调单帧尺寸
+[v0.1.3]     2026-06-12 16:58:12   修改了角色朝向的BUG,补充了角色朝向的状态判定,分别加入了两个角色的backward动作
+[v0.1.4]     2026-06-12 17:45:15   实现了镜头跟随机制,修复了移动打断开场动画的Bug
+[v0.1.5]     2026-06-15 02:22:38   实现了跳跃功能,斜跳功能,修改了跳跃高度
+[v0.1.6]     2026-06-15 13:28:32   修复了两名角色同时起跳越过对方时产生的镜头晃动和闪屏
+[v0.1.7]     2026-06-15 21:06:43   角色同时新增轻拳,轻腿,重拳,重腿这些攻击动作
+[v0.1.8]     2026-06-17 09:51:57   新增碰撞检测功能,同时也加入了受击动作,实现了攻击响应击退效果
+[v0.1.9]     2026-06-18 17:34:33   实现下蹲系统（含蹲防无敌机制）和攻击视觉特效系统
+
+待完成阶段
+背景选择+地图系统
+伤害计算+血量系统
+胜负判定+回合系统
+防御系统+减伤机制
+在线对战+网络同步
+
+
+
+4. 数据驱动架构
+
+所有角色动画参数通过config/characters.json配置：
+
+json
+{
+    角色ID: {
+        facingLeft: true/false,
+        posX: 初始位置比例,
+        opening: { "cols", "fw", "fh", "interval", "path" },
+        stand:   { "cols", "fw", "fh", "interval", "path", "feetBottom", "feetMargin" },
+        forward: { "cols", "fw", "fh", "interval", "path", "loop" },
+        backward:{ ... },
+        jump:    { ..., "jumpHeight", "visualScale" },
+        diagonalJump: { ..., "jumpHeight", "jumpDistance", "divFrame", "visualScale" }
+    }
+}
+
+
+新角色接入只需：准备精灵表图片 → 添加 JSON 配置 → 在 SelectScreen.qml 中注册角色条目。
+
+

@@ -174,6 +174,24 @@
             "attackRadius": 150,
             "attackFrames": "3-7",
             "knockbackDistance": 80
+        },
+        "dodge": {
+            "cols": 16,
+            "fw": 384,
+            "fh": 512,
+            "interval": 60,
+            "path": "qrc:/images/character/Orochi/Dodge.png",
+            "loop": false,
+            "visualScale": 1.0,
+            "feetBottom": 476,
+            "feetMargin": 82,
+            "dodgeStartFrame": 8,
+            "dodgeEndFrame": 15,
+            "dodgeDistance": 0.3,
+            "offsetX": 60,
+            "offsetXPost": 17,
+            "offsetXEnd": 4,
+            "dodgeSwitchFrame": 8
         }
     },
     "Yagami": {
@@ -386,6 +404,21 @@
             "visualScale": 0.75,
             "feetBottom": 264,
             "feetMargin": 82
+        },
+        "dodge": {
+            "cols": 25,
+            "fw": 384,
+            "fh": 512,
+            "interval": 60,
+            "path": "qrc:/images/character/Yagami/Dodge.png",
+            "loop": false,
+            "visualScale": 1.25,
+            "feetBottom": 277,
+            "feetMargin": 60,
+            "dodgeFrames": "0-11",
+            "dodgeBackFrames": "12-24",
+            "dodgeDistance": 0.3,
+            "offsetX": -50
         }
     }
 }

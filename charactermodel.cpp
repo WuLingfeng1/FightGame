@@ -15,26 +15,27 @@ CharacterModel::~CharacterModel()
 }
 
 // 从配置初始化角色模型: 保存动画参数副本, 重置状态为 Waiting
-void CharacterModel::configure(const CharacterConfig &cfg)
+void CharacterModel::configure(const CharacterData &cfg)
 {
-    m_opening      = cfg.opening;
-    m_stand        = cfg.stand;
-    m_forward      = cfg.forward;
-    m_backward     = cfg.backward;
-    m_jump         = cfg.jump;
+    m_opening = cfg.opening;
+    m_stand = cfg.stand;
+    m_forward = cfg.forward;
+    m_backward = cfg.backward;
+    m_jump = cfg.jump;
     m_diagonalJump = cfg.diagonalJump;
-    m_lightPunch   = cfg.lightPunch;
-    m_lightKick    = cfg.lightKick;
-    m_heavyPunch   = cfg.heavyPunch;
-    m_heavyKick    = cfg.heavyKick;
-    m_heavyStrike  = cfg.heavyStrike;
-    m_hurt         = cfg.hurt;
-    m_hurt1        = cfg.hurt1;
-    m_hurt2        = cfg.hurt2;
-    m_hurt3        = cfg.hurt3;
-    m_crouch       = cfg.crouch;
+    m_lightPunch = cfg.lightPunch;
+    m_lightKick = cfg.lightKick;
+    m_heavyPunch = cfg.heavyPunch;
+    m_heavyKick = cfg.heavyKick;
+    m_heavyStrike = cfg.heavyStrike;
+    m_hurt = cfg.hurt;
+    m_hurt1 = cfg.hurt1;
+    m_hurt2 = cfg.hurt2;
+    m_hurt3 = cfg.hurt3;
+    m_crouch = cfg.crouch;
     m_crouchAttack = cfg.crouchAttack;
-    m_jumpHeight   = cfg.jump.jumpHeight;
+    m_dodge = cfg.dodge;
+    m_jumpHeight = cfg.jump.jumpHeight;
     m_refFrameWidth = cfg.stand.fw;
     setFacingLeft(cfg.facingLeft);
     setPosXRatio(cfg.posX);
@@ -297,11 +298,84 @@ void CharacterModel::playHeavyStrike()
     emit stateChanged();
 }
 
+// 切换到闪避动画
+void CharacterModel::playDodge(bool forward)
+{
+    if (m_dodge.cols <= 0) return;
+    m_timer.stop();
+    m_state = Dodge;
+    m_loopAnim = false;
+    m_visualScale = m_dodge.visualScale;
+    if (m_dodge.dodgeStartFrame > 0)
+        m_animOffsetX = m_dodge.offsetX;
+    else
+        m_animOffsetX = (forward || m_dodge.dodgeBackFrames.isEmpty())
+            ? m_dodge.offsetX : -m_dodge.offsetX;
+    m_currentAnim = m_dodge;
+    m_dodgeForward = forward;
+    m_dodgeStandPending = false;
+    m_totalFrames = m_dodge.cols;
+
+    // 帧范围：Yagami 有 dodgeFrames/dodgeBackFrames，Orochi 没有
+    m_dodgeEndFrame = 0;
+    if (m_dodge.dodgeFrames.length() > 0) {
+        QStringList fwdRange = m_dodge.dodgeFrames.split('-');
+        QStringList bwdRange = m_dodge.dodgeBackFrames.split('-');
+        if (forward && fwdRange.size() == 2) {
+            m_currentFrame = fwdRange[0].toInt();
+            m_dodgeEndFrame = fwdRange[1].toInt() + 1;
+        } else if (!forward && bwdRange.size() == 2) {
+            m_currentFrame = bwdRange[0].toInt();
+            m_dodgeEndFrame = bwdRange[1].toInt() + 1;
+        } else {
+            m_currentFrame = 0;
+        }
+    } else {
+        // Orochi：没有 dodgeFrames，使用 dodgeStartFrame/dodgeEndFrame
+        m_currentFrame = 0;
+        if (m_dodge.dodgeEndFrame > 0 && m_dodge.dodgeEndFrame < m_dodge.cols)
+            m_dodgeEndFrame = m_dodge.dodgeEndFrame + 1;
+        else
+            m_dodgeEndFrame = m_dodge.cols;
+    }
+
+    m_sourcePath = m_dodge.path;
+    m_frameWidth = m_dodge.fw;
+    m_frameHeight = m_dodge.fh;
+    if (m_dodge.dodgeStartFrame > 0) {
+        m_dodgeOffsetXPost = m_dodge.offsetXPost;
+        m_dodgeOffsetXEnd = m_dodge.offsetXEnd;
+        m_dodgeSwitchFrame = m_dodge.dodgeSwitchFrame > 0
+            ? m_dodge.dodgeSwitchFrame : m_dodge.dodgeStartFrame;
+    }
+    setPosY();
+
+    m_timer.setInterval(m_dodge.interval);
+    m_timer.start();
+    emit frameChanged();
+    emit sourcePathChanged();
+    emit sizeChanged();
+    emit positionChanged();
+    emit stateChanged();
+}
+
 // 切换到受击动画
 void CharacterModel::playHurt()
 {
     if (m_hurt.cols <= 0) return;
-    if (m_crouching) return;
+    if (m_crouching) {
+        if (m_opponent && m_knockbackToApply > 0) {
+            double dist = m_knockbackToApply / 1000.0;
+            if (m_cfgPosX > m_opponent->posXRatio())
+                m_cfgPosX += dist;
+            else
+                m_cfgPosX -= dist;
+            m_cfgPosX = std::max(0.0, std::min(m_cfgPosX, 3.0));
+            emit posXRatioChanged();
+            m_knockbackToApply = 0;
+        }
+        return;
+    }
     m_timer.stop();
     m_state = Hurt;
     m_currentFrame = 0;
@@ -324,7 +398,19 @@ void CharacterModel::playHurt()
 void CharacterModel::playHurt1()
 {
     if (m_hurt1.cols <= 0) { playHurt(); return; }
-    if (m_crouching) return;
+    if (m_crouching) {
+        if (m_opponent && m_knockbackToApply > 0) {
+            double dist = m_knockbackToApply / 1000.0;
+            if (m_cfgPosX > m_opponent->posXRatio())
+                m_cfgPosX += dist;
+            else
+                m_cfgPosX -= dist;
+            m_cfgPosX = std::max(0.0, std::min(m_cfgPosX, 3.0));
+            emit posXRatioChanged();
+            m_knockbackToApply = 0;
+        }
+        return;
+    }
     m_timer.stop();
     m_state = Hurt;
     m_currentFrame = 0;
@@ -347,7 +433,19 @@ void CharacterModel::playHurt1()
 void CharacterModel::playHurt2()
 {
     if (m_hurt2.cols <= 0) { playHurt(); return; }
-    if (m_crouching) return;
+    if (m_crouching) {
+        if (m_opponent && m_knockbackToApply > 0) {
+            double dist = m_knockbackToApply / 1000.0;
+            if (m_cfgPosX > m_opponent->posXRatio())
+                m_cfgPosX += dist;
+            else
+                m_cfgPosX -= dist;
+            m_cfgPosX = std::max(0.0, std::min(m_cfgPosX, 3.0));
+            emit posXRatioChanged();
+            m_knockbackToApply = 0;
+        }
+        return;
+    }
     m_timer.stop();
     m_state = Hurt;
     m_currentFrame = 0;
@@ -370,7 +468,19 @@ void CharacterModel::playHurt2()
 void CharacterModel::playHurt3()
 {
     if (m_hurt3.cols <= 0) { playHurt(); return; }
-    if (m_crouching) return;
+    if (m_crouching) {
+        if (m_opponent && m_knockbackToApply > 0) {
+            double dist = m_knockbackToApply / 1000.0;
+            if (m_cfgPosX > m_opponent->posXRatio())
+                m_cfgPosX += dist;
+            else
+                m_cfgPosX -= dist;
+            m_cfgPosX = std::max(0.0, std::min(m_cfgPosX, 3.0));
+            emit posXRatioChanged();
+            m_knockbackToApply = 0;
+        }
+        return;
+    }
     m_timer.stop();
     m_state = Hurt;
     m_currentFrame = 0;
@@ -514,6 +624,8 @@ void CharacterModel::setPosY()
                 fb = m_heavyKick.feetBottom;  fm = m_heavyKick.feetMargin;  break;
             case HeavyStrike:
                 fb = m_heavyStrike.feetBottom;  fm = m_heavyStrike.feetMargin;  break;
+            case Dodge:
+                fb = m_dodge.feetBottom;  fm = m_dodge.feetMargin;  break;
             case Forward:
                 fb = m_forward.feetBottom;    fm = m_forward.feetMargin;    break;
             case Backward:
@@ -530,12 +642,17 @@ void CharacterModel::setPosY()
         if (fb <= 0 || fm <= 0) { fb = m_stand.feetBottom; fm = m_stand.feetMargin; }
         if (fb > 0 && fm > 0) {
             // HeavyStrike 特殊处理：确保底部位置与 stand 一致
-            if (m_state == HeavyStrike) {
+            if (m_state == HeavyStrike || (m_state == Dodge && m_dodge.dodgeStartFrame > 0)) {
                 double standBottom = m_rootHeight - m_stand.feetMargin - m_stand.feetBottom + m_stand.fh;
-                m_posY = standBottom - m_frameHeight;
-            } else {
+                if (m_state == Dodge) {
+                    m_posY = standBottom - m_stand.feetBottom - m_frameHeight
+                           + (int)(fb * m_visualScale);
+                } else {
+                    m_posY = standBottom - m_frameHeight;
+                }
+            }
+            else {
                 m_posY = m_rootHeight - fm - fb;
-                // 补偿 visualScale 从 Item 底部缩放导致的脚尖上移
                 if (m_visualScale > 1.0)
                     m_posY += (m_frameHeight - fb) * (m_visualScale - 1.0);
                 else if (m_visualScale < 1.0)
@@ -566,6 +683,7 @@ void CharacterModel::onTick()
         }
     }
 
+    // 帧推进：统一正序播放
     m_currentFrame++;
     if (m_state == Opening && m_currentFrame >= m_totalFrames) {
         m_currentFrame = m_totalFrames - 1;   // 冻结在最后一帧
@@ -673,6 +791,111 @@ void CharacterModel::onTick()
             playStand();
         }
         emit attackFinished();
+        return;
+    }
+    // --- Dodge 位移逻辑 ---
+    if (m_state == Dodge) {
+        bool reachedEnd = false;
+        if (m_dodgeEndFrame > 0 && m_currentFrame >= m_dodgeEndFrame) {
+            reachedEnd = true;
+        }
+        if (!reachedEnd) {
+            // Orochi：在 dodgeStartFrame 帧一次性瞬移
+            if (m_dodge.dodgeStartFrame > 0) {
+                int teleportFrame = m_dodge.dodgeStartFrame;
+                if (m_currentFrame == teleportFrame) {
+                double dodgeDistance = m_dodge.dodgeDistance > 0 ? m_dodge.dodgeDistance : 0.3;
+                double xSign;
+                if (m_opponent && m_cfgPosX > m_opponent->posXRatio())
+                    xSign = -1.0;
+                else
+                    xSign = 1.0;
+                if (!m_dodgeForward) xSign = -xSign;
+                double newX = m_cfgPosX + xSign * dodgeDistance;
+                if (m_opponent) {
+                    double minX = 0.0;
+                    double maxX = 3.0;
+                    newX = std::max(minX, std::min(newX, maxX));
+                }
+                m_cfgPosX = newX;
+                emit posXRatioChanged();
+                if (m_opponent)
+                    m_facingLeft = (newX > m_opponent->posXRatio());
+                }
+                if (m_currentFrame == m_dodgeSwitchFrame)
+                    m_animOffsetX = m_dodgeOffsetXPost;
+                if (m_dodgeOffsetXPost != m_dodgeOffsetXEnd
+                    && m_currentFrame >= m_dodgeEndFrame - 3
+                    && m_currentFrame < m_dodgeEndFrame) {
+                    int stepsLeft = m_dodgeEndFrame - m_currentFrame;
+                    double t = (stepsLeft - 1) / 3.0;
+                    m_animOffsetX = (int)(m_dodgeOffsetXEnd
+                        + (m_dodgeOffsetXPost - m_dodgeOffsetXEnd) * t);
+                }
+            }
+            // Yagami：在整个闪避期间均匀位移
+            else if (m_dodge.dodgeStartFrame == 0 && m_dodge.dodgeFrames.length() > 0) {
+                double dodgeDistance = m_dodge.dodgeDistance > 0 ? m_dodge.dodgeDistance : 0.3;
+                double xSign;
+                if (m_opponent && m_cfgPosX > m_opponent->posXRatio())
+                    xSign = -1.0;
+                else
+                    xSign = 1.0;
+                if (!m_dodgeForward) xSign = -xSign;
+                int dodgeFrameSteps = 0;
+                if (m_dodgeForward) {
+                    QStringList fwdRange = m_dodge.dodgeFrames.split('-');
+                    if (fwdRange.size() == 2)
+                        dodgeFrameSteps = fwdRange[1].toInt() - fwdRange[0].toInt();
+                } else {
+                    QStringList bwdRange = m_dodge.dodgeBackFrames.split('-');
+                    if (bwdRange.size() == 2)
+                        dodgeFrameSteps = bwdRange[1].toInt() - bwdRange[0].toInt();
+                }
+                if (dodgeFrameSteps > 0) {
+                    double newX = m_cfgPosX + xSign * dodgeDistance / dodgeFrameSteps;
+                    if (m_opponent) {
+                        double oppX = m_opponent->posXRatio();
+                        double bodyDist = 0.08;
+                        if (xSign > 0 && m_cfgPosX < oppX) newX = std::min(newX, oppX - bodyDist);
+                        else if (xSign < 0 && m_cfgPosX > oppX) newX = std::max(newX, oppX + bodyDist);
+                        double minX = std::max(0.0, oppX - 0.95);
+                        double maxX = std::min(3.0, oppX + 0.95);
+                        newX = std::max(minX, std::min(newX, maxX));
+                    }
+                    m_cfgPosX = newX;
+                    emit posXRatioChanged();
+                }
+            }
+        }
+    }
+    // --- Dodge 结束条件 ---
+    if (m_state == Dodge && m_dodgeEndFrame > 0 && m_currentFrame >= m_dodgeEndFrame) {
+        m_currentFrame = m_dodgeEndFrame - 1;
+        m_timer.stop();
+        if (m_dodge.dodgeStartFrame > 0)
+            m_animOffsetX = 0;
+        m_dodgeStandPending = true;
+        QTimer::singleShot(0, this, [this]() {
+            if (m_dodgeStandPending) {
+                m_dodgeStandPending = false;
+                playStand();
+                emit dodgeFinished();
+            }
+        });
+        return;
+    }
+    if (m_state == Dodge && !m_dodgeForward && m_dodge.dodgeBackFrames.isEmpty() && m_currentFrame >= m_totalFrames) {
+        m_currentFrame = m_totalFrames - 1;
+        m_timer.stop();
+        m_dodgeStandPending = true;
+        QTimer::singleShot(0, this, [this]() {
+            if (m_dodgeStandPending) {
+                m_dodgeStandPending = false;
+                playStand();
+                emit dodgeFinished();
+            }
+        });
         return;
     }
     if (m_state == Stand && m_currentFrame >= m_totalFrames) {

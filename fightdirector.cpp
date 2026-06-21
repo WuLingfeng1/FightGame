@@ -17,12 +17,12 @@ FightDirector::FightDirector(QObject *parent)
     connect(m_p2Model, &CharacterModel::openingFinished,
             this, &FightDirector::onP2OpeningFinished);
 
-    QFile file(":/config/characters.json");
+    QFile file("/wlf/FightGame/config/characters.json");
     if (file.open(QIODevice::ReadOnly)) {
         m_jsonConfig = QJsonDocument::fromJson(file.readAll()).object();
         file.close();
     } else {
-        qWarning() << "[FightDirector] Cannot load characters.json";
+        qWarning() << "[FightDirector] Cannot load characters.json from: /wlf/FightGame/config/characters.json";
     }
 }
 
@@ -67,7 +67,7 @@ void FightDirector::loadConfig(const QString &charId, CharacterModel *model)
         qWarning() << "[FightDirector] Unknown character:" << charId;
         return;
     }
-    CharacterConfig cfg = CharacterConfigLoader::load(obj, charId);
+    CharacterData cfg = CharacterConfig::load(obj, charId);
     model->configure(cfg);
 }
 
@@ -127,7 +127,8 @@ bool FightDirector::checkCollision()
     bool anyHit = false;
 
     // 检查 P1 是否攻击 P2
-    if (m_p1Model->isAttacking() && m_p1Model->isAttackActive()) {
+    if (m_p1Model->isAttacking() && m_p1Model->isAttackActive()
+        && m_p2Model->state() != CharacterModel::Dodge) {
         double hitNormX = m_p1Model->hitboxX();
         double hitY = m_p1Model->hitboxY();
         double hitR = m_p1Model->hitboxRadius();
@@ -152,7 +153,8 @@ bool FightDirector::checkCollision()
     }
 
     // 检查 P2 是否攻击 P1
-    if (m_p2Model->isAttacking() && m_p2Model->isAttackActive()) {
+    if (m_p2Model->isAttacking() && m_p2Model->isAttackActive()
+        && m_p1Model->state() != CharacterModel::Dodge) {
         double hitNormX = m_p2Model->hitboxX();
         double hitY = m_p2Model->hitboxY();
         double hitR = m_p2Model->hitboxRadius();

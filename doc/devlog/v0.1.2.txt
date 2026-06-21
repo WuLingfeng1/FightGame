@@ -1,0 +1,16 @@
+v0.1.1 — 界面串联 + 开场动画
+
+日期：2026-06-07 ~ 2026-06-11
+
+变更摘要
+
+实现三层界面完整串联，添加角色开场动画和窗口自适应。
+
+详细内容
+
+界面串联：Main "Local Two-Player" → StackView.push(SelectScreen) → "FIGHT" → Qt.createComponent(FightScreen)。角色数据通过组件属性传入。
+
+开场动画：CharacterModel 新增 Opening 状态，playOpening() 播完自动切 Stand。FightDirector 管理开场顺序：P1→P2→Fighting。开场阶段键盘输入被忽略。
+
+窗口自适应：fitScale = Math.min(width/900, height/640)，所有 UI 元素等比缩放。
+

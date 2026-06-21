@@ -13,6 +13,7 @@
 //     [v0.1.7]     2026-06-15 21:06:43   角色同时新增轻拳,轻腿,重拳,重腿这些攻击动作
 //     [v0.1.8]     2026-06-17 09:51:57   新增碰撞检测功能,同时也加入了受击动作,实现了攻击响应击退效果
 //     [v0.1.9]     2026-06-18 17:34:33   实现下蹲系统（含蹲防无敌机制）和攻击视觉特效系统
+//     [v0.2.0]     2026-06-21 20:49:28   实现了闪避功能,改善了一下攻击和受击的机制,下蹲防御时新增受击击退效果
 import QtQuick
 import QtQuick.Controls
 import FightGame
@@ -117,6 +118,57 @@ Item {
     property bool moveLeftPressed: false
     property bool moveRightPressed: false
     property string p1CurrentAnim: ""
+
+    // 组合键缓冲: 等待第二个按键
+    property bool p1WaitingCombo: false
+    property bool p2WaitingCombo: false
+    property bool p1ComboKeyJ: true   // 记录首发键: true=J, false=K
+    property bool p2ComboKeyJ: true
+
+    Timer {
+        id: p1ComboTimer
+        interval: 100
+        onTriggered: {
+            if (p1WaitingCombo) {
+                p1WaitingCombo = false
+                if (p1ComboKeyJ) startAttack1()
+                else startAttackLightKick1()
+            }
+        }
+    }
+    Timer {
+        id: p2ComboTimer
+        interval: 100
+        onTriggered: {
+                if (p2WaitingCombo) {
+                    p2WaitingCombo = false
+                    if (p2ComboKeyJ) startAttack2()
+                    else startAttackLightKick2()
+            }
+        }
+    }
+
+    // P1 闪避方向判断: 根据角色朝向决定前后
+    function getP1DodgeForward() {
+        var fwd = !director.p1Model.facingLeft
+        if (moveRightPressed && !moveLeftPressed) {
+            return fwd       // 右键 → 朝对手方向 = 前闪
+        } else if (moveLeftPressed && !moveRightPressed) {
+            return !fwd      // 左键 → 背离对手 = 后闪
+        }
+        return true  // 默认前闪
+    }
+
+    // P2 闪避方向判断
+    function getP2DodgeForward() {
+        var fwd = !director.p2Model.facingLeft
+        if (moveRight2Pressed && !moveLeft2Pressed) {
+            return fwd
+        } else if (moveLeft2Pressed && !moveRight2Pressed) {
+            return !fwd
+        }
+        return true
+    }
 
     // P1 向右移动
     function startMoveRight() {
@@ -279,6 +331,18 @@ Item {
         isMoving = false
         p1CurrentAnim = ""
         director.p1Model.playHeavyStrike()
+    }
+
+    // P1 闪避
+    function startDodge1(forward) {
+        if (p1Jumping) return
+        p1Attacking = true
+        moveTimer.moveRight = false
+        moveTimer.moveLeft = false
+        moveTimer.stop()
+        isMoving = false
+        p1CurrentAnim = ""
+        director.p1Model.playDodge(forward)
     }
 
     // P1 下蹲
@@ -513,6 +577,18 @@ Item {
         director.p2Model.playHeavyStrike()
     }
 
+    // P2 闪避
+    function startDodge2(forward) {
+        if (p2Jumping) return
+        p2Attacking = true
+        moveTimer2.moveRight = false
+        moveTimer2.moveLeft = false
+        moveTimer2.stop()
+        isMoving2 = false
+        p2CurrentAnim = ""
+        director.p2Model.playDodge(forward)
+    }
+
     // P2 下蹲
     function startCrouch2() {
         if (p2Jumping || p2Attacking) return
@@ -546,6 +622,11 @@ Item {
     }
 
     // 键盘输入, P1用A/D/W/J/K/U/L, P2用方向键/小键盘1-3/0
+    property bool p1JPressed: false
+    property bool p1KPressed: false
+    property bool p2N1Pressed: false
+    property bool p2N2Pressed: false
+
     Keys.onPressed: (event) => {
         if (event.isAutoRepeat || director.phase !== FightDirector.Fighting) return
         switch (event.key) {
@@ -553,8 +634,30 @@ Item {
         case Qt.Key_A:      startMoveLeft();   break
         case Qt.Key_S:      startCrouch1();    break
         case Qt.Key_W:      startJump();       break
-        case Qt.Key_J:      startAttack1();    break
-        case Qt.Key_K:      startAttackLightKick1();  break
+        case Qt.Key_J:
+            p1JPressed = true
+            if (p1WaitingCombo && p1KPressed && (moveRightPressed || moveLeftPressed)) {
+                p1ComboTimer.stop()
+                p1WaitingCombo = false
+                startDodge1(getP1DodgeForward())
+            } else {
+                p1ComboKeyJ = true
+                p1WaitingCombo = true
+                p1ComboTimer.restart()
+            }
+            break
+        case Qt.Key_K:
+            p1KPressed = true
+            if (p1WaitingCombo && p1JPressed && (moveRightPressed || moveLeftPressed)) {
+                p1ComboTimer.stop()
+                p1WaitingCombo = false
+                startDodge1(getP1DodgeForward())
+            } else {
+                p1ComboKeyJ = false
+                p1WaitingCombo = true
+                p1ComboTimer.restart()
+            }
+            break
         case Qt.Key_U:      startAttackHeavyPunch1(); break
         case Qt.Key_L:      startAttackHeavyKick1();  break
         case Qt.Key_I:      startAttackHeavyStrike1();  break
@@ -562,8 +665,43 @@ Item {
         case Qt.Key_Left:   startMoveLeft2();  break
         case Qt.Key_Down:   startCrouch2();    break
         case Qt.Key_Up:     startJump2();      break
-        case Qt.Key_1:      if (event.modifiers & Qt.KeypadModifier) startAttack2(); break
-        case Qt.Key_2:      if (event.modifiers & Qt.KeypadModifier) startAttackLightKick2(); break
+        case Qt.Key_1:
+            if (event.modifiers & Qt.KeypadModifier) {
+                p2N1Pressed = true
+                var dir = moveRight2Pressed || moveLeft2Pressed
+                if (p2WaitingCombo && p2N2Pressed) {
+                    p2ComboTimer.stop()
+                    p2WaitingCombo = false
+                    startDodge2(dir ? getP2DodgeForward() : true)
+                } else {
+                    p2ComboKeyJ = true
+                    p2WaitingCombo = true
+                    p2ComboTimer.restart()
+                }
+            }
+            break
+        case Qt.Key_2:
+            if (event.modifiers & Qt.KeypadModifier) {
+                p2N2Pressed = true
+                var dir = moveRight2Pressed || moveLeft2Pressed
+                if (p2WaitingCombo && p2N1Pressed) {
+                    // 正常：Num1先按，Num2后按 → 闪避
+                    p2ComboTimer.stop()
+                    p2WaitingCombo = false
+                    startDodge2(dir ? getP2DodgeForward() : true)
+                } else {
+                    // Num2先按（无方向键），启动计时器等待Num1
+                    p2ComboKeyJ = false
+                    p2WaitingCombo = true
+                    p2ComboTimer.restart()
+                }
+            }
+            break
+        case Qt.Key_2:
+            if (event.modifiers & Qt.KeypadModifier) {
+                // Already handled above for dodge combo
+            }
+            break
         case Qt.Key_3:      if (event.modifiers & Qt.KeypadModifier) startAttackHeavyPunch2(); break
         case Qt.Key_0:      if (event.modifiers & Qt.KeypadModifier) startAttackHeavyKick2(); break
         case Qt.Key_5:      if (event.modifiers & Qt.KeypadModifier) startAttackHeavyStrike2(); break
@@ -575,9 +713,13 @@ Item {
         case Qt.Key_D:      stopMoveRight();  break
         case Qt.Key_A:      stopMoveLeft();   break
         case Qt.Key_S:      stopCrouch1();    break
+        case Qt.Key_J:      p1JPressed = false; break
+        case Qt.Key_K:      p1KPressed = false; break
         case Qt.Key_Right:  stopMoveRight2(); break
         case Qt.Key_Left:   stopMoveLeft2();  break
         case Qt.Key_Down:   stopCrouch2();    break
+        case Qt.Key_1:      if (event.modifiers & Qt.KeypadModifier) p2N1Pressed = false; break
+        case Qt.Key_2:      if (event.modifiers & Qt.KeypadModifier) p2N2Pressed = false; break
         }
     }
 
@@ -1324,6 +1466,40 @@ Item {
                 isMoving = false
             }
         }
+        function onDodgeFinished() {
+            p1Attacking = false
+            updateFacing()
+            director.updateCamera()
+            if (moveRightPressed && !moveLeftPressed) {
+                isMoving = true
+                moveTimer.moveLeft = false
+                moveTimer.moveRight = true
+                if (director.p1Model.facingLeft) {
+                    director.p1Model.playBackward()
+                    p1CurrentAnim = "backward"
+                } else {
+                    director.p1Model.playForward()
+                    p1CurrentAnim = "forward"
+                }
+                moveTimer.start()
+            } else if (moveLeftPressed && !moveRightPressed) {
+                isMoving = true
+                moveTimer.moveRight = false
+                moveTimer.moveLeft = true
+                if (director.p1Model.facingLeft) {
+                    director.p1Model.playForward()
+                    p1CurrentAnim = "forward"
+                } else {
+                    director.p1Model.playBackward()
+                    p1CurrentAnim = "backward"
+                }
+                moveTimer.start()
+            } else {
+                moveTimer.moveRight = false
+                moveTimer.moveLeft = false
+                isMoving = false
+            }
+        }
     }
 
     Connections {
@@ -1450,6 +1626,40 @@ Item {
                 moveTimer2.start()
             } else {
                 director.p2Model.playStand()
+                moveTimer2.moveRight = false
+                moveTimer2.moveLeft = false
+                isMoving2 = false
+            }
+        }
+        function onDodgeFinished() {
+            p2Attacking = false
+            updateFacing()
+            director.updateCamera()
+            if (moveRight2Pressed && !moveLeft2Pressed) {
+                isMoving2 = true
+                moveTimer2.moveLeft = false
+                moveTimer2.moveRight = true
+                if (director.p2Model.facingLeft) {
+                    director.p2Model.playBackward()
+                    p2CurrentAnim = "backward"
+                } else {
+                    director.p2Model.playForward()
+                    p2CurrentAnim = "forward"
+                }
+                moveTimer2.start()
+            } else if (moveLeft2Pressed && !moveRight2Pressed) {
+                isMoving2 = true
+                moveTimer2.moveRight = false
+                moveTimer2.moveLeft = true
+                if (director.p2Model.facingLeft) {
+                    director.p2Model.playForward()
+                    p2CurrentAnim = "forward"
+                } else {
+                    director.p2Model.playBackward()
+                    p2CurrentAnim = "backward"
+                }
+                moveTimer2.start()
+            } else {
                 moveTimer2.moveRight = false
                 moveTimer2.moveLeft = false
                 isMoving2 = false

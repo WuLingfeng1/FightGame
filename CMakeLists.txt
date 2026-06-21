@@ -26,7 +26,6 @@ qt_add_resources(appFightGame "appresources"
     PREFIX "/"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}"
     FILES
-        config/characters.json
         images/background.jpg
         images/background2.jpg
         images/avatar/Kdash.jpg
@@ -56,6 +55,7 @@ qt_add_resources(appFightGame "appresources"
         images/character/Orochi/Hurt.png
         images/character/Orochi/CrouchAttack.png
         images/character/Orochi/Crouch.png
+        images/character/Orochi/Dodge.png
         images/character/Yagami/Stand.png
         images/character/Yagami/opening.png
         images/character/Yagami/Backward.png
@@ -97,6 +97,7 @@ qt_add_resources(appFightGame "appresources"
         images/Attack/2.png
         images/Attack/3.png
 )
+
 target_compile_features(appFightGame PRIVATE cxx_std_23)
 target_link_libraries(appFightGame
     PRIVATE Qt6::Quick
