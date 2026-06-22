@@ -86,6 +86,11 @@ ApplicationWindow {
                         border.color: btnOnline.hovered ? "dimgray" : "gray"
                         border.width: 1; radius: 2
                     }
+
+                    onClicked: stackView.push(
+                        "OnlineLobby.qml",
+                        { "stackViewRef": stackView }
+                    )
                 }
 
                 Button {

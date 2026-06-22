@@ -17,12 +17,12 @@ FightDirector::FightDirector(QObject *parent)
     connect(m_p2Model, &CharacterModel::openingFinished,
             this, &FightDirector::onP2OpeningFinished);
 
-    QFile file("/wlf/FightGame/config/characters.json");
+    QFile file(":/config/characters.json");
     if (file.open(QIODevice::ReadOnly)) {
         m_jsonConfig = QJsonDocument::fromJson(file.readAll()).object();
         file.close();
     } else {
-        qWarning() << "[FightDirector] Cannot load characters.json from: /wlf/FightGame/config/characters.json";
+        qWarning() << "[FightDirector] Cannot load characters.json from: :/config/characters.json";
     }
 }
 

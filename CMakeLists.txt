@@ -1,13 +1,9 @@
-cmake_minimum_required(VERSION 4.2.3)
-set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "d0edc3af-4c50-42ea-a356-e2862fe7a444")
-# cmake_minimum_required(VERSION 4.3.2)
-# set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "451f2fe2-a8a2-47c3-bc32-94786d8fc91b")
-set(CMAKE_CXX_MODULE_STD ON)
+cmake_minimum_required(VERSION 3.22)
 
 project(FightGame VERSION 0.1 LANGUAGES CXX)
 set(QT_QML_GENERATE_QMLLS_INI ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick)
+find_package(Qt6 REQUIRED COMPONENTS Quick Network)
 qt_standard_project_setup(REQUIRES 6.9)
 
 qt_add_executable(appFightGame  WIN32)
@@ -18,6 +14,7 @@ qt_add_qml_module(appFightGame
     QML_FILES   Main.qml
     QML_FILES SelectScreen.qml
     QML_FILES FightScreen.qml
+    QML_FILES OnlineLobby.qml
     SOURCES charactermodel.h charactermodel.cpp
     SOURCES fightdirector.h fightdirector.cpp
     SOURCES characterconfig.h characterconfig.cpp
@@ -26,6 +23,7 @@ qt_add_resources(appFightGame "appresources"
     PREFIX "/"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}"
     FILES
+        config/characters.json
         images/background.jpg
         images/background2.jpg
         images/avatar/Kdash.jpg
@@ -101,7 +99,7 @@ qt_add_resources(appFightGame "appresources"
 
 target_compile_features(appFightGame PRIVATE cxx_std_23)
 target_link_libraries(appFightGame
-    PRIVATE Qt6::Quick
+    PRIVATE Qt6::Quick Qt6::Network
 )
 
 set(CMAKE_INSTALL_PREFIX "/opt/${PROJECT_NAME}" CACHE PATH "Install path prefix" FORCE)
