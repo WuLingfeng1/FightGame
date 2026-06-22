@@ -18,6 +18,7 @@ qt_add_qml_module(appFightGame
     SOURCES charactermodel.h charactermodel.cpp
     SOURCES fightdirector.h fightdirector.cpp
     SOURCES characterconfig.h characterconfig.cpp
+    SOURCES networkmanager.h networkmanager.cpp
 )
 qt_add_resources(appFightGame "appresources"
     PREFIX "/"
