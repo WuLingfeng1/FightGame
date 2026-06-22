@@ -25,11 +25,12 @@ struct AnimParams {
     int offsetXBwdLast = 0;// 对角跳后跳段末帧水平偏移
     double visualScale = 1.0; // 视觉缩放补偿(帧图缩小放大时用)
     int offsetX = 0;       // 角色在帧内的水平偏移补偿(用于居中对齐)
-    int attackPointX = 0;  // 攻击点X偏移(相对于角色中心, 正值=前方)
+    double attackPointX = 0;  // 攻击点X偏移(相对于角色中心, 正值=前方)
     int attackPointY = 0;  // 攻击点Y偏移(相对于角色中心, 正值=下方)
     int attackRadius = 60; // 攻击范围半径
     QString attackFrames;  // 攻击生效帧范围(如 "3-5" 表示帧3到帧5生效)
     int knockbackDistance = 0; // 击退距离(归一化坐标×1000, 如50=0.05)
+    int damage = 0;            // 攻击伤害值
     double dodgeDistance = 0;   // 闪避水平距离(归一化坐标)
     QString dodgeFrames;       // 前闪帧范围(如 "0-11")
     QString dodgeBackFrames;   // 后闪帧范围(如 "24-12", 倒序播放)
@@ -38,6 +39,7 @@ struct AnimParams {
     int dodgeSwitchFrame = 0;  // 闪避offsetX切换帧(Orochi专用)
     int offsetXPost = 0;       // 闪避瞬移后段水平偏移(Orochi专用)
     int offsetXEnd = 0;        // 闪避尾帧目标水平偏移(Orochi专用)
+    int blockHoldFrame = 0;    // 防御动画停顿帧(0=不停顿)
 };
 
 // 角色配置: 包含一个角色的所有动画参数和初始属性
@@ -63,6 +65,7 @@ struct CharacterData {
     AnimParams crouch;            // 下蹲动画参数
     AnimParams crouchAttack;      // 下蹲攻击动画参数
     AnimParams dodge;             // 闪避动画参数
+    AnimParams standBlock;        // 站立防御动画参数
 };
 
 // 角色配置加载器: 从 JSON 对象解析出 CharacterData

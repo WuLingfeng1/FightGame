@@ -14,6 +14,9 @@
 //     [v0.1.8]     2026-06-17 09:51:57   新增碰撞检测功能,同时也加入了受击动作,实现了攻击响应击退效果
 //     [v0.1.9]     2026-06-18 17:34:33   实现下蹲系统（含蹲防无敌机制）和攻击视觉特效系统
 //     [v0.2.0]     2026-06-21 20:49:28   实现了闪避功能,改善了一下攻击和受击的机制,下蹲防御时新增受击击退效果
+//     [v0.2.1]     2026-06-22 09:33:20   实现伤害计算+血量系统+三局两胜回合制
+//     [v0.2.2]     2026-06-22 10:23:02   修复回合重置开场动画/第三回合无法移动/镜头抖动/跳跃卡死
+//     [v0.2.3]     2026-06-22 11:12:32   新增站立防御系统(StandBlock)+75%减伤机制
 import QtQuick
 import QtQuick.Controls
 import FightGame
@@ -52,12 +55,19 @@ Item {
             }
             
             if (attacker === 1) {
-                playHurtByAttackType(director.p2Model, director.p1Model.state)
+                p2Health = Math.max(0, p2Health - damage)
+                if (!director.p2Model.isBlocking()) {
+                    playHurtByAttackType(director.p2Model, director.p1Model.state)
+                }
                 if (director.p1Model.state >= 7 && director.p1Model.state <= 11) attackVfx.play(director.p1Model, director.p2Model)
             } else {
-                playHurtByAttackType(director.p1Model, director.p2Model.state)
+                p1Health = Math.max(0, p1Health - damage)
+                if (!director.p1Model.isBlocking()) {
+                    playHurtByAttackType(director.p1Model, director.p2Model.state)
+                }
                 if (director.p2Model.state >= 7 && director.p2Model.state <= 11) attackVfx.play(director.p2Model, director.p1Model)
             }
+            checkRoundEnd()
         }
     }
 
@@ -66,9 +76,25 @@ Item {
         id: collisionTimer
         interval: 33
         repeat: true
-        running: director.phase === FightDirector.Fighting
+        running: director.phase === FightDirector.Fighting && !resettingRound
         onTriggered: {
             director.checkCollision()
+        }
+    }
+
+    // 倒计时定时器
+    Timer {
+        id: countdownTimer
+        interval: 1000
+        repeat: true
+        running: director.phase === FightDirector.Fighting && !roundEnding && !resettingRound
+        onTriggered: {
+            if (timerSeconds > 0) {
+                timerSeconds--
+            }
+            if (timerSeconds <= 0) {
+                checkRoundEnd()
+            }
         }
     }
 
@@ -173,7 +199,7 @@ Item {
     // P1 向右移动
     function startMoveRight() {
         moveRightPressed = true
-        if (p1Jumping || p1Attacking || p1Crouching) return
+        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
         updateFacing()
         moveTimer.moveLeft = false
         moveTimer.moveRight = true
@@ -192,7 +218,7 @@ Item {
     // P1 向左移动
     function startMoveLeft() {
         moveLeftPressed = true
-        if (p1Jumping || p1Attacking || p1Crouching) return
+        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
         updateFacing()
         moveTimer.moveRight = false
         moveTimer.moveLeft = true
@@ -210,7 +236,7 @@ Item {
     }
     function stopMoveRight() {
         moveRightPressed = false
-        if (p1Jumping || p1Attacking || p1Crouching) return
+        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
         updateFacing()
         if (moveLeftPressed) {
             moveTimer.moveRight = false
@@ -233,7 +259,7 @@ Item {
     }
     function stopMoveLeft() {
         moveLeftPressed = false
-        if (p1Jumping || p1Attacking || p1Crouching) return
+        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
         updateFacing()
         if (moveRightPressed) {
             moveTimer.moveLeft = false
@@ -257,7 +283,7 @@ Item {
 
     // P1 跳跃: 行走中按W触发对角跳(前跳/后跳), 站立时按W触发直跳
     function startJump() {
-        if (p1Jumping || p1Attacking || p1Crouching) return
+        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
         p1Jumping = true
         var wasMoving = isMoving
         var animBeforeJump = p1CurrentAnim
@@ -275,7 +301,7 @@ Item {
 
     // P1 轻拳攻击
     function startAttack1() {
-        if (p1Jumping || p1Attacking || p1Crouching) return
+        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
         p1Attacking = true
         moveTimer.moveRight = false
         moveTimer.moveLeft = false
@@ -287,7 +313,7 @@ Item {
 
     // P1 轻腿攻击
     function startAttackLightKick1() {
-        if (p1Jumping || p1Attacking || p1Crouching) return
+        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
         p1Attacking = true
         moveTimer.moveRight = false
         moveTimer.moveLeft = false
@@ -299,7 +325,7 @@ Item {
 
     // P1 重拳攻击
     function startAttackHeavyPunch1() {
-        if (p1Jumping || p1Attacking || p1Crouching) return
+        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
         p1Attacking = true
         moveTimer.moveRight = false
         moveTimer.moveLeft = false
@@ -311,7 +337,7 @@ Item {
 
     // P1 重腿攻击
     function startAttackHeavyKick1() {
-        if (p1Jumping || p1Attacking || p1Crouching) return
+        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
         p1Attacking = true
         moveTimer.moveRight = false
         moveTimer.moveLeft = false
@@ -323,7 +349,7 @@ Item {
 
     // P1 超重击攻击
     function startAttackHeavyStrike1() {
-        if (p1Jumping || p1Attacking || p1Crouching) return
+        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
         p1Attacking = true
         moveTimer.moveRight = false
         moveTimer.moveLeft = false
@@ -347,7 +373,7 @@ Item {
 
     // P1 下蹲
     function startCrouch1() {
-        if (p1Jumping || p1Attacking) return
+        if (p1Jumping || p1Attacking || p1Blocking || director.p1Model.state === 16) return
         p1Crouching = true
         moveRightPressed = false
         moveLeftPressed = false
@@ -417,7 +443,7 @@ Item {
     // P2 向右移动
     function startMoveRight2() {
         moveRight2Pressed = true
-        if (p2Jumping || p2Attacking || p2Crouching) return
+        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
         updateFacing()
         moveTimer2.moveLeft = false
         moveTimer2.moveRight = true
@@ -436,7 +462,7 @@ Item {
     // P2 向左移动
     function startMoveLeft2() {
         moveLeft2Pressed = true
-        if (p2Jumping || p2Attacking || p2Crouching) return
+        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
         updateFacing()
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = true
@@ -454,7 +480,7 @@ Item {
     }
     function stopMoveRight2() {
         moveRight2Pressed = false
-        if (p2Jumping || p2Attacking || p2Crouching) return
+        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
         updateFacing()
         if (moveLeft2Pressed) {
             moveTimer2.moveRight = false
@@ -477,7 +503,7 @@ Item {
     }
     function stopMoveLeft2() {
         moveLeft2Pressed = false
-        if (p2Jumping || p2Attacking || p2Crouching) return
+        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
         updateFacing()
         if (moveRight2Pressed) {
             moveTimer2.moveLeft = false
@@ -501,7 +527,7 @@ Item {
 
     // P2 跳跃: 行走中按↑触发对角跳(前跳/后跳), 站立时按↑触发直跳
     function startJump2() {
-        if (p2Jumping || p2Attacking || p2Crouching) return
+        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
         p2Jumping = true
         var wasMoving = isMoving2
         var animBeforeJump = p2CurrentAnim
@@ -519,7 +545,7 @@ Item {
 
     // P2 轻拳攻击
     function startAttack2() {
-        if (p2Jumping || p2Attacking || p2Crouching) return
+        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
         p2Attacking = true
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = false
@@ -531,7 +557,7 @@ Item {
 
     // P2 轻腿攻击
     function startAttackLightKick2() {
-        if (p2Jumping || p2Attacking || p2Crouching) return
+        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
         p2Attacking = true
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = false
@@ -543,7 +569,7 @@ Item {
 
     // P2 重拳攻击
     function startAttackHeavyPunch2() {
-        if (p2Jumping || p2Attacking || p2Crouching) return
+        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
         p2Attacking = true
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = false
@@ -555,7 +581,7 @@ Item {
 
     // P2 重腿攻击
     function startAttackHeavyKick2() {
-        if (p2Jumping || p2Attacking || p2Crouching) return
+        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
         p2Attacking = true
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = false
@@ -567,7 +593,7 @@ Item {
 
     // P2 超重击攻击
     function startAttackHeavyStrike2() {
-        if (p2Jumping || p2Attacking || p2Crouching) return
+        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
         p2Attacking = true
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = false
@@ -591,7 +617,7 @@ Item {
 
     // P2 下蹲
     function startCrouch2() {
-        if (p2Jumping || p2Attacking) return
+        if (p2Jumping || p2Attacking || p2Blocking || director.p2Model.state === 16) return
         p2Crouching = true
         moveRight2Pressed = false
         moveLeft2Pressed = false
@@ -621,6 +647,56 @@ Item {
         director.p2Model.facingLeft = (director.p2Model.posXRatio > director.p1Model.posXRatio)
     }
 
+    // 回合结束检查
+    function checkRoundEnd() {
+        if (roundEnding) return
+        if (p1Health <= 0 || p2Health <= 0 || timerSeconds <= 0) {
+            roundEnding = true
+            if (p1Health <= 0 && p2Health > 0) {
+                p2Wins++
+            } else if (p2Health <= 0 && p1Health > 0) {
+                p1Wins++
+            } else if (timerSeconds <= 0) {
+                if (p1Health > p2Health) p1Wins++
+                else if (p2Health > p1Health) p2Wins++
+            }
+            
+            if (p1Wins >= 2 || p2Wins >= 2) {
+                matchResultTimer.start()
+            } else {
+                roundResetTimer.start()
+            }
+        }
+    }
+
+    // 回合重置
+    function resetRound() {
+        resettingRound = true
+        currentRound++
+        p1Health = 100
+        p2Health = 100
+        timerSeconds = 60
+        roundEnding = false
+        director.resetForNewRound(p1CharId, p2CharId)
+        resettingRound = false
+    }
+
+    // 回合重置定时器
+    Timer {
+        id: roundResetTimer
+        interval: 2000
+        onTriggered: resetRound()
+    }
+
+    // 比赛结果定时器
+    Timer {
+        id: matchResultTimer
+        interval: 3000
+        onTriggered: {
+            if (stackViewRef) stackViewRef.pop()
+        }
+    }
+
     // 键盘输入, P1用A/D/W/J/K/U/L, P2用方向键/小键盘1-3/0
     property bool p1JPressed: false
     property bool p1KPressed: false
@@ -628,7 +704,7 @@ Item {
     property bool p2N2Pressed: false
 
     Keys.onPressed: (event) => {
-        if (event.isAutoRepeat || director.phase !== FightDirector.Fighting) return
+        if (event.isAutoRepeat || director.phase !== FightDirector.Fighting || resettingRound) return
         switch (event.key) {
         case Qt.Key_D:      startMoveRight();  break
         case Qt.Key_A:      startMoveLeft();   break
@@ -661,6 +737,14 @@ Item {
         case Qt.Key_U:      startAttackHeavyPunch1(); break
         case Qt.Key_L:      startAttackHeavyKick1();  break
         case Qt.Key_I:      startAttackHeavyStrike1();  break
+        case Qt.Key_G:
+            p1Blocking = true
+            if (!p1Jumping && !p1Attacking && !p1Crouching) {
+                director.p1Model.playStandBlock()
+                moveTimer.stop()
+                isMoving = false
+            }
+            break
         case Qt.Key_Right:  startMoveRight2(); break
         case Qt.Key_Left:   startMoveLeft2();  break
         case Qt.Key_Down:   startCrouch2();    break
@@ -705,10 +789,20 @@ Item {
         case Qt.Key_3:      if (event.modifiers & Qt.KeypadModifier) startAttackHeavyPunch2(); break
         case Qt.Key_0:      if (event.modifiers & Qt.KeypadModifier) startAttackHeavyKick2(); break
         case Qt.Key_5:      if (event.modifiers & Qt.KeypadModifier) startAttackHeavyStrike2(); break
+        case Qt.Key_4:
+            if (event.modifiers & Qt.KeypadModifier) {
+                p2Blocking = true
+                if (!p2Jumping && !p2Attacking && !p2Crouching) {
+                    director.p2Model.playStandBlock()
+                    moveTimer2.stop()
+                    isMoving2 = false
+                }
+            }
+            break
         }
     }
     Keys.onReleased: (event) => {
-        if (event.isAutoRepeat || director.phase !== FightDirector.Fighting) return
+        if (event.isAutoRepeat || director.phase !== FightDirector.Fighting || resettingRound) return
         switch (event.key) {
         case Qt.Key_D:      stopMoveRight();  break
         case Qt.Key_A:      stopMoveLeft();   break
@@ -718,8 +812,22 @@ Item {
         case Qt.Key_Right:  stopMoveRight2(); break
         case Qt.Key_Left:   stopMoveLeft2();  break
         case Qt.Key_Down:   stopCrouch2();    break
+        case Qt.Key_G:
+            p1Blocking = false
+            if (director.p1Model.state === 16) {  // StandBlock
+                director.p1Model.releaseStandBlock()
+            }
+            break
         case Qt.Key_1:      if (event.modifiers & Qt.KeypadModifier) p2N1Pressed = false; break
         case Qt.Key_2:      if (event.modifiers & Qt.KeypadModifier) p2N2Pressed = false; break
+        case Qt.Key_4:
+            if (event.modifiers & Qt.KeypadModifier) {
+                p2Blocking = false
+                if (director.p2Model.state === 16) {  // StandBlock
+                    director.p2Model.releaseStandBlock()
+                }
+            }
+            break
         }
     }
 
@@ -1055,34 +1163,6 @@ Item {
                     }
                 }
             }
-            // 能量条
-            Rectangle {
-                width: 240
-                height: 8
-                color: "black"
-                border.color: "darkslateblue"
-                border.width: 1
-                radius: 1
-
-                Rectangle {
-                    anchors {
-                        left: parent.left
-                        leftMargin: 1
-                        verticalCenter: parent.verticalCenter
-                    }
-                    width: Math.max(0, (parent.width - 2) * (p1Energy / 100.0))
-                    height: parent.height - 2
-                    color: "royalblue"
-                    radius: 1
-
-                    Behavior on width {
-                        NumberAnimation {
-                            duration: 150
-                            easing.type: Easing.OutCubic
-                        }
-                    }
-                }
-            }
         }
     }
 
@@ -1107,6 +1187,86 @@ Item {
             font.bold: true
             color: timerSeconds <= 10 ? "red" : "wheat"
             font.family: "monospace"
+        }
+    }
+
+    // 回合显示
+    Text {
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: 8
+        text: "Round " + currentRound
+        font.pixelSize: 14
+        font.bold: true
+        color: "wheat"
+        font.family: "monospace"
+        z: 12
+    }
+
+    // P1 胜场标记
+    Row {
+        anchors {
+            left: parent.left
+            leftMargin: 100
+            top: parent.top
+            topMargin: 8
+        }
+        spacing: 6
+        z: 12
+        
+        Repeater {
+            model: 2
+            Rectangle {
+                width: 12
+                height: 12
+                radius: 6
+                color: index < p1Wins ? "gold" : "gray"
+                border.color: "darkgoldenrod"
+                border.width: 1
+            }
+        }
+    }
+
+    // P2 胜场标记
+    Row {
+        anchors {
+            right: parent.right
+            rightMargin: 100
+            top: parent.top
+            topMargin: 8
+        }
+        spacing: 6
+        z: 12
+        
+        Repeater {
+            model: 2
+            Rectangle {
+                width: 12
+                height: 12
+                radius: 6
+                color: index < p2Wins ? "gold" : "gray"
+                border.color: "darkgoldenrod"
+                border.width: 1
+            }
+        }
+    }
+
+    // 回合结束提示
+    Text {
+        id: roundResultText
+        anchors.centerIn: parent
+        visible: roundEnding
+        font.pixelSize: 48
+        font.bold: true
+        color: "gold"
+        style: Text.Outline
+        styleColor: "black"
+        z: 20
+        text: {
+            if (p1Wins >= 2) return p1Name + " WINS!"
+            if (p2Wins >= 2) return p2Name + " WINS!"
+            if (p1Health <= 0 && p2Health > 0) return p2Name + " WIN!"
+            if (p2Health <= 0 && p1Health > 0) return p1Name + " WIN!"
+            return "DRAW!"
         }
     }
 
@@ -1201,54 +1361,19 @@ Item {
                     }
                 }
             }
-            // 能量条
-            Rectangle {
-                width: 240
-                height: 8
-                color: "black"
-                border.color: "darkslateblue"
-                border.width: 1
-                radius: 1
-
-                Rectangle {
-                    anchors {
-                        right: parent.right
-                        rightMargin: 1
-                        verticalCenter: parent.verticalCenter
-                    }
-                    width: Math.max(0, (parent.width - 2) * (p2Energy / 100.0))
-                    height: parent.height - 2
-                    color: "royalblue"
-                    radius: 1
-
-                    Behavior on width {
-                        NumberAnimation {
-                            duration: 150
-                            easing.type: Easing.OutCubic
-                        }
-                    }
-                }
-            }
         }
-    }
-
-    // 标题 & HUD 数据
-    Text {
-        anchors.horizontalCenter: parent.horizontalCenter
-        y: 10
-        text: "K.O.F. '97"
-        font.pixelSize: 8
-        font.bold: true
-        color: "darkgoldenrod"
-        font.family: "monospace"
-        z: 12
     }
 
     property int p1Health: 100
     property int p2Health: 100
-    property int p1Energy: 0
-    property int p2Energy: 0
     property int timerSeconds: 60
+    property int p1Wins: 0
+    property int p2Wins: 0
+    property int currentRound: 1
+    property bool roundEnding: false
+    property bool resettingRound: false
+    property bool p1Blocking: false
+    property bool p2Blocking: false
 
     // 底部按钮与调试信息
     Button {
@@ -1495,6 +1620,7 @@ Item {
                 }
                 moveTimer.start()
             } else {
+                director.p1Model.playStand()
                 moveTimer.moveRight = false
                 moveTimer.moveLeft = false
                 isMoving = false
@@ -1660,6 +1786,7 @@ Item {
                 }
                 moveTimer2.start()
             } else {
+                director.p2Model.playStand()
                 moveTimer2.moveRight = false
                 moveTimer2.moveLeft = false
                 isMoving2 = false

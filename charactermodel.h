@@ -35,7 +35,7 @@ class CharacterModel : public QObject
 
     QML_ELEMENT
 public:
-    enum State { Waiting, Opening, Stand, Forward, Backward, Jump, DiagonalJump, LightPunch, LightKick, HeavyPunch, HeavyKick, HeavyStrike, Hurt, Crouch, CrouchAttack, Dodge };
+    enum State { Waiting, Opening, Stand, Forward, Backward, Jump, DiagonalJump, LightPunch, LightKick, HeavyPunch, HeavyKick, HeavyStrike, Hurt, Crouch, CrouchAttack, Dodge, StandBlock };
     Q_ENUM(State)
 
     explicit CharacterModel(QObject *parent = nullptr);
@@ -78,10 +78,13 @@ public:
     Q_INVOKABLE void playCrouchAttack(); // 切换到下蹲攻击动画
     Q_INVOKABLE void stopCrouch(); // 退出下蹲状态
     Q_INVOKABLE void playDodge(bool forward); // 切换到闪避动画
+    Q_INVOKABLE void playStandBlock(); // 切换到站立防御动画
+    Q_INVOKABLE void releaseStandBlock(); // 松开防御键, 播放剩余帧后切回站立
     void reset(); // 重置到初始状态
     void updateRootHeight(double h); // 更新窗口高度(用于Y坐标计算)
     State state() const { return m_state; }
     int stateInt() const { return static_cast<int>(m_state); } // 状态整数形式(用于QML)
+    Q_INVOKABLE bool isBlocking() const { return m_state == StandBlock; } // 是否处于防御状态
 
     // 碰撞检测相关
     bool isAttacking() const; // 是否处于攻击状态
@@ -113,8 +116,9 @@ private slots:
     void onTick(); // 定时器回调: 逐帧推进动画
 
 private:
-    void applyAnim(const AnimParams &p); // 应用动画参数到当前状态
-    void setPosY(); // 根据动画类型计算Y坐标(底部/脚部对齐)
+    void applyAnim(const AnimParams &p);
+    void setPosY();
+    bool tryFinishState(); // 尝试结束当前状态(帧播完时), 返回true表示已处理
 
     QTimer m_timer; // 动画计时器
     State m_state = Waiting; // 当前状态
@@ -145,6 +149,9 @@ private:
     AnimParams m_crouch; // 下蹲动画参数副本
     AnimParams m_crouchAttack; // 下蹲攻击动画参数副本
     AnimParams m_dodge; // 闪避动画参数副本
+    AnimParams m_standBlock; // 站立防御动画参数副本
+    int m_blockHoldFrame = 0;     // 防御动画停顿帧索引
+    bool m_blockReleased = false; // 防御键是否已松开
     bool m_crouching = false;  // 是否处于蹲姿
     bool m_loopAnim = true;    // 当前动画是否循环
     double m_cfgPosX = 0.5;     // 水平位置比例(可运行时修改)

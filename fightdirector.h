@@ -38,6 +38,7 @@ public:
     void setRootHeight(double h);                              // QML窗口高度变化时更新
 
     Q_INVOKABLE void start(const QString &p1CharId, const QString &p2CharId);
+    Q_INVOKABLE void resetForNewRound(const QString &p1CharId, const QString &p2CharId);  // 回合重置，跳过开场动画
     Q_INVOKABLE void updateCamera();   // KOF97中点跟随镜头
     Q_INVOKABLE bool checkCollision(); // 检测碰撞, 返回是否命中
 
@@ -48,8 +49,8 @@ signals:
     void hitDetected(int attacker, int damage);  // 命中信号: attacker=1或2, damage=伤害值
 
 private slots:
-    void onP1OpeningFinished();   // P1开场完毕 -> 触发P2开场
-    void onP2OpeningFinished();   // P2开场完毕 -> 进入战斗阶段
+    void onP1OpeningFinished();   // P1开场完毕 - 触发P2开场
+    void onP2OpeningFinished();   // P2开场完毕 - 进入战斗阶段
 
 private:
     void loadConfig(const QString &charId, CharacterModel *model);  // 从JSON加载角色配置

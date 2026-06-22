@@ -25,11 +25,12 @@ static AnimParams parseAnim(const QJsonObject &obj)
     a.offsetXBwdLast = obj.value("offsetXBwdLast").toInt(0);
     a.visualScale = obj.value("visualScale").toDouble(1.0);
     a.offsetX = obj.value("offsetX").toInt(0);
-    a.attackPointX = obj.value("attackPointX").toInt(0);
+    a.attackPointX = obj.value("attackPointX").toDouble(0.0);
     a.attackPointY = obj.value("attackPointY").toInt(0);
     a.attackRadius = obj.value("attackRadius").toInt(60);
     a.attackFrames = obj.value("attackFrames").toString();
     a.knockbackDistance = obj.value("knockbackDistance").toInt(0);
+    a.damage = obj.value("damage").toInt(0);
     a.dodgeDistance = obj.value("dodgeDistance").toDouble(0);
     a.dodgeFrames = obj.value("dodgeFrames").toString();
     a.dodgeBackFrames = obj.value("dodgeBackFrames").toString();
@@ -38,6 +39,7 @@ static AnimParams parseAnim(const QJsonObject &obj)
     a.dodgeSwitchFrame = obj.value("dodgeSwitchFrame").toInt(0);
     a.offsetXPost = obj.value("offsetXPost").toInt(0);
     a.offsetXEnd = obj.value("offsetXEnd").toInt(0);
+    a.blockHoldFrame = obj.value("blockHoldFrame").toInt(0);
     return a;
 }
 
@@ -66,5 +68,6 @@ CharacterData CharacterConfig::load(const QJsonObject &json, const QString &id)
     cfg.crouch = parseAnim(json.value("crouch").toObject());
     cfg.crouchAttack = parseAnim(json.value("crouchAttack").toObject());
     cfg.dodge = parseAnim(json.value("dodge").toObject());
+    cfg.standBlock = parseAnim(json.value("standBlock").toObject());
     return cfg;
 }

@@ -1,7 +1,6 @@
 #include "charactermodel.h"
 #include <algorithm>
 
-// 构造函数: 创建重复触发的定时器, 绑定 onTick 回调
 CharacterModel::CharacterModel(QObject *parent)
     : QObject(parent)
 {
@@ -9,12 +8,10 @@ CharacterModel::CharacterModel(QObject *parent)
     connect(&m_timer, &QTimer::timeout, this, &CharacterModel::onTick);
 }
 
-CharacterModel::~CharacterModel()
-{
+CharacterModel::~CharacterModel(){
     m_timer.stop();
 }
 
-// 从配置初始化角色模型: 保存动画参数副本, 重置状态为 Waiting
 void CharacterModel::configure(const CharacterData &cfg)
 {
     m_opening = cfg.opening;
@@ -35,15 +32,18 @@ void CharacterModel::configure(const CharacterData &cfg)
     m_crouch = cfg.crouch;
     m_crouchAttack = cfg.crouchAttack;
     m_dodge = cfg.dodge;
+    m_standBlock = cfg.standBlock;
+    m_blockHoldFrame = cfg.standBlock.blockHoldFrame;
     m_jumpHeight = cfg.jump.jumpHeight;
     m_refFrameWidth = cfg.stand.fw;
     setFacingLeft(cfg.facingLeft);
     setPosXRatio(cfg.posX);
     m_state        = Waiting;
     m_currentFrame = 0;
+    m_crouching    = false;  // 重置下蹲状态
 }
 
-// 播放开场动画: 仅允许从 Waiting 状态进入, 播放完毕后自动切 Stand
+// 播放开场: 仅Waiting状态可进入, 播完自动切Stand
 void CharacterModel::playOpening()
 {
     if (m_state != Waiting) return;
@@ -57,13 +57,13 @@ void CharacterModel::playOpening()
     emit sizeChanged();
 }
 
-// 切换到站立动画: 停止当前动画, 从第2帧开始播放(匹配参考实现), 循环模式
+// 站立: 从第2帧开始(避开起始过渡帧), 循环播放
 void CharacterModel::playStand()
 {
     if (m_crouching) return;
     m_timer.stop();
     m_state = Stand;
-    m_currentFrame = 2;          // 从第2帧开始(避开站立的起始过渡帧)
+    m_currentFrame = 0;          // 从第2帧开始(避开站立的起始过渡帧)
     m_loopAnim = true;
     m_visualScale = 1.0;         // 必须在 applyAnim 之前设置, setPosY 依赖此值
     m_animOffsetX = 0;           // 站立动画无水平偏移
@@ -78,7 +78,7 @@ void CharacterModel::playStand()
     emit stateChanged();
 }
 
-// 切换到前进行走动画: 从第0帧开始, 循环与否由配置决定
+// 前进: 循环与否由配置决定
 void CharacterModel::playForward()
 {
     if (m_forward.cols <= 0) return;   // 未配置行走动画则忽略
@@ -98,7 +98,7 @@ void CharacterModel::playForward()
     emit positionChanged();
 }
 
-// 切换到后退行走动画: 从第0帧开始, 循环与否由配置决定
+// 后退: 循环与否由配置决定
 void CharacterModel::playBackward()
 {
     if (m_backward.cols <= 0) return;   // 未配置后退动画则忽略
@@ -118,7 +118,7 @@ void CharacterModel::playBackward()
     emit positionChanged();
 }
 
-// 切换到直跳动画: 从第0帧开始, 不循环, 播完自动切 Stand
+// 直跳: 不循环, 播完触发jumpFinished
 void CharacterModel::playJump()
 {
     if (m_jump.cols <= 0) return;
@@ -137,9 +137,8 @@ void CharacterModel::playJump()
     emit positionChanged();
 }
 
-// 切换到对角跳动画: forward=true前跳(朝对手) false后跳(背向对手)
-// 帧段由 divFrame 分割: 左半(0~divFrame-1)=右向跳跃 右半(divFrame~cols-1)=左向跳跃
-// 朝向翻转由 QML Scale 处理, 因此前跳始终用左半段 后跳始终用右半段
+// 对角跳: forward=true前跳(朝对手) false后跳(背向对手)
+// 帧段由 divFrame 分割: 左半=右向跳跃 右半=左向跳跃
 void CharacterModel::playDiagonalJump(bool forward)
 {
     if (m_diagonalJump.cols <= 0 || m_diagonalJump.divFrame <= 0) return;
@@ -177,7 +176,7 @@ void CharacterModel::playDiagonalJump(bool forward)
     emit positionChanged();
 }
 
-// 切换到轻拳攻击动画: 从第0帧开始, 不循环, 播完自动切 Stand
+// 轻拳
 void CharacterModel::playLightPunch()
 {
     if (m_lightPunch.cols <= 0) return;
@@ -201,7 +200,7 @@ void CharacterModel::playLightPunch()
     emit stateChanged();
 }
 
-// 切换到轻腿攻击动画
+// 轻腿
 void CharacterModel::playLightKick()
 {
     if (m_lightKick.cols <= 0) return;
@@ -225,7 +224,7 @@ void CharacterModel::playLightKick()
     emit stateChanged();
 }
 
-// 切换到重拳攻击动画
+// 重拳
 void CharacterModel::playHeavyPunch()
 {
     if (m_heavyPunch.cols <= 0) return;
@@ -249,7 +248,7 @@ void CharacterModel::playHeavyPunch()
     emit stateChanged();
 }
 
-// 切换到重腿攻击动画
+// 重腿
 void CharacterModel::playHeavyKick()
 {
     if (m_heavyKick.cols <= 0) return;
@@ -273,7 +272,7 @@ void CharacterModel::playHeavyKick()
     emit stateChanged();
 }
 
-// 切换到超重击动画
+// 超重击
 void CharacterModel::playHeavyStrike()
 {
     if (m_heavyStrike.cols <= 0) return;
@@ -283,8 +282,6 @@ void CharacterModel::playHeavyStrike()
     m_currentFrame = 0;
     m_loopAnim = false;
     m_visualScale = m_heavyStrike.visualScale;
-    // 从配置读取 offsetX，实现视觉上的位移
-    // QML 中会根据 facingLeft 自动翻转方向
     m_animOffsetX = m_heavyStrike.offsetX;
     m_currentAnim = m_heavyStrike;
     m_hitThisAttack = false;
@@ -298,7 +295,7 @@ void CharacterModel::playHeavyStrike()
     emit stateChanged();
 }
 
-// 切换到闪避动画
+// 闪避
 void CharacterModel::playDodge(bool forward)
 {
     if (m_dodge.cols <= 0) return;
@@ -308,15 +305,16 @@ void CharacterModel::playDodge(bool forward)
     m_visualScale = m_dodge.visualScale;
     if (m_dodge.dodgeStartFrame > 0)
         m_animOffsetX = m_dodge.offsetX;
+    else if (forward || m_dodge.dodgeBackFrames.isEmpty())
+        m_animOffsetX = m_dodge.offsetX;
     else
-        m_animOffsetX = (forward || m_dodge.dodgeBackFrames.isEmpty())
-            ? m_dodge.offsetX : -m_dodge.offsetX;
+        m_animOffsetX = -m_dodge.offsetX;
     m_currentAnim = m_dodge;
     m_dodgeForward = forward;
     m_dodgeStandPending = false;
     m_totalFrames = m_dodge.cols;
 
-    // 帧范围：Yagami 有 dodgeFrames/dodgeBackFrames，Orochi 没有
+    // 帧范围：Yagami 用 dodgeFrames/dodgeBackFrames，Orochi 用 dodgeStartFrame/dodgeEndFrame
     m_dodgeEndFrame = 0;
     if (m_dodge.dodgeFrames.length() > 0) {
         QStringList fwdRange = m_dodge.dodgeFrames.split('-');
@@ -331,7 +329,7 @@ void CharacterModel::playDodge(bool forward)
             m_currentFrame = 0;
         }
     } else {
-        // Orochi：没有 dodgeFrames，使用 dodgeStartFrame/dodgeEndFrame
+        // Orochi：用 dodgeStartFrame/dodgeEndFrame
         m_currentFrame = 0;
         if (m_dodge.dodgeEndFrame > 0 && m_dodge.dodgeEndFrame < m_dodge.cols)
             m_dodgeEndFrame = m_dodge.dodgeEndFrame + 1;
@@ -345,8 +343,10 @@ void CharacterModel::playDodge(bool forward)
     if (m_dodge.dodgeStartFrame > 0) {
         m_dodgeOffsetXPost = m_dodge.offsetXPost;
         m_dodgeOffsetXEnd = m_dodge.offsetXEnd;
-        m_dodgeSwitchFrame = m_dodge.dodgeSwitchFrame > 0
-            ? m_dodge.dodgeSwitchFrame : m_dodge.dodgeStartFrame;
+        if (m_dodge.dodgeSwitchFrame > 0)
+            m_dodgeSwitchFrame = m_dodge.dodgeSwitchFrame;
+        else
+            m_dodgeSwitchFrame = m_dodge.dodgeStartFrame;
     }
     setPosY();
 
@@ -359,7 +359,7 @@ void CharacterModel::playDodge(bool forward)
     emit stateChanged();
 }
 
-// 切换到受击动画
+// 受击(通用)
 void CharacterModel::playHurt()
 {
     if (m_hurt.cols <= 0) return;
@@ -394,7 +394,7 @@ void CharacterModel::playHurt()
     emit stateChanged();
 }
 
-// 切换到轻度受击动画
+// 轻度受击
 void CharacterModel::playHurt1()
 {
     if (m_hurt1.cols <= 0) { playHurt(); return; }
@@ -429,7 +429,7 @@ void CharacterModel::playHurt1()
     emit stateChanged();
 }
 
-// 切换到中度受击动画
+// 中度受击
 void CharacterModel::playHurt2()
 {
     if (m_hurt2.cols <= 0) { playHurt(); return; }
@@ -464,7 +464,7 @@ void CharacterModel::playHurt2()
     emit stateChanged();
 }
 
-// 切换到重度受击动画
+// 重度受击
 void CharacterModel::playHurt3()
 {
     if (m_hurt3.cols <= 0) { playHurt(); return; }
@@ -499,7 +499,7 @@ void CharacterModel::playHurt3()
     emit stateChanged();
 }
 
-// 切换到下蹲动画: Orochi冻结在第0帧(蹲姿), Yagami循环播放
+// 下蹲: Orochi冻结在第0帧(蹲姿), Yagami循环播放
 void CharacterModel::playCrouch()
 {
     if (m_crouch.cols <= 0) return;
@@ -524,7 +524,7 @@ void CharacterModel::playCrouch()
     emit stateChanged();
 }
 
-// 切换到下蹲攻击动画: 从第0帧开始播放完整动画, 播完回到蹲姿
+// 下蹲攻击: 播完回到蹲姿
 void CharacterModel::playCrouchAttack()
 {
     if (m_crouchAttack.cols <= 0) return;
@@ -547,7 +547,7 @@ void CharacterModel::playCrouchAttack()
     emit stateChanged();
 }
 
-// 退出下蹲状态: 回到站立
+// 退出下蹲
 void CharacterModel::stopCrouch()
 {
     m_crouching = false;
@@ -556,7 +556,46 @@ void CharacterModel::stopCrouch()
     }
 }
 
-// 重置角色到初始状态
+// 站立防御: 循环播放防御动画
+void CharacterModel::playStandBlock()
+{
+    if (m_standBlock.cols <= 0) return;
+    m_timer.stop();
+    m_state = StandBlock;
+    m_currentFrame = 3;
+    m_loopAnim = false;
+    m_visualScale = m_standBlock.visualScale;
+    m_animOffsetX = m_standBlock.offsetX;
+    m_hitThisAttack = false;
+    m_blockReleased = false;
+    applyAnim(m_standBlock);
+    m_timer.setInterval(m_standBlock.interval);
+    m_timer.start();
+    emit frameChanged();
+    emit sourcePathChanged();
+    emit sizeChanged();
+    emit positionChanged();
+    emit stateChanged();
+}
+
+// 松开防御键: 从停顿帧的下一帧继续播放, 播完切回站立
+void CharacterModel::releaseStandBlock()
+{
+    if (m_state != StandBlock) return;
+    m_blockReleased = true;
+    if (m_blockHoldFrame > 0 && m_currentFrame >= m_blockHoldFrame) {
+        m_currentFrame = m_blockHoldFrame + 1;
+        if (m_currentFrame >= m_totalFrames) {
+            // 没有剩余帧, 直接切回站立
+            playStand();
+            return;
+        }
+        m_timer.setInterval(m_standBlock.interval);
+        m_timer.start();
+        emit frameChanged();
+    }
+}
+
 void CharacterModel::reset()
 {
     m_timer.stop();
@@ -569,14 +608,12 @@ void CharacterModel::reset()
     m_crouching = false;
 }
 
-// 更新窗口高度并重新计算Y坐标
 void CharacterModel::updateRootHeight(double h)
 {
     m_rootHeight = h;
     setPosY();
 }
 
-// 将 AnimParams 中的元数据应用到当前角色的运行时属性
 void CharacterModel::applyAnim(const AnimParams &p)
 {
     m_sourcePath   = p.path;
@@ -586,23 +623,33 @@ void CharacterModel::applyAnim(const AnimParams &p)
     setPosY();
 }
 
-// 计算角色的像素Y坐标, 支持两种对齐模式:
-// 1. 开场/Waiting: 底部对齐, 下方留60px边距
-// 2. 站立/行走: 脚部对齐(如果配置了feetMargin/feetBottom), 否则底部对齐
+// 计算角色Y坐标: 跳跃用抛物线, 其他用脚部/底部对齐
 void CharacterModel::setPosY()
 {
     if (m_state == Jump || m_state == DiagonalJump) {
-        int totalFrames = (m_state == DiagonalJump) ? m_djTotalFrames : m_totalFrames;
-        int localFrame  = (m_state == DiagonalJump) ? (m_currentFrame - m_djStartFrame) : m_currentFrame;
-        double t = (totalFrames > 1) ? (double)localFrame / (totalFrames - 1) : 0;
+        int totalFrames, localFrame;
+        if (m_state == DiagonalJump) {
+            totalFrames = m_djTotalFrames;
+            localFrame = m_currentFrame - m_djStartFrame;
+        } else {
+            totalFrames = m_totalFrames;
+            localFrame = m_currentFrame;
+        }
+        double t = 0;
+        if (totalFrames > 1)
+            t = (double)localFrame / (totalFrames - 1);
         double arcOffset = -m_jumpHeight * 4.0 * t * (1.0 - t);
         double groundY;
         if (m_stand.feetMargin > 0 && m_stand.feetBottom > 0) {
             groundY = m_rootHeight - m_stand.feetMargin - m_stand.feetBottom;
         } else {
-            const AnimParams &curAnim = (m_state == DiagonalJump) ? m_diagonalJump : m_jump;
-            if (curAnim.feetMargin > 0 && curAnim.feetBottom > 0) {
-                groundY = m_rootHeight - curAnim.feetMargin - curAnim.feetBottom;
+            const AnimParams *curAnim;
+            if (m_state == DiagonalJump)
+                curAnim = &m_diagonalJump;
+            else
+                curAnim = &m_jump;
+            if (curAnim->feetMargin > 0 && curAnim->feetBottom > 0) {
+                groundY = m_rootHeight - curAnim->feetMargin - curAnim->feetBottom;
             } else {
                 groundY = m_rootHeight - m_frameHeight - 60.0;
             }
@@ -611,7 +658,7 @@ void CharacterModel::setPosY()
     } else if (m_state == Opening || m_state == Waiting) {
         m_posY = m_rootHeight - m_frameHeight - 60.0;
     } else {
-        // 优先使用当前动画自身的 feetBottom/feetMargin，回退到 stand 的值
+        // 优先用当前动画的 feetBottom/feetMargin，回退到 stand
         double fb = 0, fm = 0;
         switch (m_state) {
             case LightPunch:
@@ -636,12 +683,14 @@ void CharacterModel::setPosY()
                 fb = m_crouch.feetBottom;      fm = m_crouch.feetMargin;      break;
             case CrouchAttack:
                 fb = m_crouchAttack.feetBottom; fm = m_crouchAttack.feetMargin; break;
+            case StandBlock:
+                fb = m_standBlock.feetBottom;  fm = m_standBlock.feetMargin;  break;
             default:
                 fb = m_stand.feetBottom;      fm = m_stand.feetMargin;      break;
         }
         if (fb <= 0 || fm <= 0) { fb = m_stand.feetBottom; fm = m_stand.feetMargin; }
         if (fb > 0 && fm > 0) {
-            // HeavyStrike 特殊处理：确保底部位置与 stand 一致
+        // HeavyStrike/Dodge: 确保底部位置与 stand 一致
             if (m_state == HeavyStrike || (m_state == Dodge && m_dodge.dodgeStartFrame > 0)) {
                 double standBottom = m_rootHeight - m_stand.feetMargin - m_stand.feetBottom + m_stand.fh;
                 if (m_state == Dodge) {
@@ -665,12 +714,57 @@ void CharacterModel::setPosY()
     emit positionChanged();
 }
 
-// 动画帧推进: 定时器回调, 每 interval 毫秒触发一次
-// Opening状态: 播放完毕后冻结最后一帧, 自动切 Stand
-// Forward/Backward状态: 循环则回到第0帧, 否则冻结并切 Stand
-// Stand状态:  循环回到第0帧
+// 尝试结束当前状态: 帧播完时停止定时器并切回站立, 返回true表示已处理
+// 跳跃/对角线跳/闪避状态不在此处理, 由onTick中的专用逻辑触发各自完成信号
+bool CharacterModel::tryFinishState()
+{
+    if (m_state == Jump || m_state == DiagonalJump || m_state == Dodge)
+        return false;
+
+    if (m_currentFrame < m_totalFrames)
+        return false;
+
+    m_currentFrame = m_totalFrames - 1;
+
+    // 防御动画: 松开键后播完切站立, 未松开则停住
+    if (m_state == StandBlock) {
+        if (m_blockReleased) {
+            m_timer.stop();
+            playStand();
+        } else {
+            m_timer.stop();
+        }
+        return true;
+    }
+
+    m_timer.stop();
+
+    State prevState = m_state;
+    playStand();
+
+    switch (prevState) {
+    case Opening:
+        emit openingFinished();
+        break;
+    case Hurt:
+        emit hurtFinished();
+        break;
+    case LightPunch:
+    case LightKick:
+    case HeavyPunch:
+    case HeavyKick:
+    case HeavyStrike:
+        emit attackFinished();
+        break;
+    default:
+        break;
+    }
+    return true;
+}
+
 void CharacterModel::onTick()
 {
+    // 开场暂停帧处理
     if (m_state == Opening && m_opening.pauseFrame > 0) {
         if (m_currentFrame == m_opening.pauseFrame - 1) {
             m_currentFrame++;
@@ -683,32 +777,35 @@ void CharacterModel::onTick()
         }
     }
 
-    // 帧推进：统一正序播放
-    m_currentFrame++;
-    if (m_state == Opening && m_currentFrame >= m_totalFrames) {
-        m_currentFrame = m_totalFrames - 1;   // 冻结在最后一帧
-        playStand();
-        emit openingFinished();
+    // 防御停顿: 到达停顿帧且未松开防御键时暂停定时器
+    if (m_state == StandBlock && !m_blockReleased && m_blockHoldFrame > 0
+        && m_currentFrame >= m_blockHoldFrame) {
+        m_currentFrame = m_blockHoldFrame;
+        m_timer.stop();
+        emit frameChanged();
         return;
     }
-    if (m_state == Forward && m_currentFrame >= m_totalFrames) {
+
+    // 帧推进
+    m_currentFrame++;
+
+    // 行走循环
+    if ((m_state == Forward || m_state == Backward) && m_currentFrame >= m_totalFrames) {
         if (m_loopAnim) {
-            m_currentFrame = 0;               // 循环: 回到首帧
+            m_currentFrame = 0;
         } else {
-            m_currentFrame = m_totalFrames - 1; // 不循环: 冻结末帧并切回站立
+            m_currentFrame = m_totalFrames - 1;
+            m_timer.stop();
             playStand();
             return;
         }
     }
-    if (m_state == Backward && m_currentFrame >= m_totalFrames) {
-        if (m_loopAnim) {
-            m_currentFrame = 0;               // 循环: 回到首帧
-        } else {
-            m_currentFrame = m_totalFrames - 1; // 不循环: 冻结末帧并切回站立
-            playStand();
-            return;
-        }
-    }
+
+    // 尝试结束当前状态(攻击/受击/开场等)
+    if (tryFinishState())
+        return;
+
+    // 跳跃结束
     if (m_state == Jump && m_currentFrame >= m_totalFrames) {
         m_currentFrame = m_totalFrames - 1;
         m_timer.stop();
@@ -721,48 +818,8 @@ void CharacterModel::onTick()
         emit jumpFinished();
         return;
     }
-    if (m_state == LightPunch && m_currentFrame >= m_totalFrames) {
-        m_currentFrame = m_totalFrames - 1;
-        m_timer.stop();
-        playStand();
-        emit attackFinished();
-        return;
-    }
-    if (m_state == LightKick && m_currentFrame >= m_totalFrames) {
-        m_currentFrame = m_totalFrames - 1;
-        m_timer.stop();
-        playStand();
-        emit attackFinished();
-        return;
-    }
-    if (m_state == HeavyPunch && m_currentFrame >= m_totalFrames) {
-        m_currentFrame = m_totalFrames - 1;
-        m_timer.stop();
-        playStand();
-        emit attackFinished();
-        return;
-    }
-    if (m_state == HeavyKick && m_currentFrame >= m_totalFrames) {
-        m_currentFrame = m_totalFrames - 1;
-        m_timer.stop();
-        playStand();
-        emit attackFinished();
-        return;
-    }
-    if (m_state == HeavyStrike && m_currentFrame >= m_totalFrames) {
-        m_currentFrame = m_totalFrames - 1;
-        m_timer.stop();
-        playStand();
-        emit attackFinished();
-        return;
-    }
-    if (m_state == Hurt && m_currentFrame >= m_totalFrames) {
-        m_currentFrame = m_totalFrames - 1;
-        m_timer.stop();
-        playStand();
-        emit hurtFinished();
-        return;
-    }
+
+    // 下蹲循环/冻结
     if (m_state == Crouch && m_currentFrame >= m_totalFrames) {
         if (m_loopAnim) {
             m_currentFrame = 0;
@@ -775,7 +832,7 @@ void CharacterModel::onTick()
     if (m_state == CrouchAttack && m_currentFrame >= m_totalFrames) {
         m_currentFrame = m_totalFrames - 1;
         m_timer.stop();
-        // 回到蹲姿冻结在第0帧
+        // 回到蹲姿
         if (m_crouching && m_crouch.cols > 0) {
             m_state = Crouch;
             m_currentFrame = 0;
@@ -793,34 +850,37 @@ void CharacterModel::onTick()
         emit attackFinished();
         return;
     }
-    // --- Dodge 位移逻辑 ---
+    // --- Dodge ---
     if (m_state == Dodge) {
-        bool reachedEnd = false;
-        if (m_dodgeEndFrame > 0 && m_currentFrame >= m_dodgeEndFrame) {
-            reachedEnd = true;
-        }
+        bool reachedEnd = (m_dodgeEndFrame > 0 && m_currentFrame >= m_dodgeEndFrame);
         if (!reachedEnd) {
-            // Orochi：在 dodgeStartFrame 帧一次性瞬移
-            if (m_dodge.dodgeStartFrame > 0) {
-                int teleportFrame = m_dodge.dodgeStartFrame;
-                if (m_currentFrame == teleportFrame) {
-                double dodgeDistance = m_dodge.dodgeDistance > 0 ? m_dodge.dodgeDistance : 0.3;
-                double xSign;
+            // 闪避方向: 对手在右则往右闪, 否则往左; 后闪取反
+            auto xSign = [this]() {
+                double s;
                 if (m_opponent && m_cfgPosX > m_opponent->posXRatio())
-                    xSign = -1.0;
+                    s = -1.0;
                 else
-                    xSign = 1.0;
-                if (!m_dodgeForward) xSign = -xSign;
-                double newX = m_cfgPosX + xSign * dodgeDistance;
-                if (m_opponent) {
-                    double minX = 0.0;
-                    double maxX = 3.0;
-                    newX = std::max(minX, std::min(newX, maxX));
-                }
-                m_cfgPosX = newX;
-                emit posXRatioChanged();
-                if (m_opponent)
-                    m_facingLeft = (newX > m_opponent->posXRatio());
+                    s = 1.0;
+                if (!m_dodgeForward)
+                    s = -s;
+                return s;
+            };
+            double dodgeDist;
+            if (m_dodge.dodgeDistance > 0)
+                dodgeDist = m_dodge.dodgeDistance;
+            else
+                dodgeDist = 0.3;
+
+            if (m_dodge.dodgeStartFrame > 0) {
+                // Orochi: 瞬移
+                if (m_currentFrame == m_dodge.dodgeStartFrame) {
+                    double newX = m_cfgPosX + xSign() * dodgeDist;
+                    if (m_opponent)
+                        newX = std::max(0.0, std::min(newX, 3.0));
+                    m_cfgPosX = newX;
+                    emit posXRatioChanged();
+                    if (m_opponent)
+                        m_facingLeft = (newX > m_opponent->posXRatio());
                 }
                 if (m_currentFrame == m_dodgeSwitchFrame)
                     m_animOffsetX = m_dodgeOffsetXPost;
@@ -832,36 +892,21 @@ void CharacterModel::onTick()
                     m_animOffsetX = (int)(m_dodgeOffsetXEnd
                         + (m_dodgeOffsetXPost - m_dodgeOffsetXEnd) * t);
                 }
-            }
-            // Yagami：在整个闪避期间均匀位移
-            else if (m_dodge.dodgeStartFrame == 0 && m_dodge.dodgeFrames.length() > 0) {
-                double dodgeDistance = m_dodge.dodgeDistance > 0 ? m_dodge.dodgeDistance : 0.3;
-                double xSign;
-                if (m_opponent && m_cfgPosX > m_opponent->posXRatio())
-                    xSign = -1.0;
-                else
-                    xSign = 1.0;
-                if (!m_dodgeForward) xSign = -xSign;
+            } else if (m_dodge.dodgeStartFrame == 0 && m_dodge.dodgeFrames.length() > 0) {
+                // Yagami: 均匀位移
                 int dodgeFrameSteps = 0;
-                if (m_dodgeForward) {
-                    QStringList fwdRange = m_dodge.dodgeFrames.split('-');
-                    if (fwdRange.size() == 2)
-                        dodgeFrameSteps = fwdRange[1].toInt() - fwdRange[0].toInt();
-                } else {
-                    QStringList bwdRange = m_dodge.dodgeBackFrames.split('-');
-                    if (bwdRange.size() == 2)
-                        dodgeFrameSteps = bwdRange[1].toInt() - bwdRange[0].toInt();
-                }
+                QStringList range = m_dodgeForward ? m_dodge.dodgeFrames.split('-')
+                                                   : m_dodge.dodgeBackFrames.split('-');
+                if (range.size() == 2)
+                    dodgeFrameSteps = range[1].toInt() - range[0].toInt();
                 if (dodgeFrameSteps > 0) {
-                    double newX = m_cfgPosX + xSign * dodgeDistance / dodgeFrameSteps;
+                    double newX = m_cfgPosX + xSign() * dodgeDist / dodgeFrameSteps;
                     if (m_opponent) {
                         double oppX = m_opponent->posXRatio();
                         double bodyDist = 0.08;
-                        if (xSign > 0 && m_cfgPosX < oppX) newX = std::min(newX, oppX - bodyDist);
-                        else if (xSign < 0 && m_cfgPosX > oppX) newX = std::max(newX, oppX + bodyDist);
-                        double minX = std::max(0.0, oppX - 0.95);
-                        double maxX = std::min(3.0, oppX + 0.95);
-                        newX = std::max(minX, std::min(newX, maxX));
+                        if (xSign() > 0 && m_cfgPosX < oppX) newX = std::min(newX, oppX - bodyDist);
+                        else if (xSign() < 0 && m_cfgPosX > oppX) newX = std::max(newX, oppX + bodyDist);
+                        newX = std::max(std::max(0.0, oppX - 0.95), std::min(newX, std::min(3.0, oppX + 0.95)));
                     }
                     m_cfgPosX = newX;
                     emit posXRatioChanged();
@@ -869,87 +914,83 @@ void CharacterModel::onTick()
             }
         }
     }
-    // --- Dodge 结束条件 ---
-    if (m_state == Dodge && m_dodgeEndFrame > 0 && m_currentFrame >= m_dodgeEndFrame) {
-        m_currentFrame = m_dodgeEndFrame - 1;
-        m_timer.stop();
-        if (m_dodge.dodgeStartFrame > 0)
-            m_animOffsetX = 0;
-        m_dodgeStandPending = true;
-        QTimer::singleShot(0, this, [this]() {
-            if (m_dodgeStandPending) {
-                m_dodgeStandPending = false;
-                playStand();
-                emit dodgeFinished();
-            }
-        });
-        return;
-    }
-    if (m_state == Dodge && !m_dodgeForward && m_dodge.dodgeBackFrames.isEmpty() && m_currentFrame >= m_totalFrames) {
-        m_currentFrame = m_totalFrames - 1;
-        m_timer.stop();
-        m_dodgeStandPending = true;
-        QTimer::singleShot(0, this, [this]() {
-            if (m_dodgeStandPending) {
-                m_dodgeStandPending = false;
-                playStand();
-                emit dodgeFinished();
-            }
-        });
-        return;
-    }
-    if (m_state == Stand && m_currentFrame >= m_totalFrames) {
-        m_currentFrame = 0;                   // 站立动画循环
-    }
-    if (m_state == Jump || m_state == DiagonalJump) {
-        if (m_state == DiagonalJump) {
-            int localFrame = m_currentFrame - m_djStartFrame;
-            double t = (m_djTotalFrames > 1) ? (double)localFrame / (m_djTotalFrames - 1) : 0;
-            double xSign = m_djInitialFacingLeft ? -1.0 : 1.0;
-            double xDelta = xSign * (m_djIsForward ? 1.0 : -1.0);
-            double newX = m_djStartXRatio + xDelta * m_djDistance * t;
-            if (m_opponent) {
-                double oppX = m_opponent->posXRatio();
-                double minX = std::max(0.0, oppX - 0.95);
-                double maxX = std::min(3.0, oppX + 0.95);
-                newX = std::max(minX, std::min(newX, maxX));
-            }
-            if (m_opponent)
-                m_facingLeft = (newX > m_opponent->posXRatio());
-            m_cfgPosX = newX;
-            m_animOffsetX = m_djOffsetFirst + (int)((m_djOffsetLast - m_djOffsetFirst) * t);
-            emit posXRatioChanged();
+    // Dodge 结束
+    if (m_state == Dodge) {
+        bool shouldFinish = (m_dodgeEndFrame > 0 && m_currentFrame >= m_dodgeEndFrame)
+                         || (!m_dodgeForward && m_dodge.dodgeBackFrames.isEmpty() && m_currentFrame >= m_totalFrames);
+        if (shouldFinish) {
+            if (m_dodgeEndFrame > 0)
+                m_currentFrame = m_dodgeEndFrame - 1;
+            else
+                m_currentFrame = m_totalFrames - 1;
+            m_timer.stop();
+            if (m_dodge.dodgeStartFrame > 0)
+                m_animOffsetX = 0;
+            m_dodgeStandPending = true;
+            QTimer::singleShot(0, this, [this]() {
+                if (m_dodgeStandPending) {
+                    m_dodgeStandPending = false;
+                    playStand();
+                    emit dodgeFinished();
+                }
+            });
+            return;
         }
-        if (m_state == Jump && m_opponent)
-            m_facingLeft = (m_cfgPosX > m_opponent->posXRatio());
-        setPosY();
     }
-    // 渐进式击退: 每帧应用一小部分击退距离
+
+    if (m_state == Stand && m_currentFrame >= m_totalFrames)
+        m_currentFrame = 0;
+
+    // 跳跃位移+朝向
+    if (m_state == DiagonalJump) {
+        int localFrame = m_currentFrame - m_djStartFrame;
+        double t = 0;
+        if (m_djTotalFrames > 1)
+            t = (double)localFrame / (m_djTotalFrames - 1);
+        double xSign;
+        if (m_djInitialFacingLeft)
+            xSign = -1.0;
+        else
+            xSign = 1.0;
+        double xDelta;
+        if (m_djIsForward)
+            xDelta = xSign;
+        else
+            xDelta = -xSign;
+        double newX = m_djStartXRatio + xDelta * m_djDistance * t;
+        if (m_opponent) {
+            double oppX = m_opponent->posXRatio();
+            newX = std::max(std::max(0.0, oppX - 0.95), std::min(newX, std::min(3.0, oppX + 0.95)));
+            m_facingLeft = (newX > oppX);
+        }
+        m_cfgPosX = newX;
+        m_animOffsetX = m_djOffsetFirst + (int)((m_djOffsetLast - m_djOffsetFirst) * t);
+        emit posXRatioChanged();
+    } else if (m_state == Jump && m_opponent) {
+        m_facingLeft = (m_cfgPosX > m_opponent->posXRatio());
+    }
+    if (m_state == Jump || m_state == DiagonalJump)
+        setPosY();
+
+    // 渐进式击退
     if (m_state == Hurt && m_knockbackFrames > 0 && m_knockbackRemaining > 0 && m_opponent) {
         double step = m_knockbackRemaining / m_knockbackFrames;
         double oppX = m_opponent->posXRatio();
-        
-        if (m_cfgPosX > oppX) {
-            m_cfgPosX += step;  // 向右退
-        } else {
-            m_cfgPosX -= step;  // 向左退
-        }
-        
-        // 尊重舞台边界
+        if (m_cfgPosX > oppX)
+            m_cfgPosX += step;
+        else
+            m_cfgPosX -= step;
         m_cfgPosX = std::max(0.0, std::min(m_cfgPosX, 3.0));
         m_knockbackRemaining -= step;
         m_knockbackFrames--;
-        
         emit posXRatioChanged();
     }
-    // HeavyStrike 动画播放期间触发镜头更新
-    if (m_state == HeavyStrike) {
+
+    if (m_state == HeavyStrike)
         emit posXRatioChanged();
-    }
+
     emit frameChanged();
 }
-
-// 碰撞检测相关方法实现
 
 bool CharacterModel::isAttacking() const
 {
@@ -961,14 +1002,14 @@ bool CharacterModel::isAttacking() const
 bool CharacterModel::isAttackActive() const
 {
     if (!isAttacking()) return false;
-    if (m_hitThisAttack) return false;  // 本次攻击已命中，不再判定
-    if (m_currentAnim.attackFrames.isEmpty()) return true;  // 未配置则整个动画都生效
+    if (m_hitThisAttack) return false;
+    if (m_currentAnim.attackFrames.isEmpty()) return true;
 
-    // 解析 attackFrames 格式: "3-5" 或 "3,5,7" 或 "3-5,8-10"
-    QStringList parts = m_currentAnim.attackFrames.split(',');
+    // 解析 attackFrames: "3-5" 或 "3,5,7" 或 "3-5,8-10"
+    const QStringList parts = m_currentAnim.attackFrames.split(',');
     for (const QString &part : parts) {
         if (part.contains('-')) {
-            QStringList range = part.split('-');
+            const QStringList range = part.split('-');
             int start = range[0].toInt();
             int end = range[1].toInt();
             if (m_currentFrame >= start && m_currentFrame <= end) return true;
@@ -982,15 +1023,16 @@ bool CharacterModel::isAttackActive() const
 double CharacterModel::hitboxX() const
 {
     if (!isAttacking()) return 0;
-    // 攻击点X = 角色中心X + 攻击点偏移(归一化) * 朝向
-    double offsetX = m_currentAnim.attackPointX;  // 已经是归一化坐标
-    return m_cfgPosX + (m_facingLeft ? -offsetX : offsetX);
+    double offsetX = m_currentAnim.attackPointX;
+    if (m_facingLeft)
+        return m_cfgPosX - offsetX;
+    else
+        return m_cfgPosX + offsetX;
 }
 
 double CharacterModel::hitboxY() const
 {
     if (!isAttacking()) return 0;
-    // 攻击点Y = 角色Y + 帧高度/2 + 攻击点Y偏移
     return m_posY + m_frameHeight / 2.0 + m_currentAnim.attackPointY;
 }
 
@@ -1010,7 +1052,7 @@ double CharacterModel::hurtboxY() const
     return m_posY + m_frameHeight / 2.0;
 }
 
-// 被击中时应用击退效果(渐进式, 分散到受击动画的每一帧)
+// 被击中时应用击退(渐进式, 分散到受击动画每一帧)
 void CharacterModel::applyKnockback()
 {
     if (!m_opponent || m_knockbackToApply <= 0) return;
