@@ -26,10 +26,6 @@ FightDirector::FightDirector(QObject *parent)
     }
 }
 
-FightDirector::~FightDirector()
-{
-}
-
 // QML 窗口高度变化时同步更新两个角色的Y坐标计算基线
 void FightDirector::setRootHeight(double h)
 {

@@ -1,3 +1,8 @@
+// Module
+// File: charactermodel.h   Version: 0.1.0   License: AGPLv3
+// Created:Linfeng Wu       2026-06-12 15:24:23
+// Description:
+//
 #pragma once
 
 #include <QObject>

@@ -27,7 +27,6 @@ public:
     Q_ENUM(Phase)
 
     explicit FightDirector(QObject *parent = nullptr);
-    ~FightDirector() override;
 
     CharacterModel* p1Model() const { return m_p1Model; }
     CharacterModel* p2Model() const { return m_p2Model; }
