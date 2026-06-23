@@ -301,9 +301,11 @@ Item {
         repeat: true
         running: isOnline && !isHost && syncPosReady && director.phase === FightDirector.Fighting && !resettingRound
         onTriggered: {
-            var factor = 0.35
-            // 客机只插值远程角色(P1)的位置，本地角色(P2)由 moveTimer2 驱动，避免冲突导致闪帧
-            director.p1Model.posXRatio += (p1SyncTargetX - director.p1Model.posXRatio) * factor
+            // 远程角色(P1)用较大因子快速追踪主机位置，本地角色(P2)用较小因子温和修正防漂移
+            var remoteFactor = 0.8
+            var localFactor = 0.12
+            director.p1Model.posXRatio += (p1SyncTargetX - director.p1Model.posXRatio) * remoteFactor
+            director.p2Model.posXRatio += (p2SyncTargetX - director.p2Model.posXRatio) * localFactor
             director.updateCamera()
         }
     }
