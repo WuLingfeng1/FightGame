@@ -302,8 +302,8 @@ Item {
         running: isOnline && !isHost && syncPosReady && director.phase === FightDirector.Fighting && !resettingRound
         onTriggered: {
             var factor = 0.35
+            // 客机只插值远程角色(P1)的位置，本地角色(P2)由 moveTimer2 驱动，避免冲突导致闪帧
             director.p1Model.posXRatio += (p1SyncTargetX - director.p1Model.posXRatio) * factor
-            director.p2Model.posXRatio += (p2SyncTargetX - director.p2Model.posXRatio) * factor
             director.updateCamera()
         }
     }
@@ -910,6 +910,32 @@ Item {
         timerSeconds = 60
         roundEnding = false
         director.resetForNewRound(p1CharId, p2CharId)
+
+        // 重置所有移动状态标志，防止回合间状态残留导致无法移动
+        moveTimer.stop()
+        moveTimer.moveRight = false
+        moveTimer.moveLeft = false
+        isMoving = false
+        p1Jumping = false
+        p1Attacking = false
+        p1Crouching = false
+        p1Blocking = false
+        moveLeftPressed = false
+        moveRightPressed = false
+        p1CurrentAnim = ""
+
+        moveTimer2.stop()
+        moveTimer2.moveRight = false
+        moveTimer2.moveLeft = false
+        isMoving2 = false
+        p2Jumping = false
+        p2Attacking = false
+        p2Crouching = false
+        p2Blocking = false
+        moveLeft2Pressed = false
+        moveRight2Pressed = false
+        p2CurrentAnim = ""
+
         resettingRound = false
     }
 
@@ -2107,6 +2133,31 @@ Item {
                     p2Health = 100
                     timerSeconds = 60
                     director.resetForNewRound(p1CharId, p2CharId)
+
+                    // 重置所有移动状态标志，防止回合间状态残留
+                    moveTimer.stop()
+                    moveTimer.moveRight = false
+                    moveTimer.moveLeft = false
+                    isMoving = false
+                    p1Jumping = false
+                    p1Attacking = false
+                    p1Crouching = false
+                    p1Blocking = false
+                    moveLeftPressed = false
+                    moveRightPressed = false
+                    p1CurrentAnim = ""
+
+                    moveTimer2.stop()
+                    moveTimer2.moveRight = false
+                    moveTimer2.moveLeft = false
+                    isMoving2 = false
+                    p2Jumping = false
+                    p2Attacking = false
+                    p2Crouching = false
+                    p2Blocking = false
+                    moveLeft2Pressed = false
+                    moveRight2Pressed = false
+                    p2CurrentAnim = ""
                 }
                 if (msg.roundEnding !== undefined) roundEnding = msg.roundEnding
                 if (!roundEnding) {
