@@ -7,19 +7,21 @@
 //     Join 模式: 浏览局域网房间列表或手动输入IP连接
 import QtQuick
 import QtQuick.Controls
+import FightGame
 
 Item {
     id: root
 
     property var stackViewRef: null
 
+    NetworkManager {
+        id: networkMgr
+    }
+
     // 状态变量
     property bool isHost: true
     property bool isWaiting: false
-    property bool isConnected: false
     property string statusText: ""
-    property string localIp: "192.168.1.100"
-    property var discoveredRooms: []
     property string manualIp: ""
 
     property real fitScale: Math.min(root.width / 900, root.height / 640)
@@ -56,7 +58,7 @@ Item {
 
             MouseArea {
                 anchors.fill: parent; cursorShape: Qt.PointingHandCursor
-                onClicked: { isHost = true; isWaiting = false; isConnected = false; statusText = "" }
+                onClicked: { isHost = true; isWaiting = false; networkMgr.stopDiscovery(); networkMgr.disconnectFromHost(); statusText = "" }
             }
         }
 
@@ -75,7 +77,7 @@ Item {
 
             MouseArea {
                 anchors.fill: parent; cursorShape: Qt.PointingHandCursor
-                onClicked: { isHost = false; isWaiting = false; isConnected = false; statusText = "" }
+                onClicked: { isHost = false; isWaiting = false; networkMgr.stopServer(); networkMgr.disconnectFromHost(); networkMgr.startDiscovery(); statusText = "" }
             }
         }
     }
@@ -117,7 +119,7 @@ Item {
                     color: "dimgray"; font.family: "monospace"
                 }
                 Text {
-                    text: localIp; font.pixelSize: 13 * fitScale
+                    text: networkMgr.localIp; font.pixelSize: 13 * fitScale
                     color: "wheat"; font.family: "monospace"
                 }
             }
@@ -135,13 +137,13 @@ Item {
             y: isWaiting ? 190 * fitScale : 165 * fitScale
             width: 160 * fitScale; height: 36 * fitScale
             color: "black"
-            border.color: isConnected ? "darkgreen" : accent
+            border.color: networkMgr.isConnected ? "darkgreen" : accent
             border.width: 2; radius: 4
-            visible: !isConnected
+            visible: !networkMgr.isConnected
 
             Text {
                 anchors.centerIn: parent
-                text: isWaiting ? (isConnected ? "CONNECTED" : "SEARCHING...") : "CREATE ROOM"
+                text: isWaiting ? (networkMgr.isConnected ? "CONNECTED" : "SEARCHING...") : "CREATE ROOM"
                 font.pixelSize: 14 * fitScale; font.family: "monospace"
                 color: isWaiting ? "dimgray" : accent
             }
@@ -152,7 +154,8 @@ Item {
                 onClicked: {
                     isWaiting = true
                     statusText = "Waiting for opponent to join..."
-                    // TODO: NetworkManager.startServer()
+                    networkMgr.startServer()
+                    networkMgr.announceRoom("Fight Room")
                 }
             }
         }
@@ -161,7 +164,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             y: 190 * fitScale
             width: 360 * fitScale; height: 28 * fitScale
-            color: "transparent"; visible: isConnected
+            color: "transparent"; visible: networkMgr.isConnected
 
             Text {
                 anchors.centerIn: parent
@@ -205,12 +208,12 @@ Item {
             ListView {
                 anchors.fill: parent
                 anchors.margins: 4
-                model: discoveredRooms
+                model: networkMgr.discoveredRooms
                 spacing: 4
 
                 header: Text {
                     width: 380 * fitScale
-                    text: discoveredRooms.length === 0
+                    text: networkMgr.discoveredRooms.length === 0
                           ? "No rooms found. Scanning LAN..."
                           : "Found Rooms:"
                     font.pixelSize: 11 * fitScale; color: "gray"
@@ -255,7 +258,7 @@ Item {
                                 onClicked: {
                                     manualIp = modelData.ip
                                     statusText = "Connecting to " + modelData.ip + "..."
-                                    // TODO: NetworkManager.connectToHost(modelData.ip)
+                                    networkMgr.connectToHost(modelData.ip)
                                 }
                             }
                         }
@@ -327,7 +330,7 @@ Item {
                     enabled: manualIp !== ""
                     onClicked: {
                         statusText = "Connecting to " + manualIp + "..."
-                        // TODO: NetworkManager.connectToHost(manualIp)
+                        networkMgr.connectToHost(manualIp)
                     }
                 }
             }
@@ -348,7 +351,7 @@ Item {
         y: 420 * fitScale
         text: statusText
         font.pixelSize: 12 * fitScale
-        color: isConnected ? "darkgreen" : "dimgray"
+        color: networkMgr.isConnected ? "darkgreen" : "dimgray"
         font.family: "monospace"
         visible: isHost && statusText !== ""
     }
@@ -369,7 +372,36 @@ Item {
 
         MouseArea {
             anchors.fill: parent; cursorShape: Qt.PointingHandCursor
-            onClicked: { if (stackViewRef) stackViewRef.pop() }
+            onClicked: {
+                networkMgr.stopServer()
+                networkMgr.stopDiscovery()
+                networkMgr.disconnectFromHost()
+                if (stackViewRef) stackViewRef.pop()
+            }
+        }
+    }
+
+    Connections {
+        target: networkMgr
+
+        function onClientConnected() {
+            isWaiting = false
+            statusText = "Player 2 connected!"
+        }
+
+        function onConnectedToHost() {
+            networkMgr.stopDiscovery()
+            statusText = "Connected to host!"
+        }
+
+        function onDisconnected() {
+            isWaiting = false
+            statusText = "Disconnected"
+        }
+
+        function onErrorOccurred(error) {
+            isWaiting = false
+            statusText = error
         }
     }
 }
