@@ -1,8 +1,4 @@
-// Module
-// File: networkmanager.h   Version: 0.1.0   License: AGPLv3
-// Created:  wang cheng    2026-06-24
-// Description:
-//     联机网络管理器: TCP 服务器/客户端, UDP 局域网房间发现, JSON 消息收发
+// 联机网络管理器: TCP 服务器/客户端, UDP 局域网房间发现, JSON 消息收发
 #pragma once
 
 #include <QObject>
@@ -59,12 +55,13 @@ private slots:
     void onNewConnection();
     void onReadyRead();
     void onDisconnected();
-    void onSocketError(QAbstractSocket::SocketError err);
+    void onSocketError(QAbstractSocket::SocketError);
     void onUdpReadyRead();
     void onAnnounceTimer();
 
 private:
     void detectLocalIp();
+    void sendAnnounceBroadcast();
 
     QTcpServer *m_server = nullptr;
     QTcpSocket *m_socket = nullptr;

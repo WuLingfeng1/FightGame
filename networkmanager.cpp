@@ -1,8 +1,4 @@
-// Module
-// File: networkmanager.cpp   Version: 0.1.0   License: AGPLv3
-// Created:    wangcheng        2026-06-23
-// Description:
-//     联机网络管理器实现: TCP 建连/断连, UDP 局域网广播发现, JSON 消息协议
+// 联机网络管理器实现: TCP 建连/断连, UDP 局域网广播发现, JSON 消息协议
 #include "networkmanager.h"
 
 #include <QDebug>
@@ -20,12 +16,10 @@ NetworkManager::~NetworkManager()
     if (m_announceTimer) {
         m_announceTimer->stop();
         delete m_announceTimer;
-        m_announceTimer = nullptr;
     }
     if (m_server) {
         m_server->close();
         delete m_server;
-        m_server = nullptr;
     }
     if (m_socket) {
         m_socket->disconnectFromHost();
@@ -33,12 +27,10 @@ NetworkManager::~NetworkManager()
             delete m_socket;
         else
             m_socket->deleteLater();
-        m_socket = nullptr;
     }
     if (m_udpSocket) {
         m_udpSocket->close();
         delete m_udpSocket;
-        m_udpSocket = nullptr;
     }
 }
 
@@ -46,15 +38,14 @@ void NetworkManager::detectLocalIp()
 {
     const auto interfaces = QNetworkInterface::allInterfaces();
     for (const auto &iface : interfaces) {
-        if (iface.flags().testFlag(QNetworkInterface::IsUp)
-            && !iface.flags().testFlag(QNetworkInterface::IsLoopBack)) {
-            const auto entries = iface.addressEntries();
-            for (const auto &entry : entries) {
-                if (entry.ip().protocol() == QAbstractSocket::IPv4Protocol) {
-                    m_localIp = entry.ip().toString();
-                    emit localIpChanged();
-                    return;
-                }
+        if (!iface.flags().testFlag(QNetworkInterface::IsUp)
+            || iface.flags().testFlag(QNetworkInterface::IsLoopBack))
+            continue;
+        for (const auto &entry : iface.addressEntries()) {
+            if (entry.ip().protocol() == QAbstractSocket::IPv4Protocol) {
+                m_localIp = entry.ip().toString();
+                emit localIpChanged();
+                return;
             }
         }
     }
@@ -189,6 +180,18 @@ void NetworkManager::stopDiscovery()
     emit isDiscoveringChanged();
 }
 
+void NetworkManager::sendAnnounceBroadcast()
+{
+    QJsonObject announce;
+    announce[QStringLiteral("type")] = QStringLiteral("room_announce");
+    announce[QStringLiteral("name")] = m_roomName;
+    announce[QStringLiteral("ip")] = m_localIp;
+    announce[QStringLiteral("port")] = static_cast<int>(m_tcpPort);
+
+    QByteArray data = QJsonDocument(announce).toJson(QJsonDocument::Compact);
+    m_udpSocket->writeDatagram(data, QHostAddress::Broadcast, m_discoveryPort);
+}
+
 void NetworkManager::announceRoom(const QString &roomName)
 {
     m_roomName = roomName;
@@ -197,14 +200,7 @@ void NetworkManager::announceRoom(const QString &roomName)
         m_udpSocket = new QUdpSocket(this);
     }
 
-    QJsonObject announce;
-    announce[QStringLiteral("type")] = QStringLiteral("room_announce");
-    announce[QStringLiteral("name")] = roomName;
-    announce[QStringLiteral("ip")] = m_localIp;
-    announce[QStringLiteral("port")] = static_cast<int>(m_tcpPort);
-
-    QByteArray data = QJsonDocument(announce).toJson(QJsonDocument::Compact);
-    m_udpSocket->writeDatagram(data, QHostAddress::Broadcast, m_discoveryPort);
+    sendAnnounceBroadcast();
 
     if (!m_announceTimer) {
         m_announceTimer = new QTimer(this);
@@ -299,9 +295,8 @@ void NetworkManager::onDisconnected()
     qDebug() << "[NetworkManager] 连接已断开";
 }
 
-void NetworkManager::onSocketError(QAbstractSocket::SocketError err)
+void NetworkManager::onSocketError(QAbstractSocket::SocketError)
 {
-    Q_UNUSED(err)
     QTcpSocket *socket = qobject_cast<QTcpSocket *>(sender());
     QString errorMsg = socket ? socket->errorString()
                               : QStringLiteral("未知套接字错误");
@@ -365,12 +360,5 @@ void NetworkManager::onAnnounceTimer()
     if (!m_udpSocket || !m_isServer)
         return;
 
-    QJsonObject announce;
-    announce[QStringLiteral("type")] = QStringLiteral("room_announce");
-    announce[QStringLiteral("name")] = m_roomName;
-    announce[QStringLiteral("ip")] = m_localIp;
-    announce[QStringLiteral("port")] = static_cast<int>(m_tcpPort);
-
-    QByteArray data = QJsonDocument(announce).toJson(QJsonDocument::Compact);
-    m_udpSocket->writeDatagram(data, QHostAddress::Broadcast, m_discoveryPort);
+    sendAnnounceBroadcast();
 }
