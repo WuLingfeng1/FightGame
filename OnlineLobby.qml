@@ -387,11 +387,13 @@ Item {
         function onClientConnected() {
             isWaiting = false
             statusText = "Player 2 connected!"
+            networkMgr.sendMessage({"type": "start_game"})
+            if (stackViewRef) stackViewRef.push("SelectScreen.qml", { "stackViewRef": stackViewRef })
         }
 
         function onConnectedToHost() {
             networkMgr.stopDiscovery()
-            statusText = "Connected to host!"
+            statusText = "Connected to host! Waiting for host to start..."
         }
 
         function onDisconnected() {
@@ -402,6 +404,13 @@ Item {
         function onErrorOccurred(error) {
             isWaiting = false
             statusText = error
+        }
+
+        function onMessageReceived(msg) {
+            console.log("[OnlineLobby] Received:", JSON.stringify(msg))
+            if (msg.type === "start_game") {
+                if (stackViewRef) stackViewRef.push("SelectScreen.qml", { "stackViewRef": stackViewRef })
+            }
         }
     }
 }
