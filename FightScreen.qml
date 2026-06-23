@@ -290,10 +290,13 @@ Item {
         }
     }
 
-    // 客机位置插值定时器: 平滑过渡 sync 目标位置，消除闪帧
+    // 客机位置插值: 远程P1按sync推算的固定步长匀速推进(消除瞬移), 本地P2温和修正防漂移
     property real p1SyncTargetX: 0.0
     property real p2SyncTargetX: 0.0
     property bool syncPosReady: false
+    property real p1SyncPrevX: 0.0
+    property real p1SyncStep: 0.0
+    property int p1SyncFramesLeft: 0
 
     Timer {
         id: posInterpTimer
@@ -301,11 +304,14 @@ Item {
         repeat: true
         running: isOnline && !isHost && syncPosReady && director.phase === FightDirector.Fighting && !resettingRound
         onTriggered: {
-            // 远程角色(P1)用较大因子快速追踪主机位置，本地角色(P2)用较小因子温和修正防漂移
-            var remoteFactor = 0.8
-            var localFactor = 0.12
-            director.p1Model.posXRatio += (p1SyncTargetX - director.p1Model.posXRatio) * remoteFactor
-            director.p2Model.posXRatio += (p2SyncTargetX - director.p2Model.posXRatio) * localFactor
+            // P1(远程): 按sync推算的每帧步长匀速推进, +5%微量修正消除累积漂移
+            if (p1SyncFramesLeft > 0) {
+                director.p1Model.posXRatio += p1SyncStep
+                p1SyncFramesLeft--
+            }
+            director.p1Model.posXRatio += (p1SyncTargetX - director.p1Model.posXRatio) * 0.05
+            // P2(本地): 12%温和修正防止与主机长期漂移, 不影响本地输入手感
+            director.p2Model.posXRatio += (p2SyncTargetX - director.p2Model.posXRatio) * 0.12
             director.updateCamera()
         }
     }
@@ -2166,13 +2172,19 @@ Item {
                     roundResetTimer.stop()
                     matchResultTimer.stop()
                 }
-                // 位置使用目标值 + 插值平滑过渡，消除闪帧
+                // 位置: 从sync差值推算P1每帧步长, 客机匀速推进消除瞬移
                 p1SyncTargetX = msg.p1x
                 p2SyncTargetX = msg.p2x
                 if (!syncPosReady) {
                     director.p1Model.posXRatio = msg.p1x
                     director.p2Model.posXRatio = msg.p2x
+                    p1SyncPrevX = msg.p1x
                     syncPosReady = true
+                } else {
+                    var delta = msg.p1x - p1SyncPrevX
+                    p1SyncStep = delta / 2.0
+                    p1SyncFramesLeft = 2
+                    p1SyncPrevX = msg.p1x
                 }
                 director.updateCamera()
             } else if (msg.type === "round_event" && !isHost) {
