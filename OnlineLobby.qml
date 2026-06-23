@@ -388,7 +388,7 @@ Item {
             isWaiting = false
             statusText = "Player 2 connected!"
             networkMgr.sendMessage({"type": "start_game"})
-            if (stackViewRef) stackViewRef.push("SelectScreen.qml", { "stackViewRef": stackViewRef })
+            if (stackViewRef) stackViewRef.push("SelectScreen.qml", { "stackViewRef": stackViewRef, "isOnline": true, "isHost": true, "networkMgr": networkMgr })
         }
 
         function onConnectedToHost() {
@@ -409,7 +409,7 @@ Item {
         function onMessageReceived(msg) {
             console.log("[OnlineLobby] Received:", JSON.stringify(msg))
             if (msg.type === "start_game") {
-                if (stackViewRef) stackViewRef.push("SelectScreen.qml", { "stackViewRef": stackViewRef })
+                if (stackViewRef) stackViewRef.push("SelectScreen.qml", { "stackViewRef": stackViewRef, "isOnline": true, "isHost": false, "networkMgr": networkMgr })
             }
         }
     }
