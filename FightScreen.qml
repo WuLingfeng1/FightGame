@@ -266,10 +266,10 @@ Item {
         }
     }
 
-    // 联机状态同步定时器: 主机每100ms向客机同步完整游戏状态
+    // 联机状态同步定时器: 主机每33ms向客机同步完整游戏状态
     Timer {
         id: syncTimer
-        interval: 100
+        interval: 33
         repeat: true
         running: isOnline && isHost && director.phase === FightDirector.Fighting && !resettingRound
         onTriggered: {
@@ -290,6 +290,24 @@ Item {
         }
     }
 
+    // 客机位置插值定时器: 平滑过渡 sync 目标位置，消除闪帧
+    property real p1SyncTargetX: 0.0
+    property real p2SyncTargetX: 0.0
+    property bool syncPosReady: false
+
+    Timer {
+        id: posInterpTimer
+        interval: 16
+        repeat: true
+        running: isOnline && !isHost && syncPosReady && director.phase === FightDirector.Fighting && !resettingRound
+        onTriggered: {
+            var factor = 0.35
+            director.p1Model.posXRatio += (p1SyncTargetX - director.p1Model.posXRatio) * factor
+            director.p2Model.posXRatio += (p2SyncTargetX - director.p2Model.posXRatio) * factor
+            director.updateCamera()
+        }
+    }
+
     property real fitScale: Math.min(root.width / 900, root.height / 640)
     property real moveStep: 0.008
     property real bodyCollisionDist: 0.15  // 身体碰撞最小距离
@@ -303,6 +321,8 @@ Item {
         property bool moveRight: false
         property bool moveLeft: false
         onTriggered: {
+            // 客机端 P1 由 sync 插值驱动位置, 不跑本地 moveTimer
+            if (isOnline && !isHost) return
             var p1 = director.p1Model.posXRatio
             var p2 = director.p2Model.posXRatio
             if (moveRight) {
@@ -2078,6 +2098,7 @@ Item {
                 p1Wins = msg.p1Wins
                 p2Wins = msg.p2Wins
                 if (currentRound !== msg.currentRound) {
+                    syncPosReady = false
                     roundResetTimer.stop()
                     matchResultTimer.stop()
                     currentRound = msg.currentRound
@@ -2092,8 +2113,14 @@ Item {
                     roundResetTimer.stop()
                     matchResultTimer.stop()
                 }
-                director.p1Model.posXRatio = msg.p1x
-                director.p2Model.posXRatio = msg.p2x
+                // 位置使用目标值 + 插值平滑过渡，消除闪帧
+                p1SyncTargetX = msg.p1x
+                p2SyncTargetX = msg.p2x
+                if (!syncPosReady) {
+                    director.p1Model.posXRatio = msg.p1x
+                    director.p2Model.posXRatio = msg.p2x
+                    syncPosReady = true
+                }
                 director.updateCamera()
             } else if (msg.type === "round_event" && !isHost) {
                 p1Wins = msg.p1Wins

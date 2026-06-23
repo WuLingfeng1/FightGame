@@ -1,3 +1,8 @@
+// Module
+// File: networkmanager.cpp   Version: 0.1.0   License: AGPLv3
+// Created:   HaiFeng Guo    2026-06-22 19:07:59
+// Description:
+//
 // 联机网络管理器实现: TCP 建连/断连, UDP 局域网广播发现, JSON 消息协议
 #include "networkmanager.h"
 
@@ -106,6 +111,7 @@ void NetworkManager::connectToHost(const QString &ip, quint16 port)
 
     m_tcpPort = port;
     m_socket = new QTcpSocket(this);
+    m_socket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
     connect(m_socket, &QTcpSocket::connected, this, [this]() {
         m_isConnected = true;
         emit connectedChanged();
@@ -221,6 +227,7 @@ void NetworkManager::onNewConnection()
     }
 
     m_socket = m_server->nextPendingConnection();
+    m_socket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
     connect(m_socket, &QTcpSocket::readyRead, this, &NetworkManager::onReadyRead);
     connect(m_socket, &QTcpSocket::disconnected, this, &NetworkManager::onDisconnected);
     connect(m_socket, &QTcpSocket::errorOccurred, this, &NetworkManager::onSocketError);
