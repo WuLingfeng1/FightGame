@@ -37,6 +37,73 @@ Item {
     property string p2Portrait: ""
     property string p2CharId:   ""
 
+    property bool isOnline: false
+    property bool isHost: false
+    property var networkMgr: null
+
+    function sendInput(action, pressed) {
+        if (!isOnline || !networkMgr) return
+        var msg = {"type": "input", "action": action}
+        if (pressed !== undefined) msg.pressed = pressed
+        networkMgr.sendMessage(msg)
+    }
+
+    function handleRemoteInput(action, pressed) {
+        if (isHost) {
+            switch (action) {
+            case "move_right": pressed ? startMoveRight2() : stopMoveRight2(); break
+            case "move_left":  pressed ? startMoveLeft2()  : stopMoveLeft2();  break
+            case "jump":       startJump2();      break
+            case "crouch":     pressed ? startCrouch2() : stopCrouch2(); break
+            case "light_punch":   startAttack2(); break
+            case "light_kick":    startAttackLightKick2(); break
+            case "heavy_punch":   startAttackHeavyPunch2(); break
+            case "heavy_kick":    startAttackHeavyKick2(); break
+            case "heavy_strike":  startAttackHeavyStrike2(); break
+            case "block":
+                if (pressed) {
+                    p2Blocking = true
+                    if (!p2Jumping && !p2Attacking && !p2Crouching) {
+                        director.p2Model.playStandBlock()
+                        moveTimer2.stop(); isMoving2 = false
+                    }
+                } else {
+                    p2Blocking = false
+                    if (director.p2Model.state === 16) director.p2Model.releaseStandBlock()
+                }
+                break
+            case "dodge_forward":  startDodge2(true);  break
+            case "dodge_backward": startDodge2(false); break
+            }
+        } else {
+            switch (action) {
+            case "move_right": pressed ? startMoveRight() : stopMoveRight(); break
+            case "move_left":  pressed ? startMoveLeft()  : stopMoveLeft();  break
+            case "jump":       startJump();       break
+            case "crouch":     pressed ? startCrouch1() : stopCrouch1(); break
+            case "light_punch":   startAttack1(); break
+            case "light_kick":    startAttackLightKick1(); break
+            case "heavy_punch":   startAttackHeavyPunch1(); break
+            case "heavy_kick":    startAttackHeavyKick1(); break
+            case "heavy_strike":  startAttackHeavyStrike1(); break
+            case "block":
+                if (pressed) {
+                    p1Blocking = true
+                    if (!p1Jumping && !p1Attacking && !p1Crouching) {
+                        director.p1Model.playStandBlock()
+                        moveTimer.stop(); isMoving = false
+                    }
+                } else {
+                    p1Blocking = false
+                    if (director.p1Model.state === 16) director.p1Model.releaseStandBlock()
+                }
+                break
+            case "dodge_forward":  startDodge1(true);  break
+            case "dodge_backward": startDodge1(false); break
+            }
+        }
+    }
+
     // 战斗导演与通用常量
     FightDirector {
         id: director
@@ -157,8 +224,13 @@ Item {
         onTriggered: {
             if (p1WaitingCombo) {
                 p1WaitingCombo = false
-                if (p1ComboKeyJ) startAttack1()
-                else startAttackLightKick1()
+                if (p1ComboKeyJ) {
+                    startAttack1()
+                    sendInput("light_punch")
+                } else {
+                    startAttackLightKick1()
+                    sendInput("light_kick")
+                }
             }
         }
     }
@@ -168,8 +240,13 @@ Item {
         onTriggered: {
                 if (p2WaitingCombo) {
                     p2WaitingCombo = false
-                    if (p2ComboKeyJ) startAttack2()
-                    else startAttackLightKick2()
+                    if (p2ComboKeyJ) {
+                        startAttack2()
+                        sendInput("light_punch")
+                    } else {
+                        startAttackLightKick2()
+                        sendInput("light_kick")
+                    }
             }
         }
     }
@@ -705,17 +782,24 @@ Item {
 
     Keys.onPressed: (event) => {
         if (event.isAutoRepeat || director.phase !== FightDirector.Fighting || resettingRound) return
+        if (isOnline) {
+            var isP1Key = (event.key === Qt.Key_D || event.key === Qt.Key_A || event.key === Qt.Key_W || event.key === Qt.Key_S || event.key === Qt.Key_J || event.key === Qt.Key_K || event.key === Qt.Key_U || event.key === Qt.Key_L || event.key === Qt.Key_I || event.key === Qt.Key_G)
+            if (isHost && !isP1Key) return
+            if (!isHost && isP1Key) return
+        }
         switch (event.key) {
-        case Qt.Key_D:      startMoveRight();  break
-        case Qt.Key_A:      startMoveLeft();   break
-        case Qt.Key_S:      startCrouch1();    break
-        case Qt.Key_W:      startJump();       break
+        case Qt.Key_D:      startMoveRight(); sendInput("move_right", true); break
+        case Qt.Key_A:      startMoveLeft();  sendInput("move_left", true);  break
+        case Qt.Key_S:      startCrouch1();   sendInput("crouch", true);     break
+        case Qt.Key_W:      startJump();      sendInput("jump");             break
         case Qt.Key_J:
             p1JPressed = true
             if (p1WaitingCombo && p1KPressed && (moveRightPressed || moveLeftPressed)) {
                 p1ComboTimer.stop()
                 p1WaitingCombo = false
-                startDodge1(getP1DodgeForward())
+                var p1DodgeDir = getP1DodgeForward()
+                startDodge1(p1DodgeDir)
+                sendInput(p1DodgeDir ? "dodge_forward" : "dodge_backward")
             } else {
                 p1ComboKeyJ = true
                 p1WaitingCombo = true
@@ -727,16 +811,18 @@ Item {
             if (p1WaitingCombo && p1JPressed && (moveRightPressed || moveLeftPressed)) {
                 p1ComboTimer.stop()
                 p1WaitingCombo = false
-                startDodge1(getP1DodgeForward())
+                var p1DodgeDir2 = getP1DodgeForward()
+                startDodge1(p1DodgeDir2)
+                sendInput(p1DodgeDir2 ? "dodge_forward" : "dodge_backward")
             } else {
                 p1ComboKeyJ = false
                 p1WaitingCombo = true
                 p1ComboTimer.restart()
             }
             break
-        case Qt.Key_U:      startAttackHeavyPunch1(); break
-        case Qt.Key_L:      startAttackHeavyKick1();  break
-        case Qt.Key_I:      startAttackHeavyStrike1();  break
+        case Qt.Key_U:      startAttackHeavyPunch1();  sendInput("heavy_punch");  break
+        case Qt.Key_L:      startAttackHeavyKick1();   sendInput("heavy_kick");   break
+        case Qt.Key_I:      startAttackHeavyStrike1(); sendInput("heavy_strike"); break
         case Qt.Key_G:
             p1Blocking = true
             if (!p1Jumping && !p1Attacking && !p1Crouching) {
@@ -744,19 +830,22 @@ Item {
                 moveTimer.stop()
                 isMoving = false
             }
+            sendInput("block", true)
             break
-        case Qt.Key_Right:  startMoveRight2(); break
-        case Qt.Key_Left:   startMoveLeft2();  break
-        case Qt.Key_Down:   startCrouch2();    break
-        case Qt.Key_Up:     startJump2();      break
+        case Qt.Key_Right:  startMoveRight2(); sendInput("move_right", true); break
+        case Qt.Key_Left:   startMoveLeft2();  sendInput("move_left", true);  break
+        case Qt.Key_Down:   startCrouch2();    sendInput("crouch", true);     break
+        case Qt.Key_Up:     startJump2();      sendInput("jump");             break
         case Qt.Key_1:
             if (event.modifiers & Qt.KeypadModifier) {
                 p2N1Pressed = true
-                var dir = moveRight2Pressed || moveLeft2Pressed
+                var dir1 = moveRight2Pressed || moveLeft2Pressed
                 if (p2WaitingCombo && p2N2Pressed) {
                     p2ComboTimer.stop()
                     p2WaitingCombo = false
-                    startDodge2(dir ? getP2DodgeForward() : true)
+                    var p2DodgeDir = dir1 ? getP2DodgeForward() : true
+                    startDodge2(p2DodgeDir)
+                    sendInput(p2DodgeDir ? "dodge_forward" : "dodge_backward")
                 } else {
                     p2ComboKeyJ = true
                     p2WaitingCombo = true
@@ -767,28 +856,23 @@ Item {
         case Qt.Key_2:
             if (event.modifiers & Qt.KeypadModifier) {
                 p2N2Pressed = true
-                var dir = moveRight2Pressed || moveLeft2Pressed
+                var dir2 = moveRight2Pressed || moveLeft2Pressed
                 if (p2WaitingCombo && p2N1Pressed) {
-                    // 正常：Num1先按，Num2后按 → 闪避
                     p2ComboTimer.stop()
                     p2WaitingCombo = false
-                    startDodge2(dir ? getP2DodgeForward() : true)
+                    var p2DodgeDir2 = dir2 ? getP2DodgeForward() : true
+                    startDodge2(p2DodgeDir2)
+                    sendInput(p2DodgeDir2 ? "dodge_forward" : "dodge_backward")
                 } else {
-                    // Num2先按（无方向键），启动计时器等待Num1
                     p2ComboKeyJ = false
                     p2WaitingCombo = true
                     p2ComboTimer.restart()
                 }
             }
             break
-        case Qt.Key_2:
-            if (event.modifiers & Qt.KeypadModifier) {
-                // Already handled above for dodge combo
-            }
-            break
-        case Qt.Key_3:      if (event.modifiers & Qt.KeypadModifier) startAttackHeavyPunch2(); break
-        case Qt.Key_0:      if (event.modifiers & Qt.KeypadModifier) startAttackHeavyKick2(); break
-        case Qt.Key_5:      if (event.modifiers & Qt.KeypadModifier) startAttackHeavyStrike2(); break
+        case Qt.Key_3:      if (event.modifiers & Qt.KeypadModifier) { startAttackHeavyPunch2();  sendInput("heavy_punch");  } break
+        case Qt.Key_0:      if (event.modifiers & Qt.KeypadModifier) { startAttackHeavyKick2();   sendInput("heavy_kick");   } break
+        case Qt.Key_5:      if (event.modifiers & Qt.KeypadModifier) { startAttackHeavyStrike2(); sendInput("heavy_strike"); } break
         case Qt.Key_4:
             if (event.modifiers & Qt.KeypadModifier) {
                 p2Blocking = true
@@ -797,26 +881,33 @@ Item {
                     moveTimer2.stop()
                     isMoving2 = false
                 }
+                sendInput("block", true)
             }
             break
         }
     }
     Keys.onReleased: (event) => {
         if (event.isAutoRepeat || director.phase !== FightDirector.Fighting || resettingRound) return
+        if (isOnline) {
+            var isP1Key = (event.key === Qt.Key_D || event.key === Qt.Key_A || event.key === Qt.Key_S || event.key === Qt.Key_J || event.key === Qt.Key_K || event.key === Qt.Key_G)
+            if (isHost && !isP1Key) return
+            if (!isHost && isP1Key) return
+        }
         switch (event.key) {
-        case Qt.Key_D:      stopMoveRight();  break
-        case Qt.Key_A:      stopMoveLeft();   break
-        case Qt.Key_S:      stopCrouch1();    break
+        case Qt.Key_D:      stopMoveRight(); sendInput("move_right", false); break
+        case Qt.Key_A:      stopMoveLeft();  sendInput("move_left", false);  break
+        case Qt.Key_S:      stopCrouch1();   sendInput("crouch", false);     break
         case Qt.Key_J:      p1JPressed = false; break
         case Qt.Key_K:      p1KPressed = false; break
-        case Qt.Key_Right:  stopMoveRight2(); break
-        case Qt.Key_Left:   stopMoveLeft2();  break
-        case Qt.Key_Down:   stopCrouch2();    break
+        case Qt.Key_Right:  stopMoveRight2(); sendInput("move_right", false); break
+        case Qt.Key_Left:   stopMoveLeft2();  sendInput("move_left", false);  break
+        case Qt.Key_Down:   stopCrouch2();    sendInput("crouch", false);     break
         case Qt.Key_G:
             p1Blocking = false
             if (director.p1Model.state === 16) {  // StandBlock
                 director.p1Model.releaseStandBlock()
             }
+            sendInput("block", false)
             break
         case Qt.Key_1:      if (event.modifiers & Qt.KeypadModifier) p2N1Pressed = false; break
         case Qt.Key_2:      if (event.modifiers & Qt.KeypadModifier) p2N2Pressed = false; break
@@ -826,6 +917,7 @@ Item {
                 if (director.p2Model.state === 16) {  // StandBlock
                     director.p2Model.releaseStandBlock()
                 }
+                sendInput("block", false)
             }
             break
         }
@@ -1190,11 +1282,12 @@ Item {
         }
     }
 
-    // 回合显示
+    // 回合显示 + 联机模式标识
     Text {
+        id: roundText
         anchors.horizontalCenter: parent.horizontalCenter
         y: 8
-        text: "Round " + currentRound
+        text: (isOnline ? "联机对战 · " : "") + "Round " + currentRound
         font.pixelSize: 14
         font.bold: true
         color: "wheat"
@@ -1802,5 +1895,16 @@ Item {
     Connections {
         target: director.p2Model
         function onPosXRatioChanged() { director.updateCamera() }
+    }
+
+    Connections {
+        id: netInput
+        target: networkMgr
+        enabled: isOnline && networkMgr !== null
+
+        function onMessageReceived(msg) {
+            if (msg.type !== "input") return
+            handleRemoteInput(msg.action, msg.pressed)
+        }
     }
 }
