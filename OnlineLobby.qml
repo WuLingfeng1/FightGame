@@ -34,11 +34,30 @@ Item {
     property bool isWaiting: false
     property string statusText: ""
     property string manualIp: ""
+    property int discoveryAttempts: 0
+    property bool showManualIpPopup: false
 
     property real fitScale: Math.min(root.width / 900, root.height / 640)
     property string accent: "darkgoldenrod"
 
     Rectangle { anchors.fill: parent; color: "black" }
+
+    Timer {
+        id: discoveryRetryTimer
+        interval: 3000
+        repeat: true
+        onTriggered: {
+            discoveryAttempts++
+            if (networkMgr.discoveredRooms.length === 0 && discoveryAttempts >= 3) {
+                stop()
+                showManualIpPopup = true
+            }
+            if (networkMgr.discoveredRooms.length > 0 || !networkMgr.isDiscovering) {
+                stop()
+                discoveryAttempts = 0
+            }
+        }
+    }
 
     Text {
         anchors.horizontalCenter: parent.horizontalCenter
@@ -88,7 +107,7 @@ Item {
 
             MouseArea {
                 anchors.fill: parent; cursorShape: Qt.PointingHandCursor
-                onClicked: { isHost = false; isWaiting = false; roomMgr.leaveRoom(); networkMgr.startDiscovery(); statusText = "" }
+                onClicked: { isHost = false; isWaiting = false; roomMgr.leaveRoom(); networkMgr.startDiscovery(); statusText = ""; discoveryAttempts = 0; discoveryRetryTimer.restart() }
             }
         }
     }
@@ -266,6 +285,7 @@ Item {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
+                                    discoveryRetryTimer.stop()
                                     manualIp = modelData.ip
                                     statusText = "Connecting to " + modelData.ip + "..."
                                     roomMgr.joinRoom(modelData.ip)
@@ -394,6 +414,8 @@ Item {
 
         function onConnectedToHost() {
             networkMgr.stopDiscovery()
+            discoveryRetryTimer.stop()
+            showManualIpPopup = false
             statusText = "Connected to host! Waiting for host to start..."
         }
 
@@ -405,6 +427,147 @@ Item {
         function onErrorOccurred(error) {
             isWaiting = false
             statusText = error
+        }
+    }
+
+    function connectToIp(ip) {
+        showManualIpPopup = false
+        discoveryRetryTimer.stop()
+        manualIp = ip
+        statusText = "Connecting to " + ip + "..."
+        roomMgr.joinRoom(ip)
+    }
+
+    // 手动输入 IP 弹窗
+    Item {
+        anchors.fill: parent
+        visible: showManualIpPopup
+        z: 100
+
+        Rectangle {
+            anchors.fill: parent
+            color: Qt.rgba(0, 0, 0, 0.7)
+            MouseArea { anchors.fill: parent }
+        }
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: 370 * fitScale
+            height: 200 * fitScale
+            color: "black"
+            border.color: accent
+            border.width: 2
+            radius: 8
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: 14 * fitScale
+                text: "未找到房间"
+                font.pixelSize: 18 * fitScale
+                font.bold: true
+                color: "darkgoldenrod"
+                font.family: "monospace"
+            }
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: 42 * fitScale
+                text: "请手动输入主机 IP 地址"
+                font.pixelSize: 12 * fitScale
+                color: "dimgray"
+                font.family: "monospace"
+            }
+
+            Rectangle {
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: 70 * fitScale
+                width: 280 * fitScale
+                height: 34 * fitScale
+                color: "black"
+                border.color: "dimgray"
+                border.width: 1
+                radius: 4
+
+                TextInput {
+                    id: popupIpInput
+                    anchors.fill: parent
+                    anchors.leftMargin: 10 * fitScale
+                    verticalAlignment: TextInput.AlignVCenter
+                    text: manualIp
+                    font.pixelSize: 13 * fitScale
+                    color: "wheat"
+                    font.family: "monospace"
+                    maximumLength: 21
+                    onTextChanged: manualIp = text
+                }
+
+                Text {
+                    anchors.fill: parent
+                    anchors.leftMargin: 10 * fitScale
+                    verticalAlignment: Text.AlignVCenter
+                    text: "输入 IP 地址..."
+                    font.pixelSize: 13 * fitScale
+                    color: "dimgray"
+                    font.family: "monospace"
+                    visible: manualIp === ""
+                }
+            }
+
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: 125 * fitScale
+                spacing: 16 * fitScale
+
+                Rectangle {
+                    width: 110 * fitScale
+                    height: 34 * fitScale
+                    color: manualIp !== "" ? "black" : Qt.rgba(0,0,0,0.3)
+                    border.color: manualIp !== "" ? accent : "dimgray"
+                    border.width: 2
+                    radius: 4
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "CONNECT"
+                        font.pixelSize: 13 * fitScale
+                        font.family: "monospace"
+                        color: manualIp !== "" ? accent : "dimgray"
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        enabled: manualIp !== ""
+                        onClicked: connectToIp(manualIp)
+                    }
+                }
+
+                Rectangle {
+                    width: 110 * fitScale
+                    height: 34 * fitScale
+                    color: "transparent"
+                    border.color: "dimgray"
+                    border.width: 1
+                    radius: 4
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "CANCEL"
+                        font.pixelSize: 13 * fitScale
+                        font.family: "monospace"
+                        color: "dimgray"
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            showManualIpPopup = false
+                            discoveryAttempts = 0
+                            discoveryRetryTimer.restart()
+                        }
+                    }
+                }
+            }
         }
     }
 }

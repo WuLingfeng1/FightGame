@@ -50,16 +50,52 @@ Item {
 
     function handleRemoteInput(action, pressed) {
         if (isHost) {
+            // 远程处理 P2 输入, 先同步状态标志防止指令丢失
+            p2Jumping = (director.p2Model.state === 5 || director.p2Model.state === 6)
+            var p2state = director.p2Model.state
+            p2Attacking = (p2state >= 7 && p2state <= 12) || p2state === 14 || p2state === 15
+            p2Blocking = (p2state === 16)
+            p2Crouching = (p2state === 13)
             switch (action) {
             case "move_right": pressed ? startMoveRight2() : stopMoveRight2(); break
             case "move_left":  pressed ? startMoveLeft2()  : stopMoveLeft2();  break
-            case "jump":       startJump2();      break
+            case "jump":       if (!p2Jumping && !p2Blocking) startJump2(); break
             case "crouch":     pressed ? startCrouch2() : stopCrouch2(); break
-            case "light_punch":   startAttack2(); break
-            case "light_kick":    startAttackLightKick2(); break
-            case "heavy_punch":   startAttackHeavyPunch2(); break
-            case "heavy_kick":    startAttackHeavyKick2(); break
-            case "heavy_strike":  startAttackHeavyStrike2(); break
+            case "light_punch":
+                if (!p2Jumping && !p2Blocking) {
+                    p2Attacking = true
+                    stopMove2Timers()
+                    director.p2Model.playLightPunch()
+                }
+                break
+            case "light_kick":
+                if (!p2Jumping && !p2Blocking) {
+                    p2Attacking = true
+                    stopMove2Timers()
+                    director.p2Model.playLightKick()
+                }
+                break
+            case "heavy_punch":
+                if (!p2Jumping && !p2Blocking) {
+                    p2Attacking = true
+                    stopMove2Timers()
+                    director.p2Model.playHeavyPunch()
+                }
+                break
+            case "heavy_kick":
+                if (!p2Jumping && !p2Blocking) {
+                    p2Attacking = true
+                    stopMove2Timers()
+                    director.p2Model.playHeavyKick()
+                }
+                break
+            case "heavy_strike":
+                if (!p2Jumping && !p2Blocking) {
+                    p2Attacking = true
+                    stopMove2Timers()
+                    director.p2Model.playHeavyStrike()
+                }
+                break
             case "block":
                 if (pressed) {
                     p2Blocking = true
@@ -76,16 +112,52 @@ Item {
             case "dodge_backward": startDodge2(false); break
             }
         } else {
+            // 远程处理 P1 输入 (客机本地是P2, P1是远程)
+            p1Jumping = (director.p1Model.state === 5 || director.p1Model.state === 6)
+            var p1state = director.p1Model.state
+            p1Attacking = (p1state >= 7 && p1state <= 12) || p1state === 14 || p1state === 15
+            p1Blocking = (p1state === 16)
+            p1Crouching = (p1state === 13)
             switch (action) {
             case "move_right": pressed ? startMoveRight() : stopMoveRight(); break
             case "move_left":  pressed ? startMoveLeft()  : stopMoveLeft();  break
-            case "jump":       startJump();       break
+            case "jump":       if (!p1Jumping && !p1Blocking) startJump(); break
             case "crouch":     pressed ? startCrouch1() : stopCrouch1(); break
-            case "light_punch":   startAttack1(); break
-            case "light_kick":    startAttackLightKick1(); break
-            case "heavy_punch":   startAttackHeavyPunch1(); break
-            case "heavy_kick":    startAttackHeavyKick1(); break
-            case "heavy_strike":  startAttackHeavyStrike1(); break
+            case "light_punch":
+                if (!p1Jumping && !p1Blocking) {
+                    p1Attacking = true
+                    stopMove1Timers()
+                    director.p1Model.playLightPunch()
+                }
+                break
+            case "light_kick":
+                if (!p1Jumping && !p1Blocking) {
+                    p1Attacking = true
+                    stopMove1Timers()
+                    director.p1Model.playLightKick()
+                }
+                break
+            case "heavy_punch":
+                if (!p1Jumping && !p1Blocking) {
+                    p1Attacking = true
+                    stopMove1Timers()
+                    director.p1Model.playHeavyPunch()
+                }
+                break
+            case "heavy_kick":
+                if (!p1Jumping && !p1Blocking) {
+                    p1Attacking = true
+                    stopMove1Timers()
+                    director.p1Model.playHeavyKick()
+                }
+                break
+            case "heavy_strike":
+                if (!p1Jumping && !p1Blocking) {
+                    p1Attacking = true
+                    stopMove1Timers()
+                    director.p1Model.playHeavyStrike()
+                }
+                break
             case "block":
                 if (pressed) {
                     p1Blocking = true
@@ -102,6 +174,22 @@ Item {
             case "dodge_backward": startDodge1(false); break
             }
         }
+    }
+
+    function stopMove1Timers() {
+        moveTimer.moveRight = false
+        moveTimer.moveLeft = false
+        moveTimer.stop()
+        isMoving = false
+        p1CurrentAnim = ""
+    }
+
+    function stopMove2Timers() {
+        moveTimer2.moveRight = false
+        moveTimer2.moveLeft = false
+        moveTimer2.stop()
+        isMoving2 = false
+        p2CurrentAnim = ""
     }
 
     // 战斗导演与通用常量
@@ -135,15 +223,28 @@ Item {
                 if (director.p2Model.state >= 7 && director.p2Model.state <= 11) attackVfx.play(director.p2Model, director.p1Model)
             }
             checkRoundEnd()
+
+            if (isOnline && isHost && networkMgr) {
+                networkMgr.sendMessage({
+                    "type": "hit",
+                    "attacker": attacker,
+                    "attackerState": attacker === 1 ? director.p1Model.state : director.p2Model.state,
+                    "damage": damage,
+                    "p1Health": p1Health,
+                    "p2Health": p2Health,
+                    "defenderBlocking": attacker === 1 ? director.p2Model.isBlocking() : director.p1Model.isBlocking()
+                })
+            }
         }
     }
 
     // 碰撞检测定时器, 每33ms检测一次(约30fps)
+    // 联机模式下只在主机端运行碰撞检测, 客机接收主机的命中消息
     Timer {
         id: collisionTimer
         interval: 33
         repeat: true
-        running: director.phase === FightDirector.Fighting && !resettingRound
+        running: director.phase === FightDirector.Fighting && !resettingRound && (!isOnline || isHost)
         onTriggered: {
             director.checkCollision()
         }
@@ -161,6 +262,30 @@ Item {
             }
             if (timerSeconds <= 0) {
                 checkRoundEnd()
+            }
+        }
+    }
+
+    // 联机状态同步定时器: 主机每100ms向客机同步完整游戏状态
+    Timer {
+        id: syncTimer
+        interval: 100
+        repeat: true
+        running: isOnline && isHost && director.phase === FightDirector.Fighting && !resettingRound
+        onTriggered: {
+            if (networkMgr) {
+                networkMgr.sendMessage({
+                    "type": "sync",
+                    "p1Health": p1Health,
+                    "p2Health": p2Health,
+                    "p1x": director.p1Model.posXRatio,
+                    "p2x": director.p2Model.posXRatio,
+                    "timerSeconds": timerSeconds,
+                    "p1Wins": p1Wins,
+                    "p2Wins": p2Wins,
+                    "currentRound": currentRound,
+                    "roundEnding": roundEnding
+                })
             }
         }
     }
@@ -738,6 +863,15 @@ Item {
                 else if (p2Health > p1Health) p2Wins++
             }
             
+            if (isOnline && isHost && networkMgr) {
+                networkMgr.sendMessage({
+                    "type": "round_event",
+                    "p1Wins": p1Wins,
+                    "p2Wins": p2Wins,
+                    "roundEnding": true
+                })
+            }
+
             if (p1Wins >= 2 || p2Wins >= 2) {
                 matchResultTimer.start()
             } else {
@@ -748,6 +882,7 @@ Item {
 
     // 回合重置
     function resetRound() {
+        if (resettingRound || roundEnding === false) return
         resettingRound = true
         currentRound++
         p1Health = 100
@@ -770,6 +905,9 @@ Item {
         id: matchResultTimer
         interval: 3000
         onTriggered: {
+            if (isOnline && isHost && networkMgr) {
+                networkMgr.sendMessage({"type": "match_end"})
+            }
             if (stackViewRef) stackViewRef.pop()
         }
     }
@@ -1903,8 +2041,73 @@ Item {
         enabled: isOnline && networkMgr !== null
 
         function onMessageReceived(msg) {
-            if (msg.type !== "input") return
-            handleRemoteInput(msg.action, msg.pressed)
+            if (msg.type === "input") {
+                handleRemoteInput(msg.action, msg.pressed)
+            } else if (msg.type === "hit" && !isHost) {
+                p1Health = msg.p1Health
+                p2Health = msg.p2Health
+
+                var attackerState = msg.attackerState
+                var playHurt = function(targetModel, atkState) {
+                    if (atkState === 7 || atkState === 8) {
+                        targetModel.playHurt1()
+                    } else if (atkState === 9) {
+                        targetModel.playHurt3()
+                    } else if (atkState === 10) {
+                        targetModel.playHurt2()
+                    } else {
+                        targetModel.playHurt()
+                    }
+                }
+                if (msg.attacker === 1) {
+                    if (!msg.defenderBlocking) {
+                        playHurt(director.p2Model, attackerState)
+                    }
+                    if (attackerState >= 7 && attackerState <= 11) attackVfx.play(director.p1Model, director.p2Model)
+                } else {
+                    if (!msg.defenderBlocking) {
+                        playHurt(director.p1Model, attackerState)
+                    }
+                    if (attackerState >= 7 && attackerState <= 11) attackVfx.play(director.p2Model, director.p1Model)
+                }
+                checkRoundEnd()
+            } else if (msg.type === "sync" && !isHost) {
+                p1Health = msg.p1Health
+                p2Health = msg.p2Health
+                timerSeconds = msg.timerSeconds
+                p1Wins = msg.p1Wins
+                p2Wins = msg.p2Wins
+                if (currentRound !== msg.currentRound) {
+                    roundResetTimer.stop()
+                    matchResultTimer.stop()
+                    currentRound = msg.currentRound
+                    roundEnding = false
+                    p1Health = 100
+                    p2Health = 100
+                    timerSeconds = 60
+                    director.resetForNewRound(p1CharId, p2CharId)
+                }
+                if (msg.roundEnding !== undefined) roundEnding = msg.roundEnding
+                if (!roundEnding) {
+                    roundResetTimer.stop()
+                    matchResultTimer.stop()
+                }
+                director.p1Model.posXRatio = msg.p1x
+                director.p2Model.posXRatio = msg.p2x
+                director.updateCamera()
+            } else if (msg.type === "round_event" && !isHost) {
+                p1Wins = msg.p1Wins
+                p2Wins = msg.p2Wins
+                roundEnding = true
+                if (p1Wins >= 2 || p2Wins >= 2) {
+                    matchResultTimer.start()
+                } else {
+                    roundResetTimer.start()
+                }
+            } else if (msg.type === "match_end" && !isHost) {
+                roundEnding = true
+                if (!matchResultTimer.running) matchResultTimer.start()
+            }
         }
     }
 }
