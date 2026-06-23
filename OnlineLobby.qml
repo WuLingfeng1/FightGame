@@ -18,6 +18,17 @@ Item {
         id: networkMgr
     }
 
+    RoomManager {
+        id: roomMgr
+        networkManager: networkMgr
+
+        onGoToSelectScreen: function(host) {
+            isWaiting = false
+            if (host) statusText = "Player 2 connected!"
+            if (stackViewRef) stackViewRef.push("SelectScreen.qml", { "stackViewRef": stackViewRef, "isOnline": true, "isHost": host, "networkMgr": networkMgr })
+        }
+    }
+
     // 状态变量
     property bool isHost: true
     property bool isWaiting: false
@@ -58,7 +69,7 @@ Item {
 
             MouseArea {
                 anchors.fill: parent; cursorShape: Qt.PointingHandCursor
-                onClicked: { isHost = true; isWaiting = false; networkMgr.stopDiscovery(); networkMgr.disconnectFromHost(); statusText = "" }
+                onClicked: { isHost = true; isWaiting = false; roomMgr.leaveRoom(); statusText = "" }
             }
         }
 
@@ -77,7 +88,7 @@ Item {
 
             MouseArea {
                 anchors.fill: parent; cursorShape: Qt.PointingHandCursor
-                onClicked: { isHost = false; isWaiting = false; networkMgr.stopServer(); networkMgr.disconnectFromHost(); networkMgr.startDiscovery(); statusText = "" }
+                onClicked: { isHost = false; isWaiting = false; roomMgr.leaveRoom(); networkMgr.startDiscovery(); statusText = "" }
             }
         }
     }
@@ -154,8 +165,7 @@ Item {
                 onClicked: {
                     isWaiting = true
                     statusText = "Waiting for opponent to join..."
-                    networkMgr.startServer()
-                    networkMgr.announceRoom("Fight Room")
+                    roomMgr.createRoom("Fight Room")
                 }
             }
         }
@@ -258,7 +268,7 @@ Item {
                                 onClicked: {
                                     manualIp = modelData.ip
                                     statusText = "Connecting to " + modelData.ip + "..."
-                                    networkMgr.connectToHost(modelData.ip)
+                                    roomMgr.joinRoom(modelData.ip)
                                 }
                             }
                         }
@@ -330,7 +340,7 @@ Item {
                     enabled: manualIp !== ""
                     onClicked: {
                         statusText = "Connecting to " + manualIp + "..."
-                        networkMgr.connectToHost(manualIp)
+                        roomMgr.joinRoom(manualIp)
                     }
                 }
             }
@@ -373,9 +383,7 @@ Item {
         MouseArea {
             anchors.fill: parent; cursorShape: Qt.PointingHandCursor
             onClicked: {
-                networkMgr.stopServer()
-                networkMgr.stopDiscovery()
-                networkMgr.disconnectFromHost()
+                roomMgr.leaveRoom()
                 if (stackViewRef) stackViewRef.pop()
             }
         }
@@ -384,14 +392,9 @@ Item {
     Connections {
         target: networkMgr
 
-        function onClientConnected() {
-            isWaiting = false
-            statusText = "Player 2 connected!"
-        }
-
         function onConnectedToHost() {
             networkMgr.stopDiscovery()
-            statusText = "Connected to host!"
+            statusText = "Connected to host! Waiting for host to start..."
         }
 
         function onDisconnected() {

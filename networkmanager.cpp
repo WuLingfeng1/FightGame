@@ -38,8 +38,7 @@ void NetworkManager::detectLocalIp()
 {
     const auto interfaces = QNetworkInterface::allInterfaces();
     for (const auto &iface : interfaces) {
-        if (!iface.flags().testFlag(QNetworkInterface::IsUp)
-            || iface.flags().testFlag(QNetworkInterface::IsLoopBack))
+        if (!iface.flags().testFlag(QNetworkInterface::IsUp) || iface.flags().testFlag(QNetworkInterface::IsLoopBack))
             continue;
         for (const auto &entry : iface.addressEntries()) {
             if (entry.ip().protocol() == QAbstractSocket::IPv4Protocol) {
@@ -62,8 +61,7 @@ void NetworkManager::startServer(quint16 port)
 
     m_tcpPort = port;
     m_server = new QTcpServer(this);
-    connect(m_server, &QTcpServer::newConnection,
-            this, &NetworkManager::onNewConnection);
+    connect(m_server, &QTcpServer::newConnection, this, &NetworkManager::onNewConnection);
 
     if (!m_server->listen(QHostAddress::Any, port)) {
         emit errorOccurred(QStringLiteral("无法启动服务器: ") + m_server->errorString());
@@ -114,12 +112,9 @@ void NetworkManager::connectToHost(const QString &ip, quint16 port)
         emit connectedToHost();
         qDebug() << "[NetworkManager] 已连接到主机";
     });
-    connect(m_socket, &QTcpSocket::readyRead,
-            this, &NetworkManager::onReadyRead);
-    connect(m_socket, &QTcpSocket::disconnected,
-            this, &NetworkManager::onDisconnected);
-    connect(m_socket, &QTcpSocket::errorOccurred,
-            this, &NetworkManager::onSocketError);
+    connect(m_socket, &QTcpSocket::readyRead, this, &NetworkManager::onReadyRead);
+    connect(m_socket, &QTcpSocket::disconnected, this, &NetworkManager::onDisconnected);
+    connect(m_socket, &QTcpSocket::errorOccurred, this, &NetworkManager::onSocketError);
 
     qDebug() << "[NetworkManager] 正在连接" << ip << ":" << port;
     m_socket->connectToHost(ip, port);
@@ -146,24 +141,21 @@ void NetworkManager::disconnectFromHost()
 
 void NetworkManager::startDiscovery(quint16 port)
 {
-    if (m_isDiscovering)
-        return;
+    if (m_isDiscovering) return;
 
     m_discoveryPort = port;
     m_discoveredRooms.clear();
     emit discoveredRoomsChanged();
 
     m_udpSocket = new QUdpSocket(this);
-    if (!m_udpSocket->bind(QHostAddress::Any, port,
-                           QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint)) {
+    if (!m_udpSocket->bind(QHostAddress::Any, port, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint)) {
         emit errorOccurred(QStringLiteral("无法绑定发现端口: ") + m_udpSocket->errorString());
         delete m_udpSocket;
         m_udpSocket = nullptr;
         return;
     }
 
-    connect(m_udpSocket, &QUdpSocket::readyRead,
-            this, &NetworkManager::onUdpReadyRead);
+    connect(m_udpSocket, &QUdpSocket::readyRead, this, &NetworkManager::onUdpReadyRead);
     m_isDiscovering = true;
     emit isDiscoveringChanged();
     qDebug() << "[NetworkManager] 局域网发现已启动, 端口:" << port;
@@ -196,16 +188,13 @@ void NetworkManager::announceRoom(const QString &roomName)
 {
     m_roomName = roomName;
 
-    if (!m_udpSocket) {
-        m_udpSocket = new QUdpSocket(this);
-    }
+    if (!m_udpSocket) { m_udpSocket = new QUdpSocket(this); }
 
     sendAnnounceBroadcast();
 
     if (!m_announceTimer) {
         m_announceTimer = new QTimer(this);
-        connect(m_announceTimer, &QTimer::timeout,
-                this, &NetworkManager::onAnnounceTimer);
+        connect(m_announceTimer, &QTimer::timeout, this, &NetworkManager::onAnnounceTimer);
         m_announceTimer->start(2000);
     }
 }
@@ -232,12 +221,9 @@ void NetworkManager::onNewConnection()
     }
 
     m_socket = m_server->nextPendingConnection();
-    connect(m_socket, &QTcpSocket::readyRead,
-            this, &NetworkManager::onReadyRead);
-    connect(m_socket, &QTcpSocket::disconnected,
-            this, &NetworkManager::onDisconnected);
-    connect(m_socket, &QTcpSocket::errorOccurred,
-            this, &NetworkManager::onSocketError);
+    connect(m_socket, &QTcpSocket::readyRead, this, &NetworkManager::onReadyRead);
+    connect(m_socket, &QTcpSocket::disconnected, this, &NetworkManager::onDisconnected);
+    connect(m_socket, &QTcpSocket::errorOccurred, this, &NetworkManager::onSocketError);
 
     m_isConnected = true;
     emit connectedChanged();
@@ -248,21 +234,18 @@ void NetworkManager::onNewConnection()
 void NetworkManager::onReadyRead()
 {
     QTcpSocket *socket = qobject_cast<QTcpSocket *>(sender());
-    if (!socket)
-        return;
+    if (!socket) return;
 
     m_readBuffer.append(socket->readAll());
 
     while (true) {
         int idx = m_readBuffer.indexOf('\n');
-        if (idx < 0)
-            break;
+        if (idx < 0) break;
 
         QByteArray line = m_readBuffer.left(idx);
         m_readBuffer.remove(0, idx + 1);
 
-        if (line.isEmpty())
-            continue;
+        if (line.isEmpty()) continue;
 
         QJsonParseError err;
         QJsonDocument doc = QJsonDocument::fromJson(line, &err);
@@ -298,8 +281,7 @@ void NetworkManager::onDisconnected()
 void NetworkManager::onSocketError(QAbstractSocket::SocketError)
 {
     QTcpSocket *socket = qobject_cast<QTcpSocket *>(sender());
-    QString errorMsg = socket ? socket->errorString()
-                              : QStringLiteral("未知套接字错误");
+    QString errorMsg = socket ? socket->errorString() : QStringLiteral("未知套接字错误");
     emit errorOccurred(errorMsg);
     qWarning() << "[NetworkManager] 套接字错误:" << errorMsg;
 }
@@ -307,8 +289,7 @@ void NetworkManager::onSocketError(QAbstractSocket::SocketError)
 void NetworkManager::onUdpReadyRead()
 {
     QUdpSocket *socket = qobject_cast<QUdpSocket *>(sender());
-    if (!socket)
-        return;
+    if (!socket) return;
 
     while (socket->hasPendingDatagrams()) {
         QByteArray data;
@@ -319,18 +300,15 @@ void NetworkManager::onUdpReadyRead()
 
         QJsonParseError err;
         QJsonDocument doc = QJsonDocument::fromJson(data, &err);
-        if (err.error != QJsonParseError::NoError)
-            continue;
+        if (err.error != QJsonParseError::NoError) continue;
 
         QJsonObject obj = doc.object();
-        if (obj[QStringLiteral("type")].toString() != QStringLiteral("room_announce"))
-            continue;
+        if (obj[QStringLiteral("type")].toString() != QStringLiteral("room_announce")) continue;
 
         QString roomName = obj[QStringLiteral("name")].toString();
         QString roomIp = obj[QStringLiteral("ip")].toString();
 
-        if (roomIp == m_localIp)
-            continue;
+        if (roomIp == m_localIp) continue;
 
         bool found = false;
         for (int i = 0; i < m_discoveredRooms.size(); ++i) {
@@ -357,8 +335,7 @@ void NetworkManager::onUdpReadyRead()
 
 void NetworkManager::onAnnounceTimer()
 {
-    if (!m_udpSocket || !m_isServer)
-        return;
+    if (!m_udpSocket || !m_isServer) return;
 
     sendAnnounceBroadcast();
 }

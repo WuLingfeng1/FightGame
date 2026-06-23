@@ -20,8 +20,7 @@ int main(int argc, char *argv[])
         &app,
         []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
-    engine.loadFromModule("FightGame", "Main");  // 加载 FightGame 模块中的 Main.qml
+    engine.loadFromModule("FightGame", "Main"); // 加载 FightGame 模块中的 Main.qml
 
-    return QGuiApplication::exec();  // 进入 Qt 事件循环
+    return QGuiApplication::exec(); // 进入 Qt 事件循环
 }
-

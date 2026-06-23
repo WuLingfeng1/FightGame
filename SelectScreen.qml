@@ -11,11 +11,15 @@
 //         *Fixed window stretch problem
 import QtQuick
 import QtQuick.Controls
+import FightGame
 
 Item {
     id: root
 
     property var stackViewRef: null
+    property bool isOnline: false
+    property bool isHost: false
+    property var networkMgr: null
 
     property var characters: [
         { cid: "Kusanagi", name: "草薙京",   avatar: "qrc:/images/avatar/Kusanagi.jpg",  portrait: "qrc:/images/portrait/Kusanagi.jpg" },
@@ -59,12 +63,46 @@ Item {
         ac5 = colors[5]; bc5 = borders[5]
     }
 
-    Component.onCompleted: refresh()
+    function findCharIdx(cid) {
+        for (var i = 0; i < characters.length; i++) {
+            if (characters[i].cid === cid) return i
+        }
+        return -1
+    }
+
+    Component.onCompleted: {
+        if (isOnline && !isHost) {
+            currentTurn = 0
+        }
+        refresh()
+    }
     onCurrentTurnChanged: refresh()
     onPreviewP1Changed: refresh()
     onPreviewP2Changed: refresh()
     onLockedP1Changed: refresh()
     onLockedP2Changed: refresh()
+
+    Connections {
+        id: netConn
+        target: networkMgr
+        enabled: isOnline && networkMgr !== null
+
+        function onMessageReceived(msg) {
+            if (msg.type === "p1_select") {
+                var idx = findCharIdx(msg.cid)
+                if (idx >= 0) {
+                    lockedP1 = idx
+                    currentTurn = 2
+                }
+            } else if (msg.type === "p2_select") {
+                var idx = findCharIdx(msg.cid)
+                if (idx >= 0) {
+                    lockedP2 = idx
+                    currentTurn = 0
+                }
+            }
+        }
+    }
 
     Rectangle { anchors.fill: parent; color: "black" }
 
@@ -151,8 +189,20 @@ Item {
         width: 200 * fitScale; height: 30 * fitScale
         color: Qt.rgba(0, 0, 0, 0.55); radius: 4
         Text {
+            id: statusHint
             anchors.centerIn: parent
-            text: currentTurn === 1 ? "PLAYER 1 SELECT" : (currentTurn === 2 ? "PLAYER 2 SELECT" : "READY")
+            text: {
+                if (isOnline) {
+                    if (isHost && lockedP1 < 0) return "请选择你的角色（P1）"
+                    if (isHost && lockedP1 >= 0 && lockedP2 < 0) return "等待对手选人…"
+                    if (isHost && lockedP2 >= 0) return "双方已就绪，点击 FIGHT！"
+                    if (!isHost && lockedP1 < 0) return "等待对手选人…"
+                    if (!isHost && lockedP1 >= 0 && lockedP2 < 0) return "请选择你的角色（P2）"
+                    if (!isHost && lockedP2 >= 0) return "双方已就绪，点击 FIGHT！"
+                    return ""
+                }
+                return currentTurn === 1 ? "PLAYER 1 SELECT" : (currentTurn === 2 ? "PLAYER 2 SELECT" : "READY")
+            }
             font.pixelSize: 14 * fitScale; font.bold: true
             color: currentTurn === 1 ? "indianred" : (currentTurn === 2 ? "steelblue" : "darkgoldenrod")
         }
@@ -179,6 +229,7 @@ Item {
                 MouseArea {
                     anchors.fill: parent; cursorShape: Qt.PointingHandCursor
                     onClicked: {
+                        if (currentTurn === 0) return
                         if (currentTurn === 1 && lockedP1 >= 0) return
                         if (currentTurn === 2 && lockedP2 >= 0) return
                         if (currentTurn === 1) previewP1 = index; else previewP2 = index
@@ -198,8 +249,20 @@ Item {
             text: "CONFIRM"; width: 120 * fitScale
             enabled: (currentTurn === 1 && previewP1 >= 0) || (currentTurn === 2 && previewP2 >= 0)
             onClicked: {
-                if (currentTurn === 1) { lockedP1 = previewP1; previewP1 = -1; currentTurn = 2 }
-                else if (currentTurn === 2) { lockedP2 = previewP2; previewP2 = -1; currentTurn = 0 }
+                if (isOnline) {
+                    if (isHost && currentTurn === 1) {
+                        lockedP1 = previewP1; previewP1 = -1; currentTurn = 0
+                        var p1 = characters[lockedP1]
+                        networkMgr.sendMessage({"type": "p1_select", "cid": p1.cid, "name": p1.name, "avatar": p1.avatar, "portrait": p1.portrait})
+                    } else if (!isHost && currentTurn === 2) {
+                        lockedP2 = previewP2; previewP2 = -1; currentTurn = 0
+                        var p2 = characters[lockedP2]
+                        networkMgr.sendMessage({"type": "p2_select", "cid": p2.cid, "name": p2.name, "avatar": p2.avatar, "portrait": p2.portrait})
+                    }
+                } else {
+                    if (currentTurn === 1) { lockedP1 = previewP1; previewP1 = -1; currentTurn = 2 }
+                    else if (currentTurn === 2) { lockedP2 = previewP2; previewP2 = -1; currentTurn = 0 }
+                }
             }
             contentItem: Text { text: btnConfirm.text; font.pixelSize: 16 * fitScale; font.bold: true; color: btnConfirm.enabled ? "silver" : "dimgray"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
             background: Rectangle { color: btnConfirm.enabled ? (btnConfirm.hovered ? "black" : "black") : "black"; border.color: btnConfirm.enabled ? "darkgreen" : "black"; border.width: 2; radius: 4 }
@@ -215,7 +278,7 @@ Item {
                 var p2 = characters[lockedP2]
                 var comp = Qt.createComponent("qrc:/qt/qml/FightGame/FightScreen.qml")
                 if (comp.status === Component.Ready) {
-                    stackViewRef.push(comp, {
+                    var props = {
                         "stackViewRef": stackViewRef,
                         "p1Name":     p1.name,
                         "p1Avatar":   p1.avatar,
@@ -225,7 +288,13 @@ Item {
                         "p2Avatar":   p2.avatar,
                         "p2Portrait": p2.portrait,
                         "p2CharId":   p2.cid
-                    })
+                    }
+                    if (isOnline) {
+                        props.isOnline = true
+                        props.isHost = isHost
+                        props.networkMgr = networkMgr
+                    }
+                    stackViewRef.push(comp, props)
                 }
             }
 
