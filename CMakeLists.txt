@@ -25,6 +25,7 @@ qt_add_resources(appFightGame "appresources"
     PREFIX "/"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}"
     FILES
+        config/characters.json
         images/background.jpg
         images/background2.jpg
         images/avatar/Kdash.jpg
