@@ -37,6 +37,161 @@ Item {
     property string p2Portrait: ""
     property string p2CharId:   ""
 
+    property bool isOnline: false
+    property bool isHost: false
+    property var networkMgr: null
+
+    function sendInput(action, pressed) {
+        if (!isOnline || !networkMgr) return
+        var msg = {"type": "input", "action": action}
+        if (pressed !== undefined) msg.pressed = pressed
+        networkMgr.sendMessage(msg)
+    }
+
+    function handleRemoteInput(action, pressed) {
+        if (isHost) {
+            // 远程处理 P2 输入, 先同步状态标志防止指令丢失
+            p2Jumping = (director.p2Model.state === 5 || director.p2Model.state === 6)
+            var p2state = director.p2Model.state
+            p2Attacking = (p2state >= 7 && p2state <= 12) || p2state === 14 || p2state === 15
+            p2Blocking = (p2state === 16)
+            p2Crouching = (p2state === 13)
+            switch (action) {
+            case "move_right": pressed ? startMoveRight2() : stopMoveRight2(); break
+            case "move_left":  pressed ? startMoveLeft2()  : stopMoveLeft2();  break
+            case "jump":       if (!p2Jumping && !p2Blocking) startJump2(); break
+            case "crouch":     pressed ? startCrouch2() : stopCrouch2(); break
+            case "light_punch":
+                if (!p2Jumping && !p2Blocking) {
+                    p2Attacking = true
+                    stopMove2Timers()
+                    director.p2Model.playLightPunch()
+                }
+                break
+            case "light_kick":
+                if (!p2Jumping && !p2Blocking) {
+                    p2Attacking = true
+                    stopMove2Timers()
+                    director.p2Model.playLightKick()
+                }
+                break
+            case "heavy_punch":
+                if (!p2Jumping && !p2Blocking) {
+                    p2Attacking = true
+                    stopMove2Timers()
+                    director.p2Model.playHeavyPunch()
+                }
+                break
+            case "heavy_kick":
+                if (!p2Jumping && !p2Blocking) {
+                    p2Attacking = true
+                    stopMove2Timers()
+                    director.p2Model.playHeavyKick()
+                }
+                break
+            case "heavy_strike":
+                if (!p2Jumping && !p2Blocking) {
+                    p2Attacking = true
+                    stopMove2Timers()
+                    director.p2Model.playHeavyStrike()
+                }
+                break
+            case "block":
+                if (pressed) {
+                    p2Blocking = true
+                    if (!p2Jumping && !p2Attacking && !p2Crouching) {
+                        director.p2Model.playStandBlock()
+                        moveTimer2.stop(); isMoving2 = false
+                    }
+                } else {
+                    p2Blocking = false
+                    if (director.p2Model.state === 16) director.p2Model.releaseStandBlock()
+                }
+                break
+            case "dodge_forward":  startDodge2(true);  break
+            case "dodge_backward": startDodge2(false); break
+            }
+        } else {
+            // 远程处理 P1 输入 (客机本地是P2, P1是远程)
+            p1Jumping = (director.p1Model.state === 5 || director.p1Model.state === 6)
+            var p1state = director.p1Model.state
+            p1Attacking = (p1state >= 7 && p1state <= 12) || p1state === 14 || p1state === 15
+            p1Blocking = (p1state === 16)
+            p1Crouching = (p1state === 13)
+            switch (action) {
+            case "move_right": pressed ? startMoveRight() : stopMoveRight(); break
+            case "move_left":  pressed ? startMoveLeft()  : stopMoveLeft();  break
+            case "jump":       if (!p1Jumping && !p1Blocking) startJump(); break
+            case "crouch":     pressed ? startCrouch1() : stopCrouch1(); break
+            case "light_punch":
+                if (!p1Jumping && !p1Blocking) {
+                    p1Attacking = true
+                    stopMove1Timers()
+                    director.p1Model.playLightPunch()
+                }
+                break
+            case "light_kick":
+                if (!p1Jumping && !p1Blocking) {
+                    p1Attacking = true
+                    stopMove1Timers()
+                    director.p1Model.playLightKick()
+                }
+                break
+            case "heavy_punch":
+                if (!p1Jumping && !p1Blocking) {
+                    p1Attacking = true
+                    stopMove1Timers()
+                    director.p1Model.playHeavyPunch()
+                }
+                break
+            case "heavy_kick":
+                if (!p1Jumping && !p1Blocking) {
+                    p1Attacking = true
+                    stopMove1Timers()
+                    director.p1Model.playHeavyKick()
+                }
+                break
+            case "heavy_strike":
+                if (!p1Jumping && !p1Blocking) {
+                    p1Attacking = true
+                    stopMove1Timers()
+                    director.p1Model.playHeavyStrike()
+                }
+                break
+            case "block":
+                if (pressed) {
+                    p1Blocking = true
+                    if (!p1Jumping && !p1Attacking && !p1Crouching) {
+                        director.p1Model.playStandBlock()
+                        moveTimer.stop(); isMoving = false
+                    }
+                } else {
+                    p1Blocking = false
+                    if (director.p1Model.state === 16) director.p1Model.releaseStandBlock()
+                }
+                break
+            case "dodge_forward":  startDodge1(true);  break
+            case "dodge_backward": startDodge1(false); break
+            }
+        }
+    }
+
+    function stopMove1Timers() {
+        moveTimer.moveRight = false
+        moveTimer.moveLeft = false
+        moveTimer.stop()
+        isMoving = false
+        p1CurrentAnim = ""
+    }
+
+    function stopMove2Timers() {
+        moveTimer2.moveRight = false
+        moveTimer2.moveLeft = false
+        moveTimer2.stop()
+        isMoving2 = false
+        p2CurrentAnim = ""
+    }
+
     // 战斗导演与通用常量
     FightDirector {
         id: director
@@ -68,15 +223,28 @@ Item {
                 if (director.p2Model.state >= 7 && director.p2Model.state <= 11) attackVfx.play(director.p2Model, director.p1Model)
             }
             checkRoundEnd()
+
+            if (isOnline && isHost && networkMgr) {
+                networkMgr.sendMessage({
+                    "type": "hit",
+                    "attacker": attacker,
+                    "attackerState": attacker === 1 ? director.p1Model.state : director.p2Model.state,
+                    "damage": damage,
+                    "p1Health": p1Health,
+                    "p2Health": p2Health,
+                    "defenderBlocking": attacker === 1 ? director.p2Model.isBlocking() : director.p1Model.isBlocking()
+                })
+            }
         }
     }
 
     // 碰撞检测定时器, 每33ms检测一次(约30fps)
+    // 联机模式下只在主机端运行碰撞检测, 客机接收主机的命中消息
     Timer {
         id: collisionTimer
         interval: 33
         repeat: true
-        running: director.phase === FightDirector.Fighting && !resettingRound
+        running: director.phase === FightDirector.Fighting && !resettingRound && (!isOnline || isHost)
         onTriggered: {
             director.checkCollision()
         }
@@ -98,6 +266,56 @@ Item {
         }
     }
 
+    // 联机状态同步定时器: 主机每33ms向客机同步完整游戏状态
+    Timer {
+        id: syncTimer
+        interval: 33
+        repeat: true
+        running: isOnline && isHost && director.phase === FightDirector.Fighting && !resettingRound
+        onTriggered: {
+            if (networkMgr) {
+                networkMgr.sendMessage({
+                    "type": "sync",
+                    "p1Health": p1Health,
+                    "p2Health": p2Health,
+                    "p1x": director.p1Model.posXRatio,
+                    "p2x": director.p2Model.posXRatio,
+                    "timerSeconds": timerSeconds,
+                    "p1Wins": p1Wins,
+                    "p2Wins": p2Wins,
+                    "currentRound": currentRound,
+                    "roundEnding": roundEnding
+                })
+            }
+        }
+    }
+
+    // 客机位置插值: 远程P1按sync推算的固定步长匀速推进(消除瞬移), 本地P2温和修正防漂移
+    property real p1SyncTargetX: 0.0
+    property real p2SyncTargetX: 0.0
+    property bool syncPosReady: false
+    property real p1SyncPrevX: 0.0
+    property real p1SyncStep: 0.0
+    property int p1SyncFramesLeft: 0
+
+    Timer {
+        id: posInterpTimer
+        interval: 16
+        repeat: true
+        running: isOnline && !isHost && syncPosReady && director.phase === FightDirector.Fighting && !resettingRound
+        onTriggered: {
+            // P1(远程): 按sync推算的每帧步长匀速推进, +5%微量修正消除累积漂移
+            if (p1SyncFramesLeft > 0) {
+                director.p1Model.posXRatio += p1SyncStep
+                p1SyncFramesLeft--
+            }
+            director.p1Model.posXRatio += (p1SyncTargetX - director.p1Model.posXRatio) * 0.05
+            // P2(本地): 12%温和修正防止与主机长期漂移, 不影响本地输入手感
+            director.p2Model.posXRatio += (p2SyncTargetX - director.p2Model.posXRatio) * 0.12
+            director.updateCamera()
+        }
+    }
+
     property real fitScale: Math.min(root.width / 900, root.height / 640)
     property real moveStep: 0.008
     property real bodyCollisionDist: 0.15  // 身体碰撞最小距离
@@ -111,6 +329,8 @@ Item {
         property bool moveRight: false
         property bool moveLeft: false
         onTriggered: {
+            // 客机端 P1 由 sync 插值驱动位置, 不跑本地 moveTimer
+            if (isOnline && !isHost) return
             var p1 = director.p1Model.posXRatio
             var p2 = director.p2Model.posXRatio
             if (moveRight) {
@@ -157,8 +377,13 @@ Item {
         onTriggered: {
             if (p1WaitingCombo) {
                 p1WaitingCombo = false
-                if (p1ComboKeyJ) startAttack1()
-                else startAttackLightKick1()
+                if (p1ComboKeyJ) {
+                    startAttack1()
+                    sendInput("light_punch")
+                } else {
+                    startAttackLightKick1()
+                    sendInput("light_kick")
+                }
             }
         }
     }
@@ -168,8 +393,13 @@ Item {
         onTriggered: {
                 if (p2WaitingCombo) {
                     p2WaitingCombo = false
-                    if (p2ComboKeyJ) startAttack2()
-                    else startAttackLightKick2()
+                    if (p2ComboKeyJ) {
+                        startAttack2()
+                        sendInput("light_punch")
+                    } else {
+                        startAttackLightKick2()
+                        sendInput("light_kick")
+                    }
             }
         }
     }
@@ -661,6 +891,15 @@ Item {
                 else if (p2Health > p1Health) p2Wins++
             }
             
+            if (isOnline && isHost && networkMgr) {
+                networkMgr.sendMessage({
+                    "type": "round_event",
+                    "p1Wins": p1Wins,
+                    "p2Wins": p2Wins,
+                    "roundEnding": true
+                })
+            }
+
             if (p1Wins >= 2 || p2Wins >= 2) {
                 matchResultTimer.start()
             } else {
@@ -671,6 +910,7 @@ Item {
 
     // 回合重置
     function resetRound() {
+        if (resettingRound || roundEnding === false) return
         resettingRound = true
         currentRound++
         p1Health = 100
@@ -678,6 +918,32 @@ Item {
         timerSeconds = 60
         roundEnding = false
         director.resetForNewRound(p1CharId, p2CharId)
+
+        // 重置所有移动状态标志，防止回合间状态残留导致无法移动
+        moveTimer.stop()
+        moveTimer.moveRight = false
+        moveTimer.moveLeft = false
+        isMoving = false
+        p1Jumping = false
+        p1Attacking = false
+        p1Crouching = false
+        p1Blocking = false
+        moveLeftPressed = false
+        moveRightPressed = false
+        p1CurrentAnim = ""
+
+        moveTimer2.stop()
+        moveTimer2.moveRight = false
+        moveTimer2.moveLeft = false
+        isMoving2 = false
+        p2Jumping = false
+        p2Attacking = false
+        p2Crouching = false
+        p2Blocking = false
+        moveLeft2Pressed = false
+        moveRight2Pressed = false
+        p2CurrentAnim = ""
+
         resettingRound = false
     }
 
@@ -693,6 +959,9 @@ Item {
         id: matchResultTimer
         interval: 3000
         onTriggered: {
+            if (isOnline && isHost && networkMgr) {
+                networkMgr.sendMessage({"type": "match_end"})
+            }
             if (stackViewRef) stackViewRef.pop()
         }
     }
@@ -705,17 +974,24 @@ Item {
 
     Keys.onPressed: (event) => {
         if (event.isAutoRepeat || director.phase !== FightDirector.Fighting || resettingRound) return
+        if (isOnline) {
+            var isP1Key = (event.key === Qt.Key_D || event.key === Qt.Key_A || event.key === Qt.Key_W || event.key === Qt.Key_S || event.key === Qt.Key_J || event.key === Qt.Key_K || event.key === Qt.Key_U || event.key === Qt.Key_L || event.key === Qt.Key_I || event.key === Qt.Key_G)
+            if (isHost && !isP1Key) return
+            if (!isHost && isP1Key) return
+        }
         switch (event.key) {
-        case Qt.Key_D:      startMoveRight();  break
-        case Qt.Key_A:      startMoveLeft();   break
-        case Qt.Key_S:      startCrouch1();    break
-        case Qt.Key_W:      startJump();       break
+        case Qt.Key_D:      startMoveRight(); sendInput("move_right", true); break
+        case Qt.Key_A:      startMoveLeft();  sendInput("move_left", true);  break
+        case Qt.Key_S:      startCrouch1();   sendInput("crouch", true);     break
+        case Qt.Key_W:      startJump();      sendInput("jump");             break
         case Qt.Key_J:
             p1JPressed = true
             if (p1WaitingCombo && p1KPressed && (moveRightPressed || moveLeftPressed)) {
                 p1ComboTimer.stop()
                 p1WaitingCombo = false
-                startDodge1(getP1DodgeForward())
+                var p1DodgeDir = getP1DodgeForward()
+                startDodge1(p1DodgeDir)
+                sendInput(p1DodgeDir ? "dodge_forward" : "dodge_backward")
             } else {
                 p1ComboKeyJ = true
                 p1WaitingCombo = true
@@ -727,16 +1003,18 @@ Item {
             if (p1WaitingCombo && p1JPressed && (moveRightPressed || moveLeftPressed)) {
                 p1ComboTimer.stop()
                 p1WaitingCombo = false
-                startDodge1(getP1DodgeForward())
+                var p1DodgeDir2 = getP1DodgeForward()
+                startDodge1(p1DodgeDir2)
+                sendInput(p1DodgeDir2 ? "dodge_forward" : "dodge_backward")
             } else {
                 p1ComboKeyJ = false
                 p1WaitingCombo = true
                 p1ComboTimer.restart()
             }
             break
-        case Qt.Key_U:      startAttackHeavyPunch1(); break
-        case Qt.Key_L:      startAttackHeavyKick1();  break
-        case Qt.Key_I:      startAttackHeavyStrike1();  break
+        case Qt.Key_U:      startAttackHeavyPunch1();  sendInput("heavy_punch");  break
+        case Qt.Key_L:      startAttackHeavyKick1();   sendInput("heavy_kick");   break
+        case Qt.Key_I:      startAttackHeavyStrike1(); sendInput("heavy_strike"); break
         case Qt.Key_G:
             p1Blocking = true
             if (!p1Jumping && !p1Attacking && !p1Crouching) {
@@ -744,19 +1022,22 @@ Item {
                 moveTimer.stop()
                 isMoving = false
             }
+            sendInput("block", true)
             break
-        case Qt.Key_Right:  startMoveRight2(); break
-        case Qt.Key_Left:   startMoveLeft2();  break
-        case Qt.Key_Down:   startCrouch2();    break
-        case Qt.Key_Up:     startJump2();      break
+        case Qt.Key_Right:  startMoveRight2(); sendInput("move_right", true); break
+        case Qt.Key_Left:   startMoveLeft2();  sendInput("move_left", true);  break
+        case Qt.Key_Down:   startCrouch2();    sendInput("crouch", true);     break
+        case Qt.Key_Up:     startJump2();      sendInput("jump");             break
         case Qt.Key_1:
             if (event.modifiers & Qt.KeypadModifier) {
                 p2N1Pressed = true
-                var dir = moveRight2Pressed || moveLeft2Pressed
+                var dir1 = moveRight2Pressed || moveLeft2Pressed
                 if (p2WaitingCombo && p2N2Pressed) {
                     p2ComboTimer.stop()
                     p2WaitingCombo = false
-                    startDodge2(dir ? getP2DodgeForward() : true)
+                    var p2DodgeDir = dir1 ? getP2DodgeForward() : true
+                    startDodge2(p2DodgeDir)
+                    sendInput(p2DodgeDir ? "dodge_forward" : "dodge_backward")
                 } else {
                     p2ComboKeyJ = true
                     p2WaitingCombo = true
@@ -767,28 +1048,23 @@ Item {
         case Qt.Key_2:
             if (event.modifiers & Qt.KeypadModifier) {
                 p2N2Pressed = true
-                var dir = moveRight2Pressed || moveLeft2Pressed
+                var dir2 = moveRight2Pressed || moveLeft2Pressed
                 if (p2WaitingCombo && p2N1Pressed) {
-                    // 正常：Num1先按，Num2后按 → 闪避
                     p2ComboTimer.stop()
                     p2WaitingCombo = false
-                    startDodge2(dir ? getP2DodgeForward() : true)
+                    var p2DodgeDir2 = dir2 ? getP2DodgeForward() : true
+                    startDodge2(p2DodgeDir2)
+                    sendInput(p2DodgeDir2 ? "dodge_forward" : "dodge_backward")
                 } else {
-                    // Num2先按（无方向键），启动计时器等待Num1
                     p2ComboKeyJ = false
                     p2WaitingCombo = true
                     p2ComboTimer.restart()
                 }
             }
             break
-        case Qt.Key_2:
-            if (event.modifiers & Qt.KeypadModifier) {
-                // Already handled above for dodge combo
-            }
-            break
-        case Qt.Key_3:      if (event.modifiers & Qt.KeypadModifier) startAttackHeavyPunch2(); break
-        case Qt.Key_0:      if (event.modifiers & Qt.KeypadModifier) startAttackHeavyKick2(); break
-        case Qt.Key_5:      if (event.modifiers & Qt.KeypadModifier) startAttackHeavyStrike2(); break
+        case Qt.Key_3:      if (event.modifiers & Qt.KeypadModifier) { startAttackHeavyPunch2();  sendInput("heavy_punch");  } break
+        case Qt.Key_0:      if (event.modifiers & Qt.KeypadModifier) { startAttackHeavyKick2();   sendInput("heavy_kick");   } break
+        case Qt.Key_5:      if (event.modifiers & Qt.KeypadModifier) { startAttackHeavyStrike2(); sendInput("heavy_strike"); } break
         case Qt.Key_4:
             if (event.modifiers & Qt.KeypadModifier) {
                 p2Blocking = true
@@ -797,26 +1073,33 @@ Item {
                     moveTimer2.stop()
                     isMoving2 = false
                 }
+                sendInput("block", true)
             }
             break
         }
     }
     Keys.onReleased: (event) => {
         if (event.isAutoRepeat || director.phase !== FightDirector.Fighting || resettingRound) return
+        if (isOnline) {
+            var isP1Key = (event.key === Qt.Key_D || event.key === Qt.Key_A || event.key === Qt.Key_S || event.key === Qt.Key_J || event.key === Qt.Key_K || event.key === Qt.Key_G)
+            if (isHost && !isP1Key) return
+            if (!isHost && isP1Key) return
+        }
         switch (event.key) {
-        case Qt.Key_D:      stopMoveRight();  break
-        case Qt.Key_A:      stopMoveLeft();   break
-        case Qt.Key_S:      stopCrouch1();    break
+        case Qt.Key_D:      stopMoveRight(); sendInput("move_right", false); break
+        case Qt.Key_A:      stopMoveLeft();  sendInput("move_left", false);  break
+        case Qt.Key_S:      stopCrouch1();   sendInput("crouch", false);     break
         case Qt.Key_J:      p1JPressed = false; break
         case Qt.Key_K:      p1KPressed = false; break
-        case Qt.Key_Right:  stopMoveRight2(); break
-        case Qt.Key_Left:   stopMoveLeft2();  break
-        case Qt.Key_Down:   stopCrouch2();    break
+        case Qt.Key_Right:  stopMoveRight2(); sendInput("move_right", false); break
+        case Qt.Key_Left:   stopMoveLeft2();  sendInput("move_left", false);  break
+        case Qt.Key_Down:   stopCrouch2();    sendInput("crouch", false);     break
         case Qt.Key_G:
             p1Blocking = false
             if (director.p1Model.state === 16) {  // StandBlock
                 director.p1Model.releaseStandBlock()
             }
+            sendInput("block", false)
             break
         case Qt.Key_1:      if (event.modifiers & Qt.KeypadModifier) p2N1Pressed = false; break
         case Qt.Key_2:      if (event.modifiers & Qt.KeypadModifier) p2N2Pressed = false; break
@@ -826,6 +1109,7 @@ Item {
                 if (director.p2Model.state === 16) {  // StandBlock
                     director.p2Model.releaseStandBlock()
                 }
+                sendInput("block", false)
             }
             break
         }
@@ -1190,11 +1474,12 @@ Item {
         }
     }
 
-    // 回合显示
+    // 回合显示 + 联机模式标识
     Text {
+        id: roundText
         anchors.horizontalCenter: parent.horizontalCenter
         y: 8
-        text: "Round " + currentRound
+        text: (isOnline ? "联机对战 · " : "") + "Round " + currentRound
         font.pixelSize: 14
         font.bold: true
         color: "wheat"
@@ -1802,5 +2087,119 @@ Item {
     Connections {
         target: director.p2Model
         function onPosXRatioChanged() { director.updateCamera() }
+    }
+
+    Connections {
+        id: netInput
+        target: networkMgr
+        enabled: isOnline && networkMgr !== null
+
+        function onMessageReceived(msg) {
+            if (msg.type === "input") {
+                handleRemoteInput(msg.action, msg.pressed)
+            } else if (msg.type === "hit" && !isHost) {
+                p1Health = msg.p1Health
+                p2Health = msg.p2Health
+
+                var attackerState = msg.attackerState
+                var playHurt = function(targetModel, atkState) {
+                    if (atkState === 7 || atkState === 8) {
+                        targetModel.playHurt1()
+                    } else if (atkState === 9) {
+                        targetModel.playHurt3()
+                    } else if (atkState === 10) {
+                        targetModel.playHurt2()
+                    } else {
+                        targetModel.playHurt()
+                    }
+                }
+                if (msg.attacker === 1) {
+                    if (!msg.defenderBlocking) {
+                        playHurt(director.p2Model, attackerState)
+                    }
+                    if (attackerState >= 7 && attackerState <= 11) attackVfx.play(director.p1Model, director.p2Model)
+                } else {
+                    if (!msg.defenderBlocking) {
+                        playHurt(director.p1Model, attackerState)
+                    }
+                    if (attackerState >= 7 && attackerState <= 11) attackVfx.play(director.p2Model, director.p1Model)
+                }
+                checkRoundEnd()
+            } else if (msg.type === "sync" && !isHost) {
+                p1Health = msg.p1Health
+                p2Health = msg.p2Health
+                timerSeconds = msg.timerSeconds
+                p1Wins = msg.p1Wins
+                p2Wins = msg.p2Wins
+                if (currentRound !== msg.currentRound) {
+                    syncPosReady = false
+                    roundResetTimer.stop()
+                    matchResultTimer.stop()
+                    currentRound = msg.currentRound
+                    roundEnding = false
+                    p1Health = 100
+                    p2Health = 100
+                    timerSeconds = 60
+                    director.resetForNewRound(p1CharId, p2CharId)
+
+                    // 重置所有移动状态标志，防止回合间状态残留
+                    moveTimer.stop()
+                    moveTimer.moveRight = false
+                    moveTimer.moveLeft = false
+                    isMoving = false
+                    p1Jumping = false
+                    p1Attacking = false
+                    p1Crouching = false
+                    p1Blocking = false
+                    moveLeftPressed = false
+                    moveRightPressed = false
+                    p1CurrentAnim = ""
+
+                    moveTimer2.stop()
+                    moveTimer2.moveRight = false
+                    moveTimer2.moveLeft = false
+                    isMoving2 = false
+                    p2Jumping = false
+                    p2Attacking = false
+                    p2Crouching = false
+                    p2Blocking = false
+                    moveLeft2Pressed = false
+                    moveRight2Pressed = false
+                    p2CurrentAnim = ""
+                }
+                if (msg.roundEnding !== undefined) roundEnding = msg.roundEnding
+                if (!roundEnding) {
+                    roundResetTimer.stop()
+                    matchResultTimer.stop()
+                }
+                // 位置: 从sync差值推算P1每帧步长, 客机匀速推进消除瞬移
+                p1SyncTargetX = msg.p1x
+                p2SyncTargetX = msg.p2x
+                if (!syncPosReady) {
+                    director.p1Model.posXRatio = msg.p1x
+                    director.p2Model.posXRatio = msg.p2x
+                    p1SyncPrevX = msg.p1x
+                    syncPosReady = true
+                } else {
+                    var delta = msg.p1x - p1SyncPrevX
+                    p1SyncStep = delta / 2.0
+                    p1SyncFramesLeft = 2
+                    p1SyncPrevX = msg.p1x
+                }
+                director.updateCamera()
+            } else if (msg.type === "round_event" && !isHost) {
+                p1Wins = msg.p1Wins
+                p2Wins = msg.p2Wins
+                roundEnding = true
+                if (p1Wins >= 2 || p2Wins >= 2) {
+                    matchResultTimer.start()
+                } else {
+                    roundResetTimer.start()
+                }
+            } else if (msg.type === "match_end" && !isHost) {
+                roundEnding = true
+                if (!matchResultTimer.running) matchResultTimer.start()
+            }
+        }
     }
 }

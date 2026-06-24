@@ -100,11 +100,11 @@
             "visualScale": 1.97,
             "feetBottom": 218,
             "feetMargin": 82,
-            "attackPointX": 0.15,
+            "attackPointX": 0.10,
             "attackPointY": -40,
-            "attackRadius": 150,
+            "attackRadius": 120,
             "attackFrames": "9-12",
-            "knockbackDistance": 80,
+            "knockbackDistance": 30,
             "damage": 12
         },
         "heavyKick": {
@@ -135,11 +135,11 @@
             "feetBottom": 335,
             "feetMargin": 75,
             "offsetX": 25,
-            "attackPointX": 0.15,
+            "attackPointX": 0.10,
             "attackPointY": 0,
-            "attackRadius": 150,
+            "attackRadius": 120,
             "attackFrames": "5-10",
-            "knockbackDistance": 150,
+            "knockbackDistance": 30,
             "damage": 20
         },
         "hurt": {
@@ -331,11 +331,11 @@
             "feetBottom": 205,
             "feetMargin": 82,
             "offsetX": 38,
-            "attackPointX": 0.15,
+            "attackPointX": 0.10,
             "attackPointY": 18,
-            "attackRadius": 150,
+            "attackRadius": 120,
             "attackFrames": "3-6",
-            "knockbackDistance": 80,
+            "knockbackDistance": 30,
             "damage": 12
         },
         "heavyKick": {
@@ -367,11 +367,11 @@
             "feetBottom": 103,
             "feetMargin": 82,
             "offsetX": 0,
-            "attackPointX": 0.15,
+            "attackPointX": 0.10,
             "attackPointY": 18,
-            "attackRadius": 150,
+            "attackRadius": 120,
             "attackFrames": "4-8",
-            "knockbackDistance": 150,
+            "knockbackDistance": 30,
             "damage": 20
         },
         "hurt": {
