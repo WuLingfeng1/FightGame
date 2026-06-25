@@ -4,22 +4,15 @@
 // Description:
 //     应用程序入口: 创建 Qt6 Quick 窗口, 加载 Main.qml 主菜单界面
 //
-#include <QGuiApplication>
-#include <QQmlApplicationEngine>
+#include "appcontroller.h"
+
+#include <QApplication>
 
 int main(int argc, char *argv[])
 {
-    QGuiApplication app(argc, argv);
+    QApplication a(argc, argv);
 
-    QQmlApplicationEngine engine;
-    // 如果 QML 模块加载失败则退出程序
-    QObject::connect(
-        &engine,
-        &QQmlApplicationEngine::objectCreationFailed,
-        &app,
-        []() { QCoreApplication::exit(-1); },
-        Qt::QueuedConnection);
-    engine.loadFromModule("FightGame", "Main"); // 加载 FightGame 模块中的 Main.qml
+    AppController::singleton();
 
-    return QGuiApplication::exec(); // 进入 Qt 事件循环
+    return QCoreApplication::exec();
 }

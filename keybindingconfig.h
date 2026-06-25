@@ -42,7 +42,7 @@ public:
     explicit KeyBindingConfig(QObject *parent = nullptr);
 
     // 从 JSON 文件加载配置
-    bool loadFromFile(const QString &filePath);
+    Q_INVOKABLE bool loadFromFile(const QString &filePath);
 
     // P1 键位访问器
     QString p1MoveLeft() const { return m_p1Bindings["moveLeft"]; }

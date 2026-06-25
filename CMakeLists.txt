@@ -3,14 +3,15 @@ cmake_minimum_required(VERSION 3.22)
 project(FightGame VERSION 0.1 LANGUAGES CXX)
 set(QT_QML_GENERATE_QMLLS_INI ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick Network)
+find_package(Qt6 REQUIRED COMPONENTS Quick Network Widgets)
 qt_standard_project_setup(REQUIRES 6.9)
 
 qt_add_executable(appFightGame  WIN32)
 qt_add_qml_module(appFightGame
     URI FightGame
     VERSION 1.0
-    SOURCES     main.cpp
+    SOURCES main.cpp
+    SOURCES appcontroller.h appcontroller.cpp
     QML_FILES   Main.qml
     QML_FILES SelectScreen.qml
     QML_FILES FightScreen.qml
@@ -102,7 +103,7 @@ qt_add_resources(appFightGame "appresources"
 
 target_compile_features(appFightGame PRIVATE cxx_std_23)
 target_link_libraries(appFightGame
-    PRIVATE Qt6::Quick Qt6::Network
+    PRIVATE Qt6::Quick Qt6::Network Qt6::Widgets
 )
 
 set(CMAKE_INSTALL_PREFIX "/opt/${PROJECT_NAME}" CACHE PATH "Install path prefix" FORCE)
