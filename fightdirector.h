@@ -6,6 +6,7 @@
 #include <QJsonObject>
 #include <QFile>
 #include <QtQml/qqmlregistration.h>
+#include "keybindingconfig.h"
 
 class CharacterModel;
 
@@ -16,6 +17,7 @@ class FightDirector : public QObject
     Q_OBJECT
     Q_PROPERTY(CharacterModel *p1Model READ p1Model CONSTANT) // P1角色模型
     Q_PROPERTY(CharacterModel *p2Model READ p2Model CONSTANT) // P2角色模型
+    Q_PROPERTY(KeyBindingConfig *keyBindings READ keyBindings CONSTANT) // 键位配置
     Q_PROPERTY(int phase READ phase NOTIFY phaseChanged)      // 当前战斗阶段
     Q_PROPERTY(double rootHeight READ rootHeight WRITE setRootHeight NOTIFY rootHeightChanged)
     Q_PROPERTY(double cameraOffset READ cameraOffset NOTIFY cameraOffsetChanged)
@@ -30,6 +32,7 @@ public:
 
     CharacterModel *p1Model() const { return m_p1Model; }
     CharacterModel *p2Model() const { return m_p2Model; }
+    KeyBindingConfig *keyBindings() const { return m_keyBindings; }
     int phase() const { return m_phase; }
     double rootHeight() const { return m_rootHeight; }
     double cameraOffset() const { return m_cameraOffset; }
@@ -40,6 +43,7 @@ public:
     Q_INVOKABLE void resetForNewRound(const QString &p1CharId, const QString &p2CharId); // 回合重置，跳过开场动画
     Q_INVOKABLE void updateCamera();                                                     // KOF97中点跟随镜头
     Q_INVOKABLE bool checkCollision();                                                   // 检测碰撞, 返回是否命中
+    Q_INVOKABLE void reloadKeyBindings();                                                // 重新加载键位配置
 
 signals:
     void phaseChanged();
@@ -56,6 +60,7 @@ private:
 
     CharacterModel *m_p1Model; // P1角色模型
     CharacterModel *m_p2Model; // P2角色模型
+    KeyBindingConfig *m_keyBindings; // 键位配置
     static constexpr double kStageWidth = 3.0;
     int m_phase = Fighting;
     double m_rootHeight = 640; // 窗口高度

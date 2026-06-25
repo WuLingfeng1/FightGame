@@ -17,6 +17,7 @@
 //     [v0.2.1]     2026-06-22 09:33:20   实现伤害计算+血量系统+三局两胜回合制
 //     [v0.2.2]     2026-06-22 10:23:02   修复回合重置开场动画/第三回合无法移动/镜头抖动/跳跃卡死
 //     [v0.2.3]     2026-06-22 11:12:32   新增站立防御系统(StandBlock)+75%减伤机制
+//     [v0.2.4]     2026-06-25 14:38:16   新增键位修改功能
 import QtQuick
 import QtQuick.Controls
 import FightGame
@@ -40,6 +41,40 @@ Item {
     property bool isOnline: false
     property bool isHost: false
     property var networkMgr: null
+
+    // 将键名转换为 Qt.Key 值
+    function getKeyCode(keyName) {
+        var keyMap = {
+            "A": Qt.Key_A, "B": Qt.Key_B, "C": Qt.Key_C, "D": Qt.Key_D,
+            "E": Qt.Key_E, "F": Qt.Key_F, "G": Qt.Key_G, "H": Qt.Key_H,
+            "I": Qt.Key_I, "J": Qt.Key_J, "K": Qt.Key_K, "L": Qt.Key_L,
+            "M": Qt.Key_M, "N": Qt.Key_N, "O": Qt.Key_O, "P": Qt.Key_P,
+            "Q": Qt.Key_Q, "R": Qt.Key_R, "S": Qt.Key_S, "T": Qt.Key_T,
+            "U": Qt.Key_U, "V": Qt.Key_V, "W": Qt.Key_W, "X": Qt.Key_X,
+            "Y": Qt.Key_Y, "Z": Qt.Key_Z,
+            "0": Qt.Key_0, "1": Qt.Key_1, "2": Qt.Key_2, "3": Qt.Key_3,
+            "4": Qt.Key_4, "5": Qt.Key_5, "6": Qt.Key_6, "7": Qt.Key_7,
+            "8": Qt.Key_8, "9": Qt.Key_9,
+            "Left": Qt.Key_Left, "Right": Qt.Key_Right, "Up": Qt.Key_Up, "Down": Qt.Key_Down,
+            "Space": Qt.Key_Space, "Return": Qt.Key_Return, "Escape": Qt.Key_Escape,
+            "Shift": Qt.Key_Shift, "Control": Qt.Key_Control, "Alt": Qt.Key_Alt,
+            "NumPad0": Qt.Key_0, "NumPad1": Qt.Key_1, "NumPad2": Qt.Key_2,
+            "NumPad3": Qt.Key_3, "NumPad4": Qt.Key_4, "NumPad5": Qt.Key_5,
+            "NumPad6": Qt.Key_6, "NumPad7": Qt.Key_7, "NumPad8": Qt.Key_8, "NumPad9": Qt.Key_9
+        }
+        return keyMap[keyName] || 0
+    }
+
+    // 检查按键是否匹配配置
+    function isKeyMatch(event, player, action) {
+        var configuredKey = director.keyBindings.getBinding(player, action)
+        if (!configuredKey) return false
+        var keyCode = getKeyCode(configuredKey)
+        if (configuredKey.startsWith("NumPad")) {
+            return event.key === keyCode && (event.modifiers & Qt.KeypadModifier)
+        }
+        return event.key === keyCode
+    }
 
     function sendInput(action, pressed) {
         if (!isOnline || !networkMgr) return
@@ -208,7 +243,7 @@ Item {
                     targetModel.playHurt()
                 }
             }
-            
+
             if (attacker === 1) {
                 p2Health = Math.max(0, p2Health - damage)
                 if (!director.p2Model.isBlocking()) {
@@ -890,7 +925,7 @@ Item {
                 if (p1Health > p2Health) p1Wins++
                 else if (p2Health > p1Health) p2Wins++
             }
-            
+
             if (isOnline && isHost && networkMgr) {
                 networkMgr.sendMessage({
                     "type": "round_event",
@@ -966,27 +1001,28 @@ Item {
         }
     }
 
-    // 键盘输入, P1用A/D/W/J/K/U/L, P2用方向键/小键盘1-3/0
-    property bool p1JPressed: false
-    property bool p1KPressed: false
-    property bool p2N1Pressed: false
-    property bool p2N2Pressed: false
+    // 键盘输入, 使用配置的键位
+    property bool p1LightPunchPressed: false
+    property bool p1LightKickPressed: false
+    property bool p2LightPunchPressed: false
+    property bool p2LightKickPressed: false
 
     Keys.onPressed: (event) => {
         if (event.isAutoRepeat || director.phase !== FightDirector.Fighting || resettingRound) return
         if (isOnline) {
-            var isP1Key = (event.key === Qt.Key_D || event.key === Qt.Key_A || event.key === Qt.Key_W || event.key === Qt.Key_S || event.key === Qt.Key_J || event.key === Qt.Key_K || event.key === Qt.Key_U || event.key === Qt.Key_L || event.key === Qt.Key_I || event.key === Qt.Key_G)
+            var isP1Key = isKeyMatch(event, "P1", "moveLeft") || isKeyMatch(event, "P1", "moveRight") || isKeyMatch(event, "P1", "jump") || isKeyMatch(event, "P1", "crouch") || isKeyMatch(event, "P1", "lightPunch") || isKeyMatch(event, "P1", "lightKick") || isKeyMatch(event, "P1", "heavyPunch") || isKeyMatch(event, "P1", "heavyKick") || isKeyMatch(event, "P1", "heavyStrike") || isKeyMatch(event, "P1", "block")
             if (isHost && !isP1Key) return
             if (!isHost && isP1Key) return
         }
-        switch (event.key) {
-        case Qt.Key_D:      startMoveRight(); sendInput("move_right", true); break
-        case Qt.Key_A:      startMoveLeft();  sendInput("move_left", true);  break
-        case Qt.Key_S:      startCrouch1();   sendInput("crouch", true);     break
-        case Qt.Key_W:      startJump();      sendInput("jump");             break
-        case Qt.Key_J:
-            p1JPressed = true
-            if (p1WaitingCombo && p1KPressed && (moveRightPressed || moveLeftPressed)) {
+
+        // P1 键位处理
+        if (isKeyMatch(event, "P1", "moveRight")) { startMoveRight(); sendInput("move_right", true); return }
+        if (isKeyMatch(event, "P1", "moveLeft")) { startMoveLeft(); sendInput("move_left", true); return }
+        if (isKeyMatch(event, "P1", "crouch")) { startCrouch1(); sendInput("crouch", true); return }
+        if (isKeyMatch(event, "P1", "jump")) { startJump(); sendInput("jump"); return }
+        if (isKeyMatch(event, "P1", "lightPunch")) {
+            p1LightPunchPressed = true
+            if (p1WaitingCombo && p1LightKickPressed && (moveRightPressed || moveLeftPressed)) {
                 p1ComboTimer.stop()
                 p1WaitingCombo = false
                 var p1DodgeDir = getP1DodgeForward()
@@ -997,10 +1033,11 @@ Item {
                 p1WaitingCombo = true
                 p1ComboTimer.restart()
             }
-            break
-        case Qt.Key_K:
-            p1KPressed = true
-            if (p1WaitingCombo && p1JPressed && (moveRightPressed || moveLeftPressed)) {
+            return
+        }
+        if (isKeyMatch(event, "P1", "lightKick")) {
+            p1LightKickPressed = true
+            if (p1WaitingCombo && p1LightPunchPressed && (moveRightPressed || moveLeftPressed)) {
                 p1ComboTimer.stop()
                 p1WaitingCombo = false
                 var p1DodgeDir2 = getP1DodgeForward()
@@ -1011,11 +1048,12 @@ Item {
                 p1WaitingCombo = true
                 p1ComboTimer.restart()
             }
-            break
-        case Qt.Key_U:      startAttackHeavyPunch1();  sendInput("heavy_punch");  break
-        case Qt.Key_L:      startAttackHeavyKick1();   sendInput("heavy_kick");   break
-        case Qt.Key_I:      startAttackHeavyStrike1(); sendInput("heavy_strike"); break
-        case Qt.Key_G:
+            return
+        }
+        if (isKeyMatch(event, "P1", "heavyPunch")) { startAttackHeavyPunch1(); sendInput("heavy_punch"); return }
+        if (isKeyMatch(event, "P1", "heavyKick")) { startAttackHeavyKick1(); sendInput("heavy_kick"); return }
+        if (isKeyMatch(event, "P1", "heavyStrike")) { startAttackHeavyStrike1(); sendInput("heavy_strike"); return }
+        if (isKeyMatch(event, "P1", "block")) {
             p1Blocking = true
             if (!p1Jumping && !p1Attacking && !p1Crouching) {
                 director.p1Model.playStandBlock()
@@ -1023,95 +1061,96 @@ Item {
                 isMoving = false
             }
             sendInput("block", true)
-            break
-        case Qt.Key_Right:  startMoveRight2(); sendInput("move_right", true); break
-        case Qt.Key_Left:   startMoveLeft2();  sendInput("move_left", true);  break
-        case Qt.Key_Down:   startCrouch2();    sendInput("crouch", true);     break
-        case Qt.Key_Up:     startJump2();      sendInput("jump");             break
-        case Qt.Key_1:
-            if (event.modifiers & Qt.KeypadModifier) {
-                p2N1Pressed = true
-                var dir1 = moveRight2Pressed || moveLeft2Pressed
-                if (p2WaitingCombo && p2N2Pressed) {
-                    p2ComboTimer.stop()
-                    p2WaitingCombo = false
-                    var p2DodgeDir = dir1 ? getP2DodgeForward() : true
-                    startDodge2(p2DodgeDir)
-                    sendInput(p2DodgeDir ? "dodge_forward" : "dodge_backward")
-                } else {
-                    p2ComboKeyJ = true
-                    p2WaitingCombo = true
-                    p2ComboTimer.restart()
-                }
+            return
+        }
+
+        // P2 键位处理
+        if (isKeyMatch(event, "P2", "moveRight")) { startMoveRight2(); sendInput("move_right", true); return }
+        if (isKeyMatch(event, "P2", "moveLeft")) { startMoveLeft2(); sendInput("move_left", true); return }
+        if (isKeyMatch(event, "P2", "crouch")) { startCrouch2(); sendInput("crouch", true); return }
+        if (isKeyMatch(event, "P2", "jump")) { startJump2(); sendInput("jump"); return }
+        if (isKeyMatch(event, "P2", "lightPunch")) {
+            p2LightPunchPressed = true
+            var dir1 = moveRight2Pressed || moveLeft2Pressed
+            if (p2WaitingCombo && p2LightKickPressed) {
+                p2ComboTimer.stop()
+                p2WaitingCombo = false
+                var p2DodgeDir = dir1 ? getP2DodgeForward() : true
+                startDodge2(p2DodgeDir)
+                sendInput(p2DodgeDir ? "dodge_forward" : "dodge_backward")
+            } else {
+                p2ComboKeyJ = true
+                p2WaitingCombo = true
+                p2ComboTimer.restart()
             }
-            break
-        case Qt.Key_2:
-            if (event.modifiers & Qt.KeypadModifier) {
-                p2N2Pressed = true
-                var dir2 = moveRight2Pressed || moveLeft2Pressed
-                if (p2WaitingCombo && p2N1Pressed) {
-                    p2ComboTimer.stop()
-                    p2WaitingCombo = false
-                    var p2DodgeDir2 = dir2 ? getP2DodgeForward() : true
-                    startDodge2(p2DodgeDir2)
-                    sendInput(p2DodgeDir2 ? "dodge_forward" : "dodge_backward")
-                } else {
-                    p2ComboKeyJ = false
-                    p2WaitingCombo = true
-                    p2ComboTimer.restart()
-                }
+            return
+        }
+        if (isKeyMatch(event, "P2", "lightKick")) {
+            p2LightKickPressed = true
+            var dir2 = moveRight2Pressed || moveLeft2Pressed
+            if (p2WaitingCombo && p2LightPunchPressed) {
+                p2ComboTimer.stop()
+                p2WaitingCombo = false
+                var p2DodgeDir2 = dir2 ? getP2DodgeForward() : true
+                startDodge2(p2DodgeDir2)
+                sendInput(p2DodgeDir2 ? "dodge_forward" : "dodge_backward")
+            } else {
+                p2ComboKeyJ = false
+                p2WaitingCombo = true
+                p2ComboTimer.restart()
             }
-            break
-        case Qt.Key_3:      if (event.modifiers & Qt.KeypadModifier) { startAttackHeavyPunch2();  sendInput("heavy_punch");  } break
-        case Qt.Key_0:      if (event.modifiers & Qt.KeypadModifier) { startAttackHeavyKick2();   sendInput("heavy_kick");   } break
-        case Qt.Key_5:      if (event.modifiers & Qt.KeypadModifier) { startAttackHeavyStrike2(); sendInput("heavy_strike"); } break
-        case Qt.Key_4:
-            if (event.modifiers & Qt.KeypadModifier) {
-                p2Blocking = true
-                if (!p2Jumping && !p2Attacking && !p2Crouching) {
-                    director.p2Model.playStandBlock()
-                    moveTimer2.stop()
-                    isMoving2 = false
-                }
-                sendInput("block", true)
+            return
+        }
+        if (isKeyMatch(event, "P2", "heavyPunch")) { startAttackHeavyPunch2(); sendInput("heavy_punch"); return }
+        if (isKeyMatch(event, "P2", "heavyKick")) { startAttackHeavyKick2(); sendInput("heavy_kick"); return }
+        if (isKeyMatch(event, "P2", "heavyStrike")) { startAttackHeavyStrike2(); sendInput("heavy_strike"); return }
+        if (isKeyMatch(event, "P2", "block")) {
+            p2Blocking = true
+            if (!p2Jumping && !p2Attacking && !p2Crouching) {
+                director.p2Model.playStandBlock()
+                moveTimer2.stop()
+                isMoving2 = false
             }
-            break
+            sendInput("block", true)
+            return
         }
     }
     Keys.onReleased: (event) => {
         if (event.isAutoRepeat || director.phase !== FightDirector.Fighting || resettingRound) return
         if (isOnline) {
-            var isP1Key = (event.key === Qt.Key_D || event.key === Qt.Key_A || event.key === Qt.Key_S || event.key === Qt.Key_J || event.key === Qt.Key_K || event.key === Qt.Key_G)
+            var isP1Key = isKeyMatch(event, "P1", "moveLeft") || isKeyMatch(event, "P1", "moveRight") || isKeyMatch(event, "P1", "crouch") || isKeyMatch(event, "P1", "lightPunch") || isKeyMatch(event, "P1", "lightKick") || isKeyMatch(event, "P1", "block")
             if (isHost && !isP1Key) return
             if (!isHost && isP1Key) return
         }
-        switch (event.key) {
-        case Qt.Key_D:      stopMoveRight(); sendInput("move_right", false); break
-        case Qt.Key_A:      stopMoveLeft();  sendInput("move_left", false);  break
-        case Qt.Key_S:      stopCrouch1();   sendInput("crouch", false);     break
-        case Qt.Key_J:      p1JPressed = false; break
-        case Qt.Key_K:      p1KPressed = false; break
-        case Qt.Key_Right:  stopMoveRight2(); sendInput("move_right", false); break
-        case Qt.Key_Left:   stopMoveLeft2();  sendInput("move_left", false);  break
-        case Qt.Key_Down:   stopCrouch2();    sendInput("crouch", false);     break
-        case Qt.Key_G:
+
+        // P1 键位释放处理
+        if (isKeyMatch(event, "P1", "moveRight")) { stopMoveRight(); sendInput("move_right", false); return }
+        if (isKeyMatch(event, "P1", "moveLeft")) { stopMoveLeft(); sendInput("move_left", false); return }
+        if (isKeyMatch(event, "P1", "crouch")) { stopCrouch1(); sendInput("crouch", false); return }
+        if (isKeyMatch(event, "P1", "lightPunch")) { p1LightPunchPressed = false; return }
+        if (isKeyMatch(event, "P1", "lightKick")) { p1LightKickPressed = false; return }
+        if (isKeyMatch(event, "P1", "block")) {
             p1Blocking = false
             if (director.p1Model.state === 16) {  // StandBlock
                 director.p1Model.releaseStandBlock()
             }
             sendInput("block", false)
-            break
-        case Qt.Key_1:      if (event.modifiers & Qt.KeypadModifier) p2N1Pressed = false; break
-        case Qt.Key_2:      if (event.modifiers & Qt.KeypadModifier) p2N2Pressed = false; break
-        case Qt.Key_4:
-            if (event.modifiers & Qt.KeypadModifier) {
-                p2Blocking = false
-                if (director.p2Model.state === 16) {  // StandBlock
-                    director.p2Model.releaseStandBlock()
-                }
-                sendInput("block", false)
+            return
+        }
+
+        // P2 键位释放处理
+        if (isKeyMatch(event, "P2", "moveRight")) { stopMoveRight2(); sendInput("move_right", false); return }
+        if (isKeyMatch(event, "P2", "moveLeft")) { stopMoveLeft2(); sendInput("move_left", false); return }
+        if (isKeyMatch(event, "P2", "crouch")) { stopCrouch2(); sendInput("crouch", false); return }
+        if (isKeyMatch(event, "P2", "lightPunch")) { p2LightPunchPressed = false; return }
+        if (isKeyMatch(event, "P2", "lightKick")) { p2LightKickPressed = false; return }
+        if (isKeyMatch(event, "P2", "block")) {
+            p2Blocking = false
+            if (director.p2Model.state === 16) {  // StandBlock
+                director.p2Model.releaseStandBlock()
             }
-            break
+            sendInput("block", false)
+            return
         }
     }
 
@@ -1497,7 +1536,7 @@ Item {
         }
         spacing: 6
         z: 12
-        
+
         Repeater {
             model: 2
             Rectangle {
@@ -1521,7 +1560,7 @@ Item {
         }
         spacing: 6
         z: 12
-        
+
         Repeater {
             model: 2
             Rectangle {
@@ -1743,6 +1782,7 @@ Item {
 
     // 初始化, 组件加载完成后开始战斗
     Component.onCompleted: {
+        director.reloadKeyBindings()  // 重新加载最新键位配置
         director.start(p1CharId, p2CharId)
         root.forceActiveFocus()
     }

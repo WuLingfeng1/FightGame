@@ -8,6 +8,7 @@
 //         * Integrate the character selection screen into the "Local Two-Player" button
 import QtQuick
 import QtQuick.Controls
+import FightGame
 
 ApplicationWindow {
     id: root
@@ -16,6 +17,12 @@ ApplicationWindow {
     visible: true
     title: "FIGHT GAME"
     color: "whitesmoke"
+
+    // 全局键位配置实例
+    KeyBindingConfig {
+        id: globalKeyBindings
+        Component.onCompleted: loadFromFile("/wlf/FightGame/config/keybindings.json")
+    }
 
     StackView {
         id: stackView
@@ -90,6 +97,27 @@ ApplicationWindow {
                     onClicked: stackView.push(
                         "OnlineLobby.qml",
                         { "stackViewRef": stackView }
+                    )
+                }
+
+                Button {
+                    id: btnKeySettings
+                    text: "Key Settings"
+                    width: 120; flat: true
+
+                    contentItem: Text {
+                        text: btnKeySettings.text; font.pixelSize: 14; color: "black"
+                        horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                    }
+                    background: Rectangle {
+                        color: btnKeySettings.hovered ? "lightgray" : "white"
+                        border.color: btnKeySettings.hovered ? "dimgray" : "gray"
+                        border.width: 1; radius: 2
+                    }
+
+                    onClicked: stackView.push(
+                        "KeyBindingScreen.qml",
+                        { "stackViewRef": stackView, "keyBindingConfig": globalKeyBindings }
                     )
                 }
 

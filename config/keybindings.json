@@ -1,0 +1,26 @@
+{
+    "P1": {
+        "block": "G",
+        "crouch": "S",
+        "heavyKick": "L",
+        "heavyPunch": "U",
+        "heavyStrike": "I",
+        "jump": "W",
+        "lightKick": "K",
+        "lightPunch": "J",
+        "moveLeft": "A",
+        "moveRight": "D"
+    },
+    "P2": {
+        "block": "NumPad4",
+        "crouch": "Down",
+        "heavyKick": "NumPad0",
+        "heavyPunch": "NumPad3",
+        "heavyStrike": "NumPad5",
+        "jump": "Up",
+        "lightKick": "NumPad2",
+        "lightPunch": "NumPad1",
+        "moveLeft": "Left",
+        "moveRight": "Right"
+    }
+}

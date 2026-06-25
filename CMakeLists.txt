@@ -15,9 +15,11 @@ qt_add_qml_module(appFightGame
     QML_FILES SelectScreen.qml
     QML_FILES FightScreen.qml
     QML_FILES OnlineLobby.qml
+    QML_FILES KeyBindingScreen.qml
     SOURCES charactermodel.h charactermodel.cpp
     SOURCES fightdirector.h fightdirector.cpp
     SOURCES characterconfig.h characterconfig.cpp
+    SOURCES keybindingconfig.h keybindingconfig.cpp
     SOURCES networkmanager.h networkmanager.cpp
     SOURCES roommanager.h roommanager.cpp
 )
@@ -25,7 +27,6 @@ qt_add_resources(appFightGame "appresources"
     PREFIX "/"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}"
     FILES
-        config/characters.json
         images/background.jpg
         images/background2.jpg
         images/avatar/Kdash.jpg

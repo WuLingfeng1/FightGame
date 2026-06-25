@@ -1,6 +1,7 @@
 #include "fightdirector.h"
 #include "charactermodel.h"
 #include "characterconfig.h"
+#include "keybindingconfig.h"
 #include <QDebug>
 #include <algorithm>
 #include <cmath>
@@ -11,16 +12,30 @@ FightDirector::FightDirector(QObject *parent)
 {
     m_p1Model = new CharacterModel(this);
     m_p2Model = new CharacterModel(this);
+    m_keyBindings = new KeyBindingConfig(this);
 
     connect(m_p1Model, &CharacterModel::openingFinished, this, &FightDirector::onP1OpeningFinished);
     connect(m_p2Model, &CharacterModel::openingFinished, this, &FightDirector::onP2OpeningFinished);
 
-    QFile file(":/config/characters.json");
+    QFile file("/wlf/FightGame/config/characters.json");
     if (file.open(QIODevice::ReadOnly)) {
         m_jsonConfig = QJsonDocument::fromJson(file.readAll()).object();
         file.close();
     } else {
-        qWarning() << "[FightDirector] Cannot load characters.json from: :/config/characters.json";
+        qWarning() << "[FightDirector] Cannot load characters.json from: /wlf/FightGame/config/characters.json";
+    }
+
+    // 加载键位配置
+    if (!m_keyBindings->loadFromFile("/wlf/FightGame/config/keybindings.json")) {
+        qWarning() << "[FightDirector] Cannot load keybindings.json, using defaults";
+    }
+}
+
+// 重新加载键位配置
+void FightDirector::reloadKeyBindings()
+{
+    if (m_keyBindings) {
+        m_keyBindings->loadFromFile("/wlf/FightGame/config/keybindings.json");
     }
 }
 
