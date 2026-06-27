@@ -84,131 +84,143 @@ Item {
         networkMgr.sendMessage(msg)
     }
 
+    function handleKeyEvent(event, pressed) {
+        var keyAct = ["moveRight","moveLeft","crouch","jump","lightPunch","lightKick","heavyPunch","heavyKick","heavyStrike","block"]
+        var protoAct = ["move_right","move_left","crouch","jump","light_punch","light_kick","heavy_punch","heavy_kick","heavy_strike","block"]
+        for (var i = 0; i < keyAct.length; i++) {
+            if (isKeyMatch(event, "P1", keyAct[i])) {
+                if (pressed || keyAct[i] !== "lightPunch" && keyAct[i] !== "lightKick") {
+                    performAction("P1", protoAct[i], pressed)
+                    sendInput(protoAct[i], keyAct[i] === "jump" ? undefined : pressed)
+                } else {
+                    if (keyAct[i] === "lightPunch") p1LightPunchPressed = false
+                    else p1LightKickPressed = false
+                }
+                return
+            }
+        }
+        for (var j = 0; j < keyAct.length; j++) {
+            if (isKeyMatch(event, "P2", keyAct[j])) {
+                if (pressed || keyAct[j] !== "lightPunch" && keyAct[j] !== "lightKick") {
+                    performAction("P2", protoAct[j], pressed)
+                    sendInput(protoAct[j], keyAct[j] === "jump" ? undefined : pressed)
+                } else {
+                    if (keyAct[j] === "lightPunch") p2LightPunchPressed = false
+                    else p2LightKickPressed = false
+                }
+                return
+            }
+        }
+    }
+
+    function performAction(player, action, pressed) {
+        var isP1 = (player === "P1")
+        if (action === "move_right") {
+            if (isP1) {
+                if (pressed) startMoveRight();
+                else stopMoveRight();
+            } else {
+                if (pressed) startMoveRight2();
+                else stopMoveRight2();
+            }
+        } else if (action === "move_left") {
+            if (isP1) {
+                if (pressed) startMoveLeft();
+                else stopMoveLeft();
+            } else {
+                if (pressed) startMoveLeft2();
+                else stopMoveLeft2();
+            }
+        } else if (action === "crouch") {
+            if (isP1) {
+                if (pressed) startCrouch1();
+                else stopCrouch1();
+            } else {
+                if (pressed) startCrouch2();
+                else stopCrouch2();
+            }
+        } else if (action === "jump") {
+            if (isP1) startJump();
+            else startJump2();
+        } else if (action === "light_punch") {
+            if (isP1) handleP1LightPunch();
+            else handleP2LightPunch();
+        } else if (action === "light_kick") {
+            if (isP1) handleP1LightKick();
+            else handleP2LightKick();
+        } else if (action === "heavy_punch") {
+            if (isP1) startAttackHeavyPunch1();
+            else startAttackHeavyPunch2();
+        } else if (action === "heavy_kick") {
+            if (isP1) startAttackHeavyKick1();
+            else startAttackHeavyKick2();
+        } else if (action === "heavy_strike") {
+            if (isP1) startAttackHeavyStrike1();
+            else startAttackHeavyStrike2();
+        } else if (action === "block") {
+            if (pressed) {
+                if (isP1) {
+                    p1Blocking = true
+                    if (!p1Jumping && !p1Attacking && !p1Crouching) { director.p1Model.playStandBlock(); moveTimer.stop(); isMoving = false }
+                } else {
+                    p2Blocking = true
+                    if (!p2Jumping && !p2Attacking && !p2Crouching) { director.p2Model.playStandBlock(); moveTimer2.stop(); isMoving2 = false }
+                }
+            } else {
+                if (isP1) { p1Blocking = false; if (director.p1Model.state === 16) director.p1Model.releaseStandBlock() }
+                else { p2Blocking = false; if (director.p2Model.state === 16) director.p2Model.releaseStandBlock() }
+            }
+        } else if (action === "dodge_forward") {
+            if (isP1) startDodge1(true);
+            else startDodge2(true);
+        } else if (action === "dodge_backward") {
+            if (isP1) startDodge1(false);
+            else startDodge2(false);
+        }
+    }
+
+    function handleP1LightPunch() {
+        p1LightPunchPressed = true
+        if (p1WaitingCombo && p1LightKickPressed && (moveRightPressed || moveLeftPressed)) {
+            p1ComboTimer.stop(); p1WaitingCombo = false; startDodge1(getP1DodgeForward())
+        } else { p1ComboKeyJ = true; p1WaitingCombo = true; p1ComboTimer.restart() }
+    }
+    function handleP1LightKick() {
+        p1LightKickPressed = true
+        if (p1WaitingCombo && p1LightPunchPressed && (moveRightPressed || moveLeftPressed)) {
+            p1ComboTimer.stop(); p1WaitingCombo = false; startDodge1(getP1DodgeForward())
+        } else { p1ComboKeyJ = false; p1WaitingCombo = true; p1ComboTimer.restart() }
+    }
+    function handleP2LightPunch() {
+        p2LightPunchPressed = true
+        var dir1 = moveRight2Pressed || moveLeft2Pressed
+        if (p2WaitingCombo && p2LightKickPressed) {
+            p2ComboTimer.stop(); p2WaitingCombo = false; startDodge2(dir1 ? getP2DodgeForward() : true)
+        } else { p2ComboKeyJ = true; p2WaitingCombo = true; p2ComboTimer.restart() }
+    }
+    function handleP2LightKick() {
+        p2LightKickPressed = true
+        var dir2 = moveRight2Pressed || moveLeft2Pressed
+        if (p2WaitingCombo && p2LightPunchPressed) {
+            p2ComboTimer.stop(); p2WaitingCombo = false; startDodge2(dir2 ? getP2DodgeForward() : true)
+        } else { p2ComboKeyJ = false; p2WaitingCombo = true; p2ComboTimer.restart() }
+    }
+
     function handleRemoteInput(action, pressed) {
         if (isHost) {
-            // 远程处理 P2 输入, 先同步状态标志防止指令丢失
             p2Jumping = (director.p2Model.state === 5 || director.p2Model.state === 6)
             var p2state = director.p2Model.state
             p2Attacking = (p2state >= 7 && p2state <= 12) || p2state === 14 || p2state === 15
             p2Blocking = (p2state === 16)
             p2Crouching = (p2state === 13)
-            switch (action) {
-            case "move_right": pressed ? startMoveRight2() : stopMoveRight2(); break
-            case "move_left":  pressed ? startMoveLeft2()  : stopMoveLeft2();  break
-            case "jump":       if (!p2Jumping && !p2Blocking) startJump2(); break
-            case "crouch":     pressed ? startCrouch2() : stopCrouch2(); break
-            case "light_punch":
-                if (!p2Jumping && !p2Blocking) {
-                    p2Attacking = true
-                    stopMove2Timers()
-                    director.p2Model.playLightPunch()
-                }
-                break
-            case "light_kick":
-                if (!p2Jumping && !p2Blocking) {
-                    p2Attacking = true
-                    stopMove2Timers()
-                    director.p2Model.playLightKick()
-                }
-                break
-            case "heavy_punch":
-                if (!p2Jumping && !p2Blocking) {
-                    p2Attacking = true
-                    stopMove2Timers()
-                    director.p2Model.playHeavyPunch()
-                }
-                break
-            case "heavy_kick":
-                if (!p2Jumping && !p2Blocking) {
-                    p2Attacking = true
-                    stopMove2Timers()
-                    director.p2Model.playHeavyKick()
-                }
-                break
-            case "heavy_strike":
-                if (!p2Jumping && !p2Blocking) {
-                    p2Attacking = true
-                    stopMove2Timers()
-                    director.p2Model.playHeavyStrike()
-                }
-                break
-            case "block":
-                if (pressed) {
-                    p2Blocking = true
-                    if (!p2Jumping && !p2Attacking && !p2Crouching) {
-                        director.p2Model.playStandBlock()
-                        moveTimer2.stop(); isMoving2 = false
-                    }
-                } else {
-                    p2Blocking = false
-                    if (director.p2Model.state === 16) director.p2Model.releaseStandBlock()
-                }
-                break
-            case "dodge_forward":  startDodge2(true);  break
-            case "dodge_backward": startDodge2(false); break
-            }
+            performAction("P2", action, pressed)
         } else {
-            // 远程处理 P1 输入 (客机本地是P2, P1是远程)
             p1Jumping = (director.p1Model.state === 5 || director.p1Model.state === 6)
             var p1state = director.p1Model.state
             p1Attacking = (p1state >= 7 && p1state <= 12) || p1state === 14 || p1state === 15
             p1Blocking = (p1state === 16)
             p1Crouching = (p1state === 13)
-            switch (action) {
-            case "move_right": pressed ? startMoveRight() : stopMoveRight(); break
-            case "move_left":  pressed ? startMoveLeft()  : stopMoveLeft();  break
-            case "jump":       if (!p1Jumping && !p1Blocking) startJump(); break
-            case "crouch":     pressed ? startCrouch1() : stopCrouch1(); break
-            case "light_punch":
-                if (!p1Jumping && !p1Blocking) {
-                    p1Attacking = true
-                    stopMove1Timers()
-                    director.p1Model.playLightPunch()
-                }
-                break
-            case "light_kick":
-                if (!p1Jumping && !p1Blocking) {
-                    p1Attacking = true
-                    stopMove1Timers()
-                    director.p1Model.playLightKick()
-                }
-                break
-            case "heavy_punch":
-                if (!p1Jumping && !p1Blocking) {
-                    p1Attacking = true
-                    stopMove1Timers()
-                    director.p1Model.playHeavyPunch()
-                }
-                break
-            case "heavy_kick":
-                if (!p1Jumping && !p1Blocking) {
-                    p1Attacking = true
-                    stopMove1Timers()
-                    director.p1Model.playHeavyKick()
-                }
-                break
-            case "heavy_strike":
-                if (!p1Jumping && !p1Blocking) {
-                    p1Attacking = true
-                    stopMove1Timers()
-                    director.p1Model.playHeavyStrike()
-                }
-                break
-            case "block":
-                if (pressed) {
-                    p1Blocking = true
-                    if (!p1Jumping && !p1Attacking && !p1Crouching) {
-                        director.p1Model.playStandBlock()
-                        moveTimer.stop(); isMoving = false
-                    }
-                } else {
-                    p1Blocking = false
-                    if (director.p1Model.state === 16) director.p1Model.releaseStandBlock()
-                }
-                break
-            case "dodge_forward":  startDodge1(true);  break
-            case "dodge_backward": startDodge1(false); break
-            }
+            performAction("P1", action, pressed)
         }
     }
 
@@ -354,7 +366,39 @@ Item {
 
     property real fitScale: Math.min(root.width / 900, root.height / 640)
     property real moveStep: 0.008
-    property real bodyCollisionDist: 0.15  // 身体碰撞最小距离
+    property real bodyCollisionDist: 0.15
+
+    property int p1Health: 100
+    property int p2Health: 100
+    property int timerSeconds: 60
+    property int p1Wins: 0
+    property int p2Wins: 0
+    property int currentRound: 1
+    property bool roundEnding: false
+    property bool resettingRound: false
+    property bool p1Blocking: false
+    property bool p2Blocking: false
+
+    property bool isMoving: false
+    property bool p1Jumping: false
+    property bool p1Attacking: false
+    property bool p1Crouching: false
+    property bool moveLeftPressed: false
+    property bool moveRightPressed: false
+    property string p1CurrentAnim: ""
+
+    property bool isMoving2: false
+    property bool p2Jumping: false
+    property bool p2Attacking: false
+    property bool p2Crouching: false
+    property bool moveLeft2Pressed: false
+    property bool moveRight2Pressed: false
+    property string p2CurrentAnim: ""
+
+    property bool p1WaitingCombo: false
+    property bool p2WaitingCombo: false
+    property bool p1ComboKeyJ: true
+    property bool p2ComboKeyJ: true
 
     // P1 移动定时器, 每 16ms 更新一次位置
     Timer {
@@ -391,21 +435,6 @@ Item {
             }
         }
     }
-
-    // P1 移动状态
-    property bool isMoving: false
-    property bool p1Jumping: false
-    property bool p1Attacking: false
-    property bool p1Crouching: false
-    property bool moveLeftPressed: false
-    property bool moveRightPressed: false
-    property string p1CurrentAnim: ""
-
-    // 组合键缓冲: 等待第二个按键
-    property bool p1WaitingCombo: false
-    property bool p2WaitingCombo: false
-    property bool p1ComboKeyJ: true   // 记录首发键: true=J, false=K
-    property bool p2ComboKeyJ: true
 
     Timer {
         id: p1ComboTimer
@@ -696,15 +725,6 @@ Item {
             }
         }
     }
-
-    // P2 移动状态
-    property bool isMoving2: false
-    property bool p2Jumping: false
-    property bool p2Attacking: false
-    property bool p2Crouching: false
-    property bool moveLeft2Pressed: false
-    property bool moveRight2Pressed: false
-    property string p2CurrentAnim: ""
 
     // P2 向右移动
     function startMoveRight2() {
@@ -1015,106 +1035,7 @@ Item {
             if (isHost && !isP1Key) return
             if (!isHost && isP1Key) return
         }
-
-        // P1 键位处理
-        if (isKeyMatch(event, "P1", "moveRight")) { startMoveRight(); sendInput("move_right", true); return }
-        if (isKeyMatch(event, "P1", "moveLeft")) { startMoveLeft(); sendInput("move_left", true); return }
-        if (isKeyMatch(event, "P1", "crouch")) { startCrouch1(); sendInput("crouch", true); return }
-        if (isKeyMatch(event, "P1", "jump")) { startJump(); sendInput("jump"); return }
-        if (isKeyMatch(event, "P1", "lightPunch")) {
-            p1LightPunchPressed = true
-            if (p1WaitingCombo && p1LightKickPressed && (moveRightPressed || moveLeftPressed)) {
-                p1ComboTimer.stop()
-                p1WaitingCombo = false
-                var p1DodgeDir = getP1DodgeForward()
-                startDodge1(p1DodgeDir)
-                sendInput(p1DodgeDir ? "dodge_forward" : "dodge_backward")
-            } else {
-                p1ComboKeyJ = true
-                p1WaitingCombo = true
-                p1ComboTimer.restart()
-            }
-            return
-        }
-        if (isKeyMatch(event, "P1", "lightKick")) {
-            p1LightKickPressed = true
-            if (p1WaitingCombo && p1LightPunchPressed && (moveRightPressed || moveLeftPressed)) {
-                p1ComboTimer.stop()
-                p1WaitingCombo = false
-                var p1DodgeDir2 = getP1DodgeForward()
-                startDodge1(p1DodgeDir2)
-                sendInput(p1DodgeDir2 ? "dodge_forward" : "dodge_backward")
-            } else {
-                p1ComboKeyJ = false
-                p1WaitingCombo = true
-                p1ComboTimer.restart()
-            }
-            return
-        }
-        if (isKeyMatch(event, "P1", "heavyPunch")) { startAttackHeavyPunch1(); sendInput("heavy_punch"); return }
-        if (isKeyMatch(event, "P1", "heavyKick")) { startAttackHeavyKick1(); sendInput("heavy_kick"); return }
-        if (isKeyMatch(event, "P1", "heavyStrike")) { startAttackHeavyStrike1(); sendInput("heavy_strike"); return }
-        if (isKeyMatch(event, "P1", "block")) {
-            p1Blocking = true
-            if (!p1Jumping && !p1Attacking && !p1Crouching) {
-                director.p1Model.playStandBlock()
-                moveTimer.stop()
-                isMoving = false
-            }
-            sendInput("block", true)
-            return
-        }
-
-        // P2 键位处理
-        if (isKeyMatch(event, "P2", "moveRight")) { startMoveRight2(); sendInput("move_right", true); return }
-        if (isKeyMatch(event, "P2", "moveLeft")) { startMoveLeft2(); sendInput("move_left", true); return }
-        if (isKeyMatch(event, "P2", "crouch")) { startCrouch2(); sendInput("crouch", true); return }
-        if (isKeyMatch(event, "P2", "jump")) { startJump2(); sendInput("jump"); return }
-        if (isKeyMatch(event, "P2", "lightPunch")) {
-            p2LightPunchPressed = true
-            var dir1 = moveRight2Pressed || moveLeft2Pressed
-            if (p2WaitingCombo && p2LightKickPressed) {
-                p2ComboTimer.stop()
-                p2WaitingCombo = false
-                var p2DodgeDir = dir1 ? getP2DodgeForward() : true
-                startDodge2(p2DodgeDir)
-                sendInput(p2DodgeDir ? "dodge_forward" : "dodge_backward")
-            } else {
-                p2ComboKeyJ = true
-                p2WaitingCombo = true
-                p2ComboTimer.restart()
-            }
-            return
-        }
-        if (isKeyMatch(event, "P2", "lightKick")) {
-            p2LightKickPressed = true
-            var dir2 = moveRight2Pressed || moveLeft2Pressed
-            if (p2WaitingCombo && p2LightPunchPressed) {
-                p2ComboTimer.stop()
-                p2WaitingCombo = false
-                var p2DodgeDir2 = dir2 ? getP2DodgeForward() : true
-                startDodge2(p2DodgeDir2)
-                sendInput(p2DodgeDir2 ? "dodge_forward" : "dodge_backward")
-            } else {
-                p2ComboKeyJ = false
-                p2WaitingCombo = true
-                p2ComboTimer.restart()
-            }
-            return
-        }
-        if (isKeyMatch(event, "P2", "heavyPunch")) { startAttackHeavyPunch2(); sendInput("heavy_punch"); return }
-        if (isKeyMatch(event, "P2", "heavyKick")) { startAttackHeavyKick2(); sendInput("heavy_kick"); return }
-        if (isKeyMatch(event, "P2", "heavyStrike")) { startAttackHeavyStrike2(); sendInput("heavy_strike"); return }
-        if (isKeyMatch(event, "P2", "block")) {
-            p2Blocking = true
-            if (!p2Jumping && !p2Attacking && !p2Crouching) {
-                director.p2Model.playStandBlock()
-                moveTimer2.stop()
-                isMoving2 = false
-            }
-            sendInput("block", true)
-            return
-        }
+        handleKeyEvent(event, true)
     }
     Keys.onReleased: (event) => {
         if (event.isAutoRepeat || director.phase !== FightDirector.Fighting || resettingRound) return
@@ -1123,36 +1044,7 @@ Item {
             if (isHost && !isP1Key) return
             if (!isHost && isP1Key) return
         }
-
-        // P1 键位释放处理
-        if (isKeyMatch(event, "P1", "moveRight")) { stopMoveRight(); sendInput("move_right", false); return }
-        if (isKeyMatch(event, "P1", "moveLeft")) { stopMoveLeft(); sendInput("move_left", false); return }
-        if (isKeyMatch(event, "P1", "crouch")) { stopCrouch1(); sendInput("crouch", false); return }
-        if (isKeyMatch(event, "P1", "lightPunch")) { p1LightPunchPressed = false; return }
-        if (isKeyMatch(event, "P1", "lightKick")) { p1LightKickPressed = false; return }
-        if (isKeyMatch(event, "P1", "block")) {
-            p1Blocking = false
-            if (director.p1Model.state === 16) {  // StandBlock
-                director.p1Model.releaseStandBlock()
-            }
-            sendInput("block", false)
-            return
-        }
-
-        // P2 键位释放处理
-        if (isKeyMatch(event, "P2", "moveRight")) { stopMoveRight2(); sendInput("move_right", false); return }
-        if (isKeyMatch(event, "P2", "moveLeft")) { stopMoveLeft2(); sendInput("move_left", false); return }
-        if (isKeyMatch(event, "P2", "crouch")) { stopCrouch2(); sendInput("crouch", false); return }
-        if (isKeyMatch(event, "P2", "lightPunch")) { p2LightPunchPressed = false; return }
-        if (isKeyMatch(event, "P2", "lightKick")) { p2LightKickPressed = false; return }
-        if (isKeyMatch(event, "P2", "block")) {
-            p2Blocking = false
-            if (director.p2Model.state === 16) {  // StandBlock
-                director.p2Model.releaseStandBlock()
-            }
-            sendInput("block", false)
-            return
-        }
+        handleKeyEvent(event, false)
     }
 
     // 背景层
@@ -1254,63 +1146,6 @@ Item {
         }
     }
 
-    // Debug 可视化: 判定框
-    property bool showDebugHitbox: false  // 调试判定框显示
-
-    // P1 受击框 (绿色)
-    Rectangle {
-        visible: showDebugHitbox
-        x: root.width * (director.p1Model.hurtboxX - director.cameraOffset) - width / 2
-        y: director.p1Model.hurtboxY - height / 2
-        width: director.p1Model.hurtboxW * fitScale
-        height: director.p1Model.hurtboxH * fitScale
-        color: "transparent"
-        border.color: "lime"
-        border.width: 2
-        z: 20
-    }
-
-    // P2 受击框 (绿色)
-    Rectangle {
-        visible: showDebugHitbox
-        x: root.width * (director.p2Model.hurtboxX - director.cameraOffset) - width / 2
-        y: director.p2Model.hurtboxY - height / 2
-        width: director.p2Model.hurtboxW * fitScale
-        height: director.p2Model.hurtboxH * fitScale
-        color: "transparent"
-        border.color: "lime"
-        border.width: 2
-        z: 20
-    }
-
-    // P1 攻击框 (红色)
-    Rectangle {
-        visible: showDebugHitbox && director.p1Model.attackActive
-        x: root.width * (director.p1Model.hitboxX - director.cameraOffset) - width / 2
-        y: director.p1Model.hitboxY - height / 2
-        width: director.p1Model.hitboxRadius * 2 * fitScale
-        height: director.p1Model.hitboxRadius * 2 * fitScale
-        radius: width / 2
-        color: Qt.rgba(1, 0, 0, 0.3)
-        border.color: "red"
-        border.width: 2
-        z: 20
-    }
-
-    // P2 攻击框 (红色)
-    Rectangle {
-        visible: showDebugHitbox && director.p2Model.attackActive
-        x: root.width * (director.p2Model.hitboxX - director.cameraOffset) - width / 2
-        y: director.p2Model.hitboxY - height / 2
-        width: director.p2Model.hitboxRadius * 2 * fitScale
-        height: director.p2Model.hitboxRadius * 2 * fitScale
-        radius: width / 2
-        color: Qt.rgba(1, 0, 0, 0.3)
-        border.color: "red"
-        border.width: 2
-        z: 20
-    }
-
     // Attack VFX 攻击特效
     Item {
         id: attackVfx
@@ -1376,7 +1211,7 @@ Item {
             right: parent.right
         }
         height: 82
-        color: Qt.rgba(0, 0, 0, 0.85)
+        color: "black"
         z: 10
 
         Rectangle {
@@ -1689,17 +1524,6 @@ Item {
         }
     }
 
-    property int p1Health: 100
-    property int p2Health: 100
-    property int timerSeconds: 60
-    property int p1Wins: 0
-    property int p2Wins: 0
-    property int currentRound: 1
-    property bool roundEnding: false
-    property bool resettingRound: false
-    property bool p1Blocking: false
-    property bool p2Blocking: false
-
     // 底部按钮与调试信息
     Button {
         anchors {
@@ -1722,62 +1546,10 @@ Item {
             verticalAlignment: Text.AlignVCenter
         }
         background: Rectangle {
-            color: Qt.rgba(0, 0, 0, 0.8)
+            color: "black"
             border.color: "darkgoldenrod"
             border.width: 1
             radius: 2
-        }
-    }
-
-    Button {
-        anchors {
-            right: parent.right
-            bottom: parent.bottom
-            margins: 12
-        }
-        width: 80
-        height: 28
-        z: 10
-        text: ">>"
-        onClicked: { director.p1Model.playForward() }
-
-        contentItem: Text {
-            text: ">>"
-            color: "darkgoldenrod"
-            font.pixelSize: 11
-            font.family: "monospace"
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-        }
-        background: Rectangle {
-            color: Qt.rgba(0, 0, 0, 0.8)
-            border.color: "darkgoldenrod"
-            border.width: 1
-            radius: 2
-        }
-    }
-
-    // 调试信息, 显示双方当前帧 / 总帧数
-    Rectangle {
-        anchors {
-            right: parent.right
-            bottom: parent.bottom
-            margins: 12
-        }
-        width: debugText.implicitWidth + 16
-        height: 22
-        color: Qt.rgba(0, 0, 0, 0.6)
-        radius: 2
-        z: 12
-
-        Text {
-            id: debugText
-            anchors.centerIn: parent
-            text: "P1:" + director.p1Model.currentFrame + "/" + director.p1Model.totalFrames
-                  + " P2:" + director.p2Model.currentFrame + "/" + director.p2Model.totalFrames
-            color: "darkgreen"
-            font.pixelSize: 10
-            font.family: "monospace"
         }
     }
 
@@ -1788,345 +1560,119 @@ Item {
         root.forceActiveFocus()
     }
 
-    Connections {
-        target: director.p1Model
-        function onJumpFinished() {
-            p1Jumping = false
-            updateFacing()
-            director.updateCamera()
-            if (moveRightPressed && !moveLeftPressed) {
-                isMoving = true
-                moveTimer.moveLeft = false
-                moveTimer.moveRight = true
-                if (director.p1Model.facingLeft) {
-                    director.p1Model.playBackward()
-                    p1CurrentAnim = "backward"
-                } else {
-                    director.p1Model.playForward()
-                    p1CurrentAnim = "forward"
-                }
-                moveTimer.start()
-            } else if (moveLeftPressed && !moveRightPressed) {
-                isMoving = true
-                moveTimer.moveRight = false
-                moveTimer.moveLeft = true
-                if (director.p1Model.facingLeft) {
-                    director.p1Model.playForward()
-                    p1CurrentAnim = "forward"
-                } else {
-                    director.p1Model.playBackward()
-                    p1CurrentAnim = "backward"
-                }
-                moveTimer.start()
-            } else if (moveRightPressed || moveLeftPressed) {
-                isMoving = true
-                moveTimer.moveRight = moveRightPressed
-                moveTimer.moveLeft = moveLeftPressed
-                if (director.p1Model.facingLeft) {
-                    director.p1Model.playBackward()
-                    p1CurrentAnim = "backward"
-                } else {
-                    director.p1Model.playForward()
-                    p1CurrentAnim = "forward"
-                }
-                moveTimer.start()
+    Component.onDestruction: {
+        collisionTimer.stop()
+        countdownTimer.stop()
+        moveTimer.stop()
+        moveTimer2.stop()
+        p1ComboTimer.stop()
+        p2ComboTimer.stop()
+        vfxTimer.stop()
+        roundResetTimer.stop()
+        matchResultTimer.stop()
+        director.p1Model.playStand()
+        director.p2Model.playStand()
+    }
+
+    function resumeP1Movement() {
+        updateFacing()
+        director.updateCamera()
+        if (p1Crouching || p1Blocking) return
+        if (moveRightPressed && !moveLeftPressed) {
+            isMoving = true
+            moveTimer.moveLeft = false
+            moveTimer.moveRight = true
+            if (director.p1Model.facingLeft) {
+                director.p1Model.playBackward(); p1CurrentAnim = "backward"
             } else {
-                director.p1Model.playStand()
-                moveTimer.moveRight = false
-                moveTimer.moveLeft = false
-                isMoving = false
+                director.p1Model.playForward();  p1CurrentAnim = "forward"
             }
+            moveTimer.start()
+        } else if (moveLeftPressed && !moveRightPressed) {
+            isMoving = true
+            moveTimer.moveRight = false
+            moveTimer.moveLeft = true
+            if (director.p1Model.facingLeft) {
+                director.p1Model.playForward();  p1CurrentAnim = "forward"
+            } else {
+                director.p1Model.playBackward(); p1CurrentAnim = "backward"
+            }
+            moveTimer.start()
+        } else if (moveRightPressed || moveLeftPressed) {
+            isMoving = true
+            moveTimer.moveRight = moveRightPressed
+            moveTimer.moveLeft = moveLeftPressed
+            if (director.p1Model.facingLeft) {
+                director.p1Model.playBackward(); p1CurrentAnim = "backward"
+            } else {
+                director.p1Model.playForward();  p1CurrentAnim = "forward"
+            }
+            moveTimer.start()
+        } else {
+            director.p1Model.playStand()
+            moveTimer.moveRight = false
+            moveTimer.moveLeft = false
+            isMoving = false
+        }
+    }
+
+    function resumeP2Movement() {
+        updateFacing()
+        director.updateCamera()
+        if (p2Crouching || p2Blocking) return
+        if (moveRight2Pressed && !moveLeft2Pressed) {
+            isMoving2 = true
+            moveTimer2.moveLeft = false
+            moveTimer2.moveRight = true
+            if (director.p2Model.facingLeft) {
+                director.p2Model.playBackward(); p2CurrentAnim = "backward"
+            } else {
+                director.p2Model.playForward();  p2CurrentAnim = "forward"
+            }
+            moveTimer2.start()
+        } else if (moveLeft2Pressed && !moveRight2Pressed) {
+            isMoving2 = true
+            moveTimer2.moveRight = false
+            moveTimer2.moveLeft = true
+            if (director.p2Model.facingLeft) {
+                director.p2Model.playForward();  p2CurrentAnim = "forward"
+            } else {
+                director.p2Model.playBackward(); p2CurrentAnim = "backward"
+            }
+            moveTimer2.start()
+        } else if (moveRight2Pressed || moveLeft2Pressed) {
+            isMoving2 = true
+            moveTimer2.moveRight = moveRight2Pressed
+            moveTimer2.moveLeft = moveLeft2Pressed
+            if (director.p2Model.facingLeft) {
+                director.p2Model.playBackward(); p2CurrentAnim = "backward"
+            } else {
+                director.p2Model.playForward();  p2CurrentAnim = "forward"
+            }
+            moveTimer2.start()
+        } else {
+            director.p2Model.playStand()
+            moveTimer2.moveRight = false
+            moveTimer2.moveLeft = false
+            isMoving2 = false
         }
     }
 
     Connections {
         target: director.p1Model
-        function onAttackFinished() {
-            p1Attacking = false
-            updateFacing()
-            director.updateCamera()
-            if (p1Crouching) {
-                // 蹲攻击完毕, 已回到蹲姿, 不做任何操作
-                return
-            }
-            if (moveRightPressed && !moveLeftPressed) {
-                isMoving = true
-                moveTimer.moveLeft = false
-                moveTimer.moveRight = true
-                if (director.p1Model.facingLeft) {
-                    director.p1Model.playBackward()
-                    p1CurrentAnim = "backward"
-                } else {
-                    director.p1Model.playForward()
-                    p1CurrentAnim = "forward"
-                }
-                moveTimer.start()
-            } else if (moveLeftPressed && !moveRightPressed) {
-                isMoving = true
-                moveTimer.moveRight = false
-                moveTimer.moveLeft = true
-                if (director.p1Model.facingLeft) {
-                    director.p1Model.playForward()
-                    p1CurrentAnim = "forward"
-                } else {
-                    director.p1Model.playBackward()
-                    p1CurrentAnim = "backward"
-                }
-                moveTimer.start()
-            } else {
-                director.p1Model.playStand()
-                moveTimer.moveRight = false
-                moveTimer.moveLeft = false
-                isMoving = false
-            }
-        }
-        function onHurtFinished() {
-            p1Attacking = false
-            p1Jumping = false
-            p1Crouching = false
-            updateFacing()
-            director.updateCamera()
-            if (moveRightPressed && !moveLeftPressed) {
-                isMoving = true
-                moveTimer.moveLeft = false
-                moveTimer.moveRight = true
-                if (director.p1Model.facingLeft) {
-                    director.p1Model.playBackward()
-                    p1CurrentAnim = "backward"
-                } else {
-                    director.p1Model.playForward()
-                    p1CurrentAnim = "forward"
-                }
-                moveTimer.start()
-            } else if (moveLeftPressed && !moveRightPressed) {
-                isMoving = true
-                moveTimer.moveRight = false
-                moveTimer.moveLeft = true
-                if (director.p1Model.facingLeft) {
-                    director.p1Model.playForward()
-                    p1CurrentAnim = "forward"
-                } else {
-                    director.p1Model.playBackward()
-                    p1CurrentAnim = "backward"
-                }
-                moveTimer.start()
-            } else {
-                director.p1Model.playStand()
-                moveTimer.moveRight = false
-                moveTimer.moveLeft = false
-                isMoving = false
-            }
-        }
-        function onDodgeFinished() {
-            p1Attacking = false
-            updateFacing()
-            director.updateCamera()
-            if (moveRightPressed && !moveLeftPressed) {
-                isMoving = true
-                moveTimer.moveLeft = false
-                moveTimer.moveRight = true
-                if (director.p1Model.facingLeft) {
-                    director.p1Model.playBackward()
-                    p1CurrentAnim = "backward"
-                } else {
-                    director.p1Model.playForward()
-                    p1CurrentAnim = "forward"
-                }
-                moveTimer.start()
-            } else if (moveLeftPressed && !moveRightPressed) {
-                isMoving = true
-                moveTimer.moveRight = false
-                moveTimer.moveLeft = true
-                if (director.p1Model.facingLeft) {
-                    director.p1Model.playForward()
-                    p1CurrentAnim = "forward"
-                } else {
-                    director.p1Model.playBackward()
-                    p1CurrentAnim = "backward"
-                }
-                moveTimer.start()
-            } else {
-                director.p1Model.playStand()
-                moveTimer.moveRight = false
-                moveTimer.moveLeft = false
-                isMoving = false
-            }
-        }
-    }
-
-    Connections {
-        target: director.p2Model
-        function onJumpFinished() {
-            p2Jumping = false
-            updateFacing()
-            director.updateCamera()
-            if (moveRight2Pressed && !moveLeft2Pressed) {
-                isMoving2 = true
-                moveTimer2.moveLeft = false
-                moveTimer2.moveRight = true
-                if (director.p2Model.facingLeft) {
-                    director.p2Model.playBackward()
-                    p2CurrentAnim = "backward"
-                } else {
-                    director.p2Model.playForward()
-                    p2CurrentAnim = "forward"
-                }
-                moveTimer2.start()
-            } else if (moveLeft2Pressed && !moveRight2Pressed) {
-                isMoving2 = true
-                moveTimer2.moveRight = false
-                moveTimer2.moveLeft = true
-                if (director.p2Model.facingLeft) {
-                    director.p2Model.playForward()
-                    p2CurrentAnim = "forward"
-                } else {
-                    director.p2Model.playBackward()
-                    p2CurrentAnim = "backward"
-                }
-                moveTimer2.start()
-            } else if (moveRight2Pressed || moveLeft2Pressed) {
-                isMoving2 = true
-                moveTimer2.moveRight = moveRight2Pressed
-                moveTimer2.moveLeft = moveLeft2Pressed
-                if (director.p2Model.facingLeft) {
-                    director.p2Model.playBackward()
-                    p2CurrentAnim = "backward"
-                } else {
-                    director.p2Model.playForward()
-                    p2CurrentAnim = "forward"
-                }
-                moveTimer2.start()
-            } else {
-                director.p2Model.playStand()
-                moveTimer2.moveRight = false
-                moveTimer2.moveLeft = false
-                isMoving2 = false
-            }
-        }
-    }
-
-    Connections {
-        target: director.p2Model
-        function onAttackFinished() {
-            p2Attacking = false
-            updateFacing()
-            director.updateCamera()
-            if (p2Crouching) {
-                // 蹲攻击完毕, 已回到蹲姿, 不做任何操作
-                return
-            }
-            if (moveRight2Pressed && !moveLeft2Pressed) {
-                isMoving2 = true
-                moveTimer2.moveLeft = false
-                moveTimer2.moveRight = true
-                if (director.p2Model.facingLeft) {
-                    director.p2Model.playBackward()
-                    p2CurrentAnim = "backward"
-                } else {
-                    director.p2Model.playForward()
-                    p2CurrentAnim = "forward"
-                }
-                moveTimer2.start()
-            } else if (moveLeft2Pressed && !moveRight2Pressed) {
-                isMoving2 = true
-                moveTimer2.moveRight = false
-                moveTimer2.moveLeft = true
-                if (director.p2Model.facingLeft) {
-                    director.p2Model.playForward()
-                    p2CurrentAnim = "forward"
-                } else {
-                    director.p2Model.playBackward()
-                    p2CurrentAnim = "backward"
-                }
-                moveTimer2.start()
-            } else {
-                director.p2Model.playStand()
-                moveTimer2.moveRight = false
-                moveTimer2.moveLeft = false
-                isMoving2 = false
-            }
-        }
-        function onHurtFinished() {
-            p2Attacking = false
-            p2Jumping = false
-            p2Crouching = false
-            updateFacing()
-            director.updateCamera()
-            if (moveRight2Pressed && !moveLeft2Pressed) {
-                isMoving2 = true
-                moveTimer2.moveLeft = false
-                moveTimer2.moveRight = true
-                if (director.p2Model.facingLeft) {
-                    director.p2Model.playBackward()
-                    p2CurrentAnim = "backward"
-                } else {
-                    director.p2Model.playForward()
-                    p2CurrentAnim = "forward"
-                }
-                moveTimer2.start()
-            } else if (moveLeft2Pressed && !moveRight2Pressed) {
-                isMoving2 = true
-                moveTimer2.moveRight = false
-                moveTimer2.moveLeft = true
-                if (director.p2Model.facingLeft) {
-                    director.p2Model.playForward()
-                    p2CurrentAnim = "forward"
-                } else {
-                    director.p2Model.playBackward()
-                    p2CurrentAnim = "backward"
-                }
-                moveTimer2.start()
-            } else {
-                director.p2Model.playStand()
-                moveTimer2.moveRight = false
-                moveTimer2.moveLeft = false
-                isMoving2 = false
-            }
-        }
-        function onDodgeFinished() {
-            p2Attacking = false
-            updateFacing()
-            director.updateCamera()
-            if (moveRight2Pressed && !moveLeft2Pressed) {
-                isMoving2 = true
-                moveTimer2.moveLeft = false
-                moveTimer2.moveRight = true
-                if (director.p2Model.facingLeft) {
-                    director.p2Model.playBackward()
-                    p2CurrentAnim = "backward"
-                } else {
-                    director.p2Model.playForward()
-                    p2CurrentAnim = "forward"
-                }
-                moveTimer2.start()
-            } else if (moveLeft2Pressed && !moveRight2Pressed) {
-                isMoving2 = true
-                moveTimer2.moveRight = false
-                moveTimer2.moveLeft = true
-                if (director.p2Model.facingLeft) {
-                    director.p2Model.playForward()
-                    p2CurrentAnim = "forward"
-                } else {
-                    director.p2Model.playBackward()
-                    p2CurrentAnim = "backward"
-                }
-                moveTimer2.start()
-            } else {
-                director.p2Model.playStand()
-                moveTimer2.moveRight = false
-                moveTimer2.moveLeft = false
-                isMoving2 = false
-            }
-        }
-    }
-
-    Connections {
-        target: director.p1Model
+        function onJumpFinished() { p1Jumping = false; resumeP1Movement() }
+        function onAttackFinished() { p1Attacking = false; resumeP1Movement() }
+        function onHurtFinished() { p1Attacking = false; p1Jumping = false; p1Crouching = false; resumeP1Movement() }
+        function onDodgeFinished() { p1Attacking = false; resumeP1Movement() }
         function onPosXRatioChanged() { director.updateCamera() }
     }
 
     Connections {
         target: director.p2Model
+        function onJumpFinished() { p2Jumping = false; resumeP2Movement() }
+        function onAttackFinished() { p2Attacking = false; resumeP2Movement() }
+        function onHurtFinished() { p2Attacking = false; p2Jumping = false; p2Crouching = false; resumeP2Movement() }
+        function onDodgeFinished() { p2Attacking = false; resumeP2Movement() }
         function onPosXRatioChanged() { director.updateCamera() }
     }
 

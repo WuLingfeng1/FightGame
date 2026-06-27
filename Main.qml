@@ -18,6 +18,24 @@ ApplicationWindow {
     title: "FIGHT GAME"
     color: "whitesmoke"
 
+    component MenuButton: Button {
+        flat: true
+        implicitWidth: 120
+        contentItem: Text {
+            text: parent.text
+            font.pixelSize: 14
+            color: "black"
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+        }
+        background: Rectangle {
+            color: parent.hovered ? "lightgray" : "white"
+            border.color: parent.hovered ? "dimgray" : "gray"
+            border.width: 1
+            radius: 2
+        }
+    }
+
     // 全局键位配置实例
     KeyBindingConfig {
         id: globalKeyBindings
@@ -58,84 +76,21 @@ ApplicationWindow {
                 anchors.margins: 40
                 spacing: 8
 
-                Button {
-                    id: btnLocal
+                MenuButton {
                     text: "Local Two-Player"
-                    width: 120; flat: true
-
-                    contentItem: Text {
-                        text: btnLocal.text; font.pixelSize: 14; color: "black"
-                        horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
-                    }
-                    background: Rectangle {
-                        color: btnLocal.hovered ? "lightgray" : "white"
-                        border.color: btnLocal.hovered ? "dimgray" : "gray"
-                        border.width: 1; radius: 2
-                    }
-
-                    onClicked: stackView.push(
-                        "SelectScreen.qml",
-                        { "stackViewRef": stackView }
-                    )
+                    onClicked: stackView.push("SelectScreen.qml", { "stackViewRef": stackView })
                 }
-
-                Button {
-                    id: btnOnline
+                MenuButton {
                     text: "Online Two-Player"
-                    width: 120; flat: true
-
-                    contentItem: Text {
-                        text: btnOnline.text; font.pixelSize: 14; color: "black"
-                        horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
-                    }
-                    background: Rectangle {
-                        color: btnOnline.hovered ? "lightgray" : "white"
-                        border.color: btnOnline.hovered ? "dimgray" : "gray"
-                        border.width: 1; radius: 2
-                    }
-
-                    onClicked: stackView.push(
-                        "OnlineLobby.qml",
-                        { "stackViewRef": stackView }
-                    )
+                    onClicked: stackView.push("OnlineLobby.qml", { "stackViewRef": stackView })
                 }
-
-                Button {
-                    id: btnKeySettings
+                MenuButton {
                     text: "Key Settings"
-                    width: 120; flat: true
-
-                    contentItem: Text {
-                        text: btnKeySettings.text; font.pixelSize: 14; color: "black"
-                        horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
-                    }
-                    background: Rectangle {
-                        color: btnKeySettings.hovered ? "lightgray" : "white"
-                        border.color: btnKeySettings.hovered ? "dimgray" : "gray"
-                        border.width: 1; radius: 2
-                    }
-
-                    onClicked: stackView.push(
-                        "KeyBindingScreen.qml",
-                        { "stackViewRef": stackView, "keyBindingConfig": globalKeyBindings }
-                    )
+                    onClicked: stackView.push("KeyBindingScreen.qml", { "stackViewRef": stackView, "keyBindingConfig": globalKeyBindings })
                 }
-
-                Button {
-                    id: btnExit
+                MenuButton {
                     text: "EXIT"
-                    width: 120; flat: true
                     onClicked: Qt.quit()
-
-                    contentItem: Text {
-                        text: btnExit.text; font.pixelSize: 14; color: "black"
-                        horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
-                    }
-                    background: Rectangle {
-                        color: btnExit.hovered ? "lightgray" : "white"
-                        border.color: btnExit.hovered ? "dimgray" : "gray"
-                        border.width: 1; radius: 2
-                    }
                 }
             }
         }

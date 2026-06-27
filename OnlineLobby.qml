@@ -75,7 +75,7 @@ Item {
 
         Rectangle {
             width: 140 * fitScale; height: 36 * fitScale
-            color: isHost ? "black" : Qt.rgba(0, 0, 0, 0.5)
+            color: "black"
             border.color: isHost ? accent : "dimgray"
             border.width: 1; radius: 4
 
@@ -94,7 +94,7 @@ Item {
 
         Rectangle {
             width: 140 * fitScale; height: 36 * fitScale
-            color: !isHost ? "black" : Qt.rgba(0, 0, 0, 0.5)
+            color: "black"
             border.color: !isHost ? accent : "dimgray"
             border.width: 1; radius: 4
 
@@ -123,7 +123,7 @@ Item {
 
         Rectangle {
             anchors.fill: parent
-            color: Qt.rgba(0, 0, 0, 0.6)
+            color: "black"
             border.color: "dimgray"; border.width: 1; radius: 6
         }
 
@@ -215,7 +215,7 @@ Item {
 
         Rectangle {
             anchors.fill: parent
-            color: Qt.rgba(0, 0, 0, 0.6)
+            color: "black"
             border.color: "dimgray"; border.width: 1; radius: 6
         }
 
@@ -446,7 +446,7 @@ Item {
 
         Rectangle {
             anchors.fill: parent
-            color: Qt.rgba(0, 0, 0, 0.7)
+            color: "black"
             MouseArea { anchors.fill: parent }
         }
 
@@ -520,7 +520,7 @@ Item {
                 Rectangle {
                     width: 110 * fitScale
                     height: 34 * fitScale
-                    color: manualIp !== "" ? "black" : Qt.rgba(0,0,0,0.3)
+                    color: "black"
                     border.color: manualIp !== "" ? accent : "dimgray"
                     border.width: 2
                     radius: 4

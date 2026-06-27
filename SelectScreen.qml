@@ -108,31 +108,6 @@ Item {
     onLockedP1Changed: refresh()
     onLockedP2Changed: refresh()
 
-    Connections {
-        id: netConn
-        target: networkMgr
-        enabled: isOnline && networkMgr !== null
-
-        function onMessageReceived(msg) {
-            if (msg.type === "p1_select") {
-                var idx = findCharIdx(msg.cid)
-                if (idx >= 0) {
-                    lockedP1 = idx
-                    currentTurn = 2
-                }
-            } else if (msg.type === "p2_select") {
-                var idx = findCharIdx(msg.cid)
-                if (idx >= 0) {
-                    lockedP2 = idx
-                    currentTurn = 0
-                }
-            } else if (msg.type === "fight_start") {
-                opponentFightReady = true
-                if (fightReady) startFightOnline()
-            }
-        }
-    }
-
     Rectangle { anchors.fill: parent; color: "black" }
 
     property real fitScale: Math.min(root.width / 900, root.height / 640)
@@ -216,7 +191,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         y: parent.height * 0.67
         width: 200 * fitScale; height: 30 * fitScale
-        color: Qt.rgba(0, 0, 0, 0.55); radius: 4
+        color: "black"; radius: 4
         Text {
             id: statusHint
             anchors.centerIn: parent
@@ -259,9 +234,10 @@ Item {
                     fillMode: Image.PreserveAspectFit
                     source: characters[index].avatar
                 }
-                MouseArea {
-                    anchors.fill: parent; cursorShape: Qt.PointingHandCursor
-                    onClicked: {
+                TapHandler {
+                    gesturePolicy: TapHandler.ReleaseWithinBounds
+                    cursorShape: Qt.PointingHandCursor
+                    onTapped: {
                         if (currentTurn === 0) return
                         if (currentTurn === 1 && lockedP1 >= 0) return
                         if (currentTurn === 2 && lockedP2 >= 0) return

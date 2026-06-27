@@ -136,23 +136,18 @@ Item {
                 }
 
                 Button {
-                    id: p1Btn
                     text: { refreshCounter; return keyDisplayName(keyBindingConfig.getBinding("P1", modelData)) }
                     width: 100; height: 30
-
                     contentItem: Text {
-                        text: p1Btn.text; font.pixelSize: 12; color: "black"
+                        text: parent.text; font.pixelSize: 12; color: "black"
                         horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
                     }
                     background: Rectangle {
-                        color: p1Btn.hovered ? "lightgray" : "white"
-                        border.color: p1Btn.hovered ? "dimgray" : "gray"
+                        color: parent.hovered ? "lightgray" : "white"
+                        border.color: parent.hovered ? "dimgray" : "gray"
                         border.width: 1; radius: 2
                     }
-
-                    onClicked: {
-                        startWaitingKey("P1", modelData)
-                    }
+                    onClicked: { startWaitingKey("P1", modelData) }
                 }
             }
         }
@@ -187,23 +182,18 @@ Item {
                 }
 
                 Button {
-                    id: p2Btn
                     text: { refreshCounter; return keyDisplayName(keyBindingConfig.getBinding("P2", modelData)) }
                     width: 100; height: 30
-
                     contentItem: Text {
-                        text: p2Btn.text; font.pixelSize: 12; color: "black"
+                        text: parent.text; font.pixelSize: 12; color: "black"
                         horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
                     }
                     background: Rectangle {
-                        color: p2Btn.hovered ? "lightgray" : "white"
-                        border.color: p2Btn.hovered ? "dimgray" : "gray"
+                        color: parent.hovered ? "lightgray" : "white"
+                        border.color: parent.hovered ? "dimgray" : "gray"
                         border.width: 1; radius: 2
                     }
-
-                    onClicked: {
-                        startWaitingKey("P2", modelData)
-                    }
+                    onClicked: { startWaitingKey("P2", modelData) }
                 }
             }
         }

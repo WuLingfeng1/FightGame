@@ -62,6 +62,12 @@ void FightDirector::start(const QString &p1CharId, const QString &p2CharId)
     m_p1Model->m_rootHeight = m_rootHeight;
     m_p2Model->m_rootHeight = m_rootHeight;
 
+    // P1始终在左侧朝右, P2始终在右侧朝左
+    m_p1Model->setPosXRatio(0.22);
+    m_p1Model->setFacingLeft(false);
+    m_p2Model->setPosXRatio(0.78);
+    m_p2Model->setFacingLeft(true);
+
     m_phase = Opening_P1;
     emit phaseChanged();
 
@@ -81,6 +87,12 @@ void FightDirector::resetForNewRound(const QString &p1CharId, const QString &p2C
 
     m_p1Model->m_rootHeight = m_rootHeight;
     m_p2Model->m_rootHeight = m_rootHeight;
+
+    // P1始终在左侧朝右, P2始终在右侧朝左
+    m_p1Model->setPosXRatio(0.22);
+    m_p1Model->setFacingLeft(false);
+    m_p2Model->setPosXRatio(0.78);
+    m_p2Model->setFacingLeft(true);
 
     // 直接进入战斗阶段，跳过开场动画
     m_phase = Fighting;
@@ -219,39 +231,6 @@ bool FightDirector::checkCollision()
             int finalKnockback = m_p2Model->m_currentAnim.knockbackDistance;
             if (m_p1Model->isBlocking()) {
                 finalDamage = std::max(1, finalDamage / 2); // 50%减伤
-                finalKnockback /= 2;
-            }
-            m_p1Model->m_knockbackToApply = finalKnockback;
-            emit hitDetected(2, finalDamage);
-            anyHit = true;
-        }
-    }
-
-    // 检查 P2 是否攻击 P1
-    if (m_p2Model->isAttacking() && m_p2Model->isAttackActive() && m_p1Model->state() != CharacterModel::Dodge) {
-        double hitNormX = m_p2Model->hitboxX();
-        double hitY = m_p2Model->hitboxY();
-        double hitR = m_p2Model->hitboxRadius();
-
-        double hurtNormX = m_p1Model->hurtboxX();
-        double hurtY = m_p1Model->hurtboxY();
-        double hurtW = m_p1Model->hurtboxW();
-        double hurtH = m_p1Model->hurtboxH();
-
-        double hitPx = hitNormX * windowW;
-        double hurtPx = hurtNormX * windowW;
-
-        bool hitX = (hitPx + hitR >= hurtPx - hurtW / 2) && (hitPx - hitR <= hurtPx + hurtW / 2);
-        bool hitYRange = (hitY + hitR >= hurtY - hurtH / 2) && (hitY - hitR <= hurtY + hurtH / 2);
-
-        if (hitX && hitYRange) {
-            m_p2Model->m_hitThisAttack = true;
-            int finalDamage = m_p2Model->m_currentAnim.damage;
-            int finalKnockback = m_p2Model->m_currentAnim.knockbackDistance;
-            qDebug() << "[Hit] P2->P1 state=" << m_p2Model->state() << "dmg=" << finalDamage << "kb=" << finalKnockback
-                     << "atkFrames=" << m_p2Model->m_currentAnim.attackFrames << "frame=" << m_p2Model->currentFrame();
-            if (m_p1Model->isBlocking()) {
-                finalDamage = std::max(1, finalDamage / 4);
                 finalKnockback /= 2;
             }
             m_p1Model->m_knockbackToApply = finalKnockback;
