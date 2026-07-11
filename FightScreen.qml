@@ -938,6 +938,22 @@ Item {
         if (roundEnding) return
         if (p1Health <= 0 || p2Health <= 0 || timerSeconds <= 0) {
             roundEnding = true
+
+            // 停止移动动画，防止角色原地做行走动作
+            moveTimer.stop()
+            moveTimer.moveRight = false
+            moveTimer.moveLeft = false
+            isMoving = false
+
+            moveTimer2.stop()
+            moveTimer2.moveRight = false
+            moveTimer2.moveLeft = false
+            isMoving2 = false
+
+            // 让角色回到站立状态
+            director.p1Model.playStand()
+            director.p2Model.playStand()
+
             if (p1Health <= 0 && p2Health > 0) {
                 p2Wins++
             } else if (p2Health <= 0 && p1Health > 0) {
@@ -1029,7 +1045,7 @@ Item {
     property bool p2LightKickPressed: false
 
     Keys.onPressed: (event) => {
-        if (event.isAutoRepeat || director.phase !== FightDirector.Fighting || resettingRound) return
+        if (event.isAutoRepeat || director.phase !== FightDirector.Fighting || resettingRound || roundEnding) return
         if (isOnline) {
             var isP1Key = isKeyMatch(event, "P1", "moveLeft") || isKeyMatch(event, "P1", "moveRight") || isKeyMatch(event, "P1", "jump") || isKeyMatch(event, "P1", "crouch") || isKeyMatch(event, "P1", "lightPunch") || isKeyMatch(event, "P1", "lightKick") || isKeyMatch(event, "P1", "heavyPunch") || isKeyMatch(event, "P1", "heavyKick") || isKeyMatch(event, "P1", "heavyStrike") || isKeyMatch(event, "P1", "block")
             if (isHost && !isP1Key) return
@@ -1038,7 +1054,7 @@ Item {
         handleKeyEvent(event, true)
     }
     Keys.onReleased: (event) => {
-        if (event.isAutoRepeat || director.phase !== FightDirector.Fighting || resettingRound) return
+        if (event.isAutoRepeat || director.phase !== FightDirector.Fighting || resettingRound || roundEnding) return
         if (isOnline) {
             var isP1Key = isKeyMatch(event, "P1", "moveLeft") || isKeyMatch(event, "P1", "moveRight") || isKeyMatch(event, "P1", "crouch") || isKeyMatch(event, "P1", "lightPunch") || isKeyMatch(event, "P1", "lightKick") || isKeyMatch(event, "P1", "block")
             if (isHost && !isP1Key) return
