@@ -107,6 +107,24 @@ Item {
     onPreviewP2Changed: refresh()
     onLockedP1Changed: refresh()
     onLockedP2Changed: refresh()
+    // 在线选人消息处理
+        Connections {
+            target: networkMgr
+            enabled: isOnline && networkMgr !== null
+
+            function onMessageReceived(msg) {
+                if (msg.type === "p1_select") {
+                    lockedP1 = findCharIdx(msg.cid)
+                    if (!isHost) currentTurn = 2
+                } else if (msg.type === "p2_select") {
+                    lockedP2 = findCharIdx(msg.cid)
+                    if (isHost) currentTurn = 0
+                } else if (msg.type === "fight_start") {
+                    opponentFightReady = true
+                    if (fightReady) startFightOnline()
+                }
+            }
+        }
 
     Rectangle { anchors.fill: parent; color: "black" }
 
