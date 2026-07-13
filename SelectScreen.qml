@@ -291,7 +291,7 @@ Item {
                     if (!stackViewRef) return
                     var p1 = characters[lockedP1]
                     var p2 = characters[lockedP2]
-                    var comp = Qt.createComponent("qrc:/qt/qml/FightGame/FightScreen.qml")
+                    var comp = Qt.createComponent("qrc:/qt/qml/FightGame/StageSelectScreen.qml")
                     if (comp.status === Component.Ready) {
                         var props = {
                             "stackViewRef": stackViewRef,

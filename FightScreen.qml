@@ -19,6 +19,7 @@
 //     [v0.2.3]     2026-06-22 11:12:32   新增站立防御系统(StandBlock)+75%减伤机制
 //     [v0.2.4]     2026-06-25 14:38:16   新增键位修改功能
 //     [v0.2.5]     2026-06-25 15:01:36   新增应用程序控制器单例类AppController
+//     [v0.2.6]     2026-07-13 15:55:23   新增地图选择功能
 import QtQuick
 import QtQuick.Controls
 import FightGame
@@ -38,6 +39,8 @@ Item {
     property string p2Avatar:   ""
     property string p2Portrait: ""
     property string p2CharId:   ""
+
+    property string stageId: "Monaco"
 
     property bool isOnline: false
     property bool isHost: false
@@ -1077,10 +1080,10 @@ Item {
         z: 0
 
         AnimatedImage {
-            id: monacoGif
+            id: stageGif
             width: parent.width * 2
             height: parent.height
-            source: "qrc:/images/FightBackGround/Monaco.gif"
+            source: "qrc:/images/FightBackGround/" + stageId + ".gif"
             fillMode: Image.PreserveAspectCrop
             smooth: false
             mipmap: false

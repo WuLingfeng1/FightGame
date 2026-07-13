@@ -14,6 +14,7 @@ qt_add_qml_module(appFightGame
     SOURCES appcontroller.h appcontroller.cpp
     QML_FILES   Main.qml
     QML_FILES SelectScreen.qml
+    QML_FILES StageSelectScreen.qml
     QML_FILES FightScreen.qml
     QML_FILES OnlineLobby.qml
     QML_FILES KeyBindingScreen.qml
@@ -99,6 +100,7 @@ qt_add_resources(appFightGame "appresources"
         images/Attack/1.png
         images/Attack/2.png
         images/Attack/3.png
+        images/FightBackGround/jiulong.gif
 )
 
 target_compile_features(appFightGame PRIVATE cxx_std_23)
