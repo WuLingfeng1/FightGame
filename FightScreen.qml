@@ -1059,7 +1059,7 @@ Item {
     Keys.onReleased: (event) => {
         if (event.isAutoRepeat || director.phase !== FightDirector.Fighting || resettingRound || roundEnding) return
         if (isOnline) {
-            var isP1Key = isKeyMatch(event, "P1", "moveLeft") || isKeyMatch(event, "P1", "moveRight") || isKeyMatch(event, "P1", "crouch") || isKeyMatch(event, "P1", "lightPunch") || isKeyMatch(event, "P1", "lightKick") || isKeyMatch(event, "P1", "block")
+            var isP1Key = isKeyMatch(event, "P1", "moveLeft") || isKeyMatch(event, "P1", "moveRight") || isKeyMatch(event, "P1", "jump") || isKeyMatch(event, "P1", "crouch") || isKeyMatch(event, "P1", "lightPunch") || isKeyMatch(event, "P1", "lightKick") || isKeyMatch(event, "P1", "heavyPunch") || isKeyMatch(event, "P1", "heavyKick") || isKeyMatch(event, "P1", "heavyStrike") || isKeyMatch(event, "P1", "block")
             if (isHost && !isP1Key) return
             if (!isHost && isP1Key) return
         }
