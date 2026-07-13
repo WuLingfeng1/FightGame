@@ -361,8 +361,8 @@ Item {
                 p1SyncFramesLeft--
             }
             director.p1Model.posXRatio += (p1SyncTargetX - director.p1Model.posXRatio) * 0.05
-            // P2(本地): 12%温和修正防止与主机长期漂移, 不影响本地输入手感
-            director.p2Model.posXRatio += (p2SyncTargetX - director.p2Model.posXRatio) * 0.12
+            // P2(本地): 3%温和修正防止与主机长期漂移, 不影响本地输入手感
+            director.p2Model.posXRatio += (p2SyncTargetX - director.p2Model.posXRatio) * 0.03
             director.updateCamera()
         }
     }
@@ -443,14 +443,14 @@ Item {
         id: p1ComboTimer
         interval: 100
         onTriggered: {
-            if (p1WaitingCombo) {
+                if (p1WaitingCombo) {
                 p1WaitingCombo = false
                 if (p1ComboKeyJ) {
                     startAttack1()
-                    sendInput("light_punch")
+                    if (!isOnline || isHost) sendInput("light_punch")
                 } else {
                     startAttackLightKick1()
-                    sendInput("light_kick")
+                    if (!isOnline || isHost) sendInput("light_kick")
                 }
             }
         }
@@ -463,10 +463,10 @@ Item {
                     p2WaitingCombo = false
                     if (p2ComboKeyJ) {
                         startAttack2()
-                        sendInput("light_punch")
+                        if (!isOnline || !isHost) sendInput("light_punch")
                     } else {
                         startAttackLightKick2()
-                        sendInput("light_kick")
+                        if (!isOnline || !isHost) sendInput("light_kick")
                     }
             }
         }
