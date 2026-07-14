@@ -20,9 +20,6 @@ private:
     explicit AppController(QObject *parent = nullptr);
     ~AppController();
 
-    AppController(const AppController&) = delete;
-    AppController& operator=(const AppController&) = delete;
-
     QGuiApplication *m_app;
     QQmlApplicationEngine *m_engine;
 };
