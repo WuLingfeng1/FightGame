@@ -17,17 +17,17 @@ FightDirector::FightDirector(QObject *parent)
     connect(m_p1Model, &CharacterModel::openingFinished, this, &FightDirector::onP1OpeningFinished);
     connect(m_p2Model, &CharacterModel::openingFinished, this, &FightDirector::onP2OpeningFinished);
 
-    QFile file("/root/gedou/FightGame/config/characters.json");
+    QFile file(":/config/characters.json");
     if (file.open(QIODevice::ReadOnly)) {
         m_jsonConfig = QJsonDocument::fromJson(file.readAll()).object();
         file.close();
     } else {
-        qWarning() << "[FightDirector] Cannot load characters.json from: /wlf/FightGame/config/characters.json";
+        qWarning() << "[FightDirector] Cannot load characters.json";
     }
 
-    // 加载键位配置
-    if (!m_keyBindings->loadFromFile("/root/gedou/FightGame/config/keybindings.json")) {
-        qWarning() << "[FightDirector] Cannot load keybindings.json, using defaults";
+    // 加载键位配置: 优先读外部文件, 回退到资源默认
+    if (!m_keyBindings->loadFromFile("/wlf/FightGame/config/keybindings.json")) {
+        m_keyBindings->loadFromFile(":/config/keybindings.json");
     }
 }
 
@@ -35,7 +35,9 @@ FightDirector::FightDirector(QObject *parent)
 void FightDirector::reloadKeyBindings()
 {
     if (m_keyBindings) {
-        m_keyBindings->loadFromFile("/root/gedou/FightGame/config/keybindings.json");
+        if (!m_keyBindings->loadFromFile("/wlf/FightGame/config/keybindings.json")) {
+            m_keyBindings->loadFromFile(":/config/keybindings.json");
+        }
     }
 }
 

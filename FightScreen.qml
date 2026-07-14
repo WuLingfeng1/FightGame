@@ -29,7 +29,7 @@ Item {
     focus: true
     activeFocusOnTab: true
 
-    // 场景属性, 由 SelectScreen 传入
+    // 外部传入属性
     property var    stackViewRef: null
     property string p1Name:     ""
     property string p1Avatar:   ""
@@ -39,14 +39,55 @@ Item {
     property string p2Avatar:   ""
     property string p2Portrait: ""
     property string p2CharId:   ""
-
     property string stageId: "Monaco"
+    property bool   isOnline: false
+    property bool   isHost: false
+    property var    networkMgr: null
 
-    property bool isOnline: false
-    property bool isHost: false
-    property var networkMgr: null
+    // 游戏状态
+    property real fitScale: Math.min(root.width / 900, root.height / 640)
+    property real moveStep: 0.008
+    property real bodyCollisionDist: 0.15
+    property int  p1Health: 100
+    property int  p2Health: 100
+    property int  timerSeconds: 60
+    property int  p1Wins: 0
+    property int  p2Wins: 0
+    property int  currentRound: 1
+    property bool roundEnding: false
+    property bool resettingRound: false
+    property bool p1Blocking: false
+    property bool p2Blocking: false
+    property bool isMoving: false
+    property bool p1Jumping: false
+    property bool p1Attacking: false
+    property bool p1Crouching: false
+    property bool moveLeftPressed: false
+    property bool moveRightPressed: false
+    property string p1CurrentAnim: ""
+    property bool isMoving2: false
+    property bool p2Jumping: false
+    property bool p2Attacking: false
+    property bool p2Crouching: false
+    property bool moveLeft2Pressed: false
+    property bool moveRight2Pressed: false
+    property string p2CurrentAnim: ""
+    property bool p1WaitingCombo: false
+    property bool p2WaitingCombo: false
+    property bool p1ComboKeyJ: true
+    property bool p2ComboKeyJ: true
+    property bool p1LightPunchPressed: false
+    property bool p1LightKickPressed: false
+    property bool p2LightPunchPressed: false
+    property bool p2LightKickPressed: false
+    property real p1SyncTargetX: 0.0
+    property real p2SyncTargetX: 0.0
+    property bool syncPosReady: false
+    property real p1SyncPrevX: 0.0
+    property real p1SyncStep: 0.0
+    property int  p1SyncFramesLeft: 0
 
-    // 将键名转换为 Qt.Key 值
+    // 键位工具
     function getKeyCode(keyName) {
         var keyMap = {
             "A": Qt.Key_A, "B": Qt.Key_B, "C": Qt.Key_C, "D": Qt.Key_D,
@@ -69,7 +110,6 @@ Item {
         return keyMap[keyName] || 0
     }
 
-    // 检查按键是否匹配配置
     function isKeyMatch(event, player, action) {
         var configuredKey = director.keyBindings.getBinding(player, action)
         if (!configuredKey) return false
@@ -87,8 +127,9 @@ Item {
         networkMgr.sendMessage(msg)
     }
 
+    // 输入处理
     function handleKeyEvent(event, pressed) {
-        var keyAct = ["moveRight","moveLeft","crouch","jump","lightPunch","lightKick","heavyPunch","heavyKick","heavyStrike","block"]
+        var keyAct   = ["moveRight","moveLeft","crouch","jump","lightPunch","lightKick","heavyPunch","heavyKick","heavyStrike","block"]
         var protoAct = ["move_right","move_left","crouch","jump","light_punch","light_kick","heavy_punch","heavy_kick","heavy_strike","block"]
         for (var i = 0; i < keyAct.length; i++) {
             if (isKeyMatch(event, "P1", keyAct[i])) {
@@ -119,94 +160,108 @@ Item {
     function performAction(player, action, pressed) {
         var isP1 = (player === "P1")
         if (action === "move_right") {
-            if (isP1) {
-                if (pressed) startMoveRight();
-                else stopMoveRight();
-            } else {
-                if (pressed) startMoveRight2();
-                else stopMoveRight2();
-            }
+            if (isP1) { if (pressed) startMoveRight(); else stopMoveRight() }
+            else      { if (pressed) startMoveRight2(); else stopMoveRight2() }
         } else if (action === "move_left") {
-            if (isP1) {
-                if (pressed) startMoveLeft();
-                else stopMoveLeft();
-            } else {
-                if (pressed) startMoveLeft2();
-                else stopMoveLeft2();
-            }
+            if (isP1) { if (pressed) startMoveLeft(); else stopMoveLeft() }
+            else      { if (pressed) startMoveLeft2(); else stopMoveLeft2() }
         } else if (action === "crouch") {
-            if (isP1) {
-                if (pressed) startCrouch1();
-                else stopCrouch1();
-            } else {
-                if (pressed) startCrouch2();
-                else stopCrouch2();
-            }
+            if (isP1) { if (pressed) startCrouch1(); else stopCrouch1() }
+            else      { if (pressed) startCrouch2(); else stopCrouch2() }
         } else if (action === "jump") {
-            if (isP1) startJump();
-            else startJump2();
+            if (isP1) startJump(); else startJump2()
         } else if (action === "light_punch") {
-            if (isP1) handleP1LightPunch();
-            else handleP2LightPunch();
+            if (isP1) handleP1LightPunch(); else handleP2LightPunch()
         } else if (action === "light_kick") {
-            if (isP1) handleP1LightKick();
-            else handleP2LightKick();
+            if (isP1) handleP1LightKick(); else handleP2LightKick()
         } else if (action === "heavy_punch") {
-            if (isP1) startAttackHeavyPunch1();
-            else startAttackHeavyPunch2();
+            if (isP1) startAttackHeavyPunch1(); else startAttackHeavyPunch2()
         } else if (action === "heavy_kick") {
-            if (isP1) startAttackHeavyKick1();
-            else startAttackHeavyKick2();
+            if (isP1) startAttackHeavyKick1(); else startAttackHeavyKick2()
         } else if (action === "heavy_strike") {
-            if (isP1) startAttackHeavyStrike1();
-            else startAttackHeavyStrike2();
+            if (isP1) startAttackHeavyStrike1(); else startAttackHeavyStrike2()
         } else if (action === "block") {
             if (pressed) {
                 if (isP1) {
                     p1Blocking = true
-                    if (!p1Jumping && !p1Attacking && !p1Crouching) { director.p1Model.playStandBlock(); moveTimer.stop(); isMoving = false }
+                    if (!p1Jumping && !p1Attacking && !p1Crouching) {
+                        director.p1Model.playStandBlock()
+                        moveTimer.stop()
+                        isMoving = false
+                    }
                 } else {
                     p2Blocking = true
-                    if (!p2Jumping && !p2Attacking && !p2Crouching) { director.p2Model.playStandBlock(); moveTimer2.stop(); isMoving2 = false }
+                    if (!p2Jumping && !p2Attacking && !p2Crouching) {
+                        director.p2Model.playStandBlock()
+                        moveTimer2.stop()
+                        isMoving2 = false
+                    }
                 }
             } else {
-                if (isP1) { p1Blocking = false; if (director.p1Model.state === 16) director.p1Model.releaseStandBlock() }
-                else { p2Blocking = false; if (director.p2Model.state === 16) director.p2Model.releaseStandBlock() }
+                if (isP1) {
+                    p1Blocking = false
+                    if (director.p1Model.state === 16) director.p1Model.releaseStandBlock()
+                } else {
+                    p2Blocking = false
+                    if (director.p2Model.state === 16) director.p2Model.releaseStandBlock()
+                }
             }
         } else if (action === "dodge_forward") {
-            if (isP1) startDodge1(true);
-            else startDodge2(true);
+            if (isP1) startDodge1(true); else startDodge2(true)
         } else if (action === "dodge_backward") {
-            if (isP1) startDodge1(false);
-            else startDodge2(false);
+            if (isP1) startDodge1(false); else startDodge2(false)
         }
     }
 
     function handleP1LightPunch() {
         p1LightPunchPressed = true
         if (p1WaitingCombo && p1LightKickPressed && (moveRightPressed || moveLeftPressed)) {
-            p1ComboTimer.stop(); p1WaitingCombo = false; startDodge1(getP1DodgeForward())
-        } else { p1ComboKeyJ = true; p1WaitingCombo = true; p1ComboTimer.restart() }
+            p1ComboTimer.stop()
+            p1WaitingCombo = false
+            startDodge1(getP1DodgeForward())
+        } else {
+            p1ComboKeyJ = true
+            p1WaitingCombo = true
+            p1ComboTimer.restart()
+        }
     }
     function handleP1LightKick() {
         p1LightKickPressed = true
         if (p1WaitingCombo && p1LightPunchPressed && (moveRightPressed || moveLeftPressed)) {
-            p1ComboTimer.stop(); p1WaitingCombo = false; startDodge1(getP1DodgeForward())
-        } else { p1ComboKeyJ = false; p1WaitingCombo = true; p1ComboTimer.restart() }
+            p1ComboTimer.stop()
+            p1WaitingCombo = false
+            startDodge1(getP1DodgeForward())
+        } else {
+            p1ComboKeyJ = false
+            p1WaitingCombo = true
+            p1ComboTimer.restart()
+        }
     }
     function handleP2LightPunch() {
         p2LightPunchPressed = true
         var dir1 = moveRight2Pressed || moveLeft2Pressed
         if (p2WaitingCombo && p2LightKickPressed) {
-            p2ComboTimer.stop(); p2WaitingCombo = false; startDodge2(dir1 ? getP2DodgeForward() : true)
-        } else { p2ComboKeyJ = true; p2WaitingCombo = true; p2ComboTimer.restart() }
+            p2ComboTimer.stop()
+            p2WaitingCombo = false
+            startDodge2(dir1 ? getP2DodgeForward() : true)
+        } else {
+            p2ComboKeyJ = true
+            p2WaitingCombo = true
+            p2ComboTimer.restart()
+        }
     }
     function handleP2LightKick() {
         p2LightKickPressed = true
         var dir2 = moveRight2Pressed || moveLeft2Pressed
         if (p2WaitingCombo && p2LightPunchPressed) {
-            p2ComboTimer.stop(); p2WaitingCombo = false; startDodge2(dir2 ? getP2DodgeForward() : true)
-        } else { p2ComboKeyJ = false; p2WaitingCombo = true; p2ComboTimer.restart() }
+            p2ComboTimer.stop()
+            p2WaitingCombo = false
+            startDodge2(dir2 ? getP2DodgeForward() : true)
+        } else {
+            p2ComboKeyJ = false
+            p2WaitingCombo = true
+            p2ComboTimer.restart()
+        }
     }
 
     function handleRemoteInput(action, pressed) {
@@ -243,258 +298,22 @@ Item {
         p2CurrentAnim = ""
     }
 
-    // 战斗导演与通用常量
-    FightDirector {
-        id: director
-        rootHeight: root.height
-        onHitDetected: function(attacker, damage) {
-            function playHurtByAttackType(targetModel, attackerState) {
-                if (attackerState === 7 || attackerState === 8) {
-                    targetModel.playHurt1()
-                } else if (attackerState === 9) {
-                    targetModel.playHurt3()
-                } else if (attackerState === 10) {
-                    targetModel.playHurt2()
-                } else {
-                    targetModel.playHurt()
-                }
-            }
-
-            if (attacker === 1) {
-                p2Health = Math.max(0, p2Health - damage)
-                if (!director.p2Model.isBlocking()) {
-                    playHurtByAttackType(director.p2Model, director.p1Model.state)
-                }
-                if (director.p1Model.state >= 7 && director.p1Model.state <= 11) attackVfx.play(director.p1Model, director.p2Model)
-            } else {
-                p1Health = Math.max(0, p1Health - damage)
-                if (!director.p1Model.isBlocking()) {
-                    playHurtByAttackType(director.p1Model, director.p2Model.state)
-                }
-                if (director.p2Model.state >= 7 && director.p2Model.state <= 11) attackVfx.play(director.p2Model, director.p1Model)
-            }
-            checkRoundEnd()
-
-            if (isOnline && isHost && networkMgr) {
-                networkMgr.sendMessage({
-                    "type": "hit",
-                    "attacker": attacker,
-                    "attackerState": attacker === 1 ? director.p1Model.state : director.p2Model.state,
-                    "damage": damage,
-                    "p1Health": p1Health,
-                    "p2Health": p2Health,
-                    "defenderBlocking": attacker === 1 ? director.p2Model.isBlocking() : director.p1Model.isBlocking()
-                })
-            }
-        }
-    }
-
-    // 碰撞检测定时器, 每33ms检测一次(约30fps)
-    // 联机模式下只在主机端运行碰撞检测, 客机接收主机的命中消息
-    Timer {
-        id: collisionTimer
-        interval: 33
-        repeat: true
-        running: director.phase === FightDirector.Fighting && !resettingRound && (!isOnline || isHost)
-        onTriggered: {
-            director.checkCollision()
-        }
-    }
-
-    // 倒计时定时器
-    Timer {
-        id: countdownTimer
-        interval: 1000
-        repeat: true
-        running: director.phase === FightDirector.Fighting && !roundEnding && !resettingRound
-        onTriggered: {
-            if (timerSeconds > 0) {
-                timerSeconds--
-            }
-            if (timerSeconds <= 0) {
-                checkRoundEnd()
-            }
-        }
-    }
-
-    // 联机状态同步定时器: 主机每33ms向客机同步完整游戏状态
-    Timer {
-        id: syncTimer
-        interval: 33
-        repeat: true
-        running: isOnline && isHost && director.phase === FightDirector.Fighting && !resettingRound
-        onTriggered: {
-            if (networkMgr) {
-                networkMgr.sendMessage({
-                    "type": "sync",
-                    "p1Health": p1Health,
-                    "p2Health": p2Health,
-                    "p1x": director.p1Model.posXRatio,
-                    "p2x": director.p2Model.posXRatio,
-                    "timerSeconds": timerSeconds,
-                    "p1Wins": p1Wins,
-                    "p2Wins": p2Wins,
-                    "currentRound": currentRound,
-                    "roundEnding": roundEnding
-                })
-            }
-        }
-    }
-
-    // 客机位置插值: 远程P1按sync推算的固定步长匀速推进(消除瞬移), 本地P2温和修正防漂移
-    property real p1SyncTargetX: 0.0
-    property real p2SyncTargetX: 0.0
-    property bool syncPosReady: false
-    property real p1SyncPrevX: 0.0
-    property real p1SyncStep: 0.0
-    property int p1SyncFramesLeft: 0
-
-    Timer {
-        id: posInterpTimer
-        interval: 16
-        repeat: true
-        running: isOnline && !isHost && syncPosReady && director.phase === FightDirector.Fighting && !resettingRound
-        onTriggered: {
-            // P1(远程): 按sync推算的每帧步长匀速推进, +5%微量修正消除累积漂移
-            if (p1SyncFramesLeft > 0) {
-                director.p1Model.posXRatio += p1SyncStep
-                p1SyncFramesLeft--
-            }
-            director.p1Model.posXRatio += (p1SyncTargetX - director.p1Model.posXRatio) * 0.05
-            // P2(本地): 3%温和修正防止与主机长期漂移, 不影响本地输入手感
-            director.p2Model.posXRatio += (p2SyncTargetX - director.p2Model.posXRatio) * 0.03
-            director.updateCamera()
-        }
-    }
-
-    property real fitScale: Math.min(root.width / 900, root.height / 640)
-    property real moveStep: 0.008
-    property real bodyCollisionDist: 0.15
-
-    property int p1Health: 100
-    property int p2Health: 100
-    property int timerSeconds: 60
-    property int p1Wins: 0
-    property int p2Wins: 0
-    property int currentRound: 1
-    property bool roundEnding: false
-    property bool resettingRound: false
-    property bool p1Blocking: false
-    property bool p2Blocking: false
-
-    property bool isMoving: false
-    property bool p1Jumping: false
-    property bool p1Attacking: false
-    property bool p1Crouching: false
-    property bool moveLeftPressed: false
-    property bool moveRightPressed: false
-    property string p1CurrentAnim: ""
-
-    property bool isMoving2: false
-    property bool p2Jumping: false
-    property bool p2Attacking: false
-    property bool p2Crouching: false
-    property bool moveLeft2Pressed: false
-    property bool moveRight2Pressed: false
-    property string p2CurrentAnim: ""
-
-    property bool p1WaitingCombo: false
-    property bool p2WaitingCombo: false
-    property bool p1ComboKeyJ: true
-    property bool p2ComboKeyJ: true
-
-    // P1 移动定时器, 每 16ms 更新一次位置
-    Timer {
-        id: moveTimer
-        interval: 16
-        repeat: true
-        running: false
-        property bool moveRight: false
-        property bool moveLeft: false
-        onTriggered: {
-            // 客机端 P1 由 sync 插值驱动位置, 不跑本地 moveTimer
-            if (isOnline && !isHost) return
-            var p1 = director.p1Model.posXRatio
-            var p2 = director.p2Model.posXRatio
-            if (moveRight) {
-                var maxPos = (p1 < p2) ? p2 - bodyCollisionDist : p2 + 0.95
-                maxPos = Math.min(maxPos, director.maxCameraOffset + 1.0)
-                director.p1Model.posXRatio = Math.min(p1 + moveStep, maxPos)
-            }
-            if (moveLeft) {
-                var minPos = (p1 > p2) ? p2 + bodyCollisionDist : p2 - 0.95
-                minPos = Math.max(minPos, 0)
-                director.p1Model.posXRatio = Math.max(p1 - moveStep, minPos)
-            }
-            director.updateCamera()
-            updateFacing()
-            var desired = ""
-            if (moveRight) desired = director.p1Model.facingLeft ? "backward" : "forward"
-            if (moveLeft)  desired = director.p1Model.facingLeft ? "forward" : "backward"
-            if (desired !== "" && desired !== p1CurrentAnim) {
-                p1CurrentAnim = desired
-                if (desired === "forward") director.p1Model.playForward()
-                else director.p1Model.playBackward()
-            }
-        }
-    }
-
-    Timer {
-        id: p1ComboTimer
-        interval: 100
-        onTriggered: {
-                if (p1WaitingCombo) {
-                p1WaitingCombo = false
-                if (p1ComboKeyJ) {
-                    startAttack1()
-                    if (!isOnline || isHost) sendInput("light_punch")
-                } else {
-                    startAttackLightKick1()
-                    if (!isOnline || isHost) sendInput("light_kick")
-                }
-            }
-        }
-    }
-    Timer {
-        id: p2ComboTimer
-        interval: 100
-        onTriggered: {
-                if (p2WaitingCombo) {
-                    p2WaitingCombo = false
-                    if (p2ComboKeyJ) {
-                        startAttack2()
-                        if (!isOnline || !isHost) sendInput("light_punch")
-                    } else {
-                        startAttackLightKick2()
-                        if (!isOnline || !isHost) sendInput("light_kick")
-                    }
-            }
-        }
-    }
-
-    // P1 闪避方向判断: 根据角色朝向决定前后
+    // 闪避方向
     function getP1DodgeForward() {
         var fwd = !director.p1Model.facingLeft
-        if (moveRightPressed && !moveLeftPressed) {
-            return fwd       // 右键 → 朝对手方向 = 前闪
-        } else if (moveLeftPressed && !moveRightPressed) {
-            return !fwd      // 左键 → 背离对手 = 后闪
-        }
-        return true  // 默认前闪
-    }
-
-    // P2 闪避方向判断
-    function getP2DodgeForward() {
-        var fwd = !director.p2Model.facingLeft
-        if (moveRight2Pressed && !moveLeft2Pressed) {
-            return fwd
-        } else if (moveLeft2Pressed && !moveRight2Pressed) {
-            return !fwd
-        }
+        if (moveRightPressed && !moveLeftPressed) return fwd
+        else if (moveLeftPressed && !moveRightPressed) return !fwd
         return true
     }
 
-    // P1 向右移动
+    function getP2DodgeForward() {
+        var fwd = !director.p2Model.facingLeft
+        if (moveRight2Pressed && !moveLeft2Pressed) return fwd
+        else if (moveLeft2Pressed && !moveRight2Pressed) return !fwd
+        return true
+    }
+
+    // P1 移动
     function startMoveRight() {
         moveRightPressed = true
         if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
@@ -513,7 +332,6 @@ Item {
             moveTimer.start()
         }
     }
-    // P1 向左移动
     function startMoveLeft() {
         moveLeftPressed = true
         if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
@@ -579,7 +397,7 @@ Item {
         }
     }
 
-    // P1 跳跃: 行走中按W触发对角跳(前跳/后跳), 站立时按W触发直跳
+    // P1 跳跃
     function startJump() {
         if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
         p1Jumping = true
@@ -597,7 +415,7 @@ Item {
         }
     }
 
-    // P1 轻拳攻击
+    // P1 攻击
     function startAttack1() {
         if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
         p1Attacking = true
@@ -608,8 +426,6 @@ Item {
         p1CurrentAnim = ""
         director.p1Model.playLightPunch()
     }
-
-    // P1 轻腿攻击
     function startAttackLightKick1() {
         if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
         p1Attacking = true
@@ -620,8 +436,6 @@ Item {
         p1CurrentAnim = ""
         director.p1Model.playLightKick()
     }
-
-    // P1 重拳攻击
     function startAttackHeavyPunch1() {
         if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
         p1Attacking = true
@@ -632,8 +446,6 @@ Item {
         p1CurrentAnim = ""
         director.p1Model.playHeavyPunch()
     }
-
-    // P1 重腿攻击
     function startAttackHeavyKick1() {
         if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
         p1Attacking = true
@@ -644,8 +456,6 @@ Item {
         p1CurrentAnim = ""
         director.p1Model.playHeavyKick()
     }
-
-    // P1 超重击攻击
     function startAttackHeavyStrike1() {
         if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
         p1Attacking = true
@@ -656,8 +466,6 @@ Item {
         p1CurrentAnim = ""
         director.p1Model.playHeavyStrike()
     }
-
-    // P1 闪避
     function startDodge1(forward) {
         if (p1Jumping) return
         p1Attacking = true
@@ -682,54 +490,14 @@ Item {
         p1CurrentAnim = ""
         director.p1Model.playCrouch()
     }
-
-    // P1 退出下蹲
     function stopCrouch1() {
         p1Crouching = false
         director.p1Model.stopCrouch()
-        // 恢复移动状态
-        if (moveRightPressed && !moveLeftPressed) {
-            startMoveRight()
-        } else if (moveLeftPressed && !moveRightPressed) {
-            startMoveLeft()
-        }
+        if (moveRightPressed && !moveLeftPressed) startMoveRight()
+        else if (moveLeftPressed && !moveRightPressed) startMoveLeft()
     }
 
-    // P2 移动定时器
-    Timer {
-        id: moveTimer2
-        interval: 16
-        repeat: true
-        running: false
-        property bool moveRight: false
-        property bool moveLeft: false
-        onTriggered: {
-            var p2 = director.p2Model.posXRatio
-            var p1 = director.p1Model.posXRatio
-            if (moveRight) {
-                var maxPos = (p2 < p1) ? p1 - bodyCollisionDist : p1 + 0.95
-                maxPos = Math.min(maxPos, director.maxCameraOffset + 1.0)
-                director.p2Model.posXRatio = Math.min(p2 + moveStep, maxPos)
-            }
-            if (moveLeft) {
-                var minPos = (p2 > p1) ? p1 + bodyCollisionDist : p1 - 0.95
-                minPos = Math.max(minPos, 0)
-                director.p2Model.posXRatio = Math.max(p2 - moveStep, minPos)
-            }
-            director.updateCamera()
-            updateFacing()
-            var desired = ""
-            if (moveRight) desired = director.p2Model.facingLeft ? "backward" : "forward"
-            if (moveLeft)  desired = director.p2Model.facingLeft ? "forward" : "backward"
-            if (desired !== "" && desired !== p2CurrentAnim) {
-                p2CurrentAnim = desired
-                if (desired === "forward") director.p2Model.playForward()
-                else director.p2Model.playBackward()
-            }
-        }
-    }
-
-    // P2 向右移动
+    // P2 移动
     function startMoveRight2() {
         moveRight2Pressed = true
         if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
@@ -748,7 +516,6 @@ Item {
             moveTimer2.start()
         }
     }
-    // P2 向左移动
     function startMoveLeft2() {
         moveLeft2Pressed = true
         if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
@@ -814,7 +581,7 @@ Item {
         }
     }
 
-    // P2 跳跃: 行走中按↑触发对角跳(前跳/后跳), 站立时按↑触发直跳
+    // P2 跳跃
     function startJump2() {
         if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
         p2Jumping = true
@@ -832,7 +599,7 @@ Item {
         }
     }
 
-    // P2 轻拳攻击
+    // P2 攻击
     function startAttack2() {
         if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
         p2Attacking = true
@@ -843,8 +610,6 @@ Item {
         p2CurrentAnim = ""
         director.p2Model.playLightPunch()
     }
-
-    // P2 轻腿攻击
     function startAttackLightKick2() {
         if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
         p2Attacking = true
@@ -855,8 +620,6 @@ Item {
         p2CurrentAnim = ""
         director.p2Model.playLightKick()
     }
-
-    // P2 重拳攻击
     function startAttackHeavyPunch2() {
         if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
         p2Attacking = true
@@ -867,8 +630,6 @@ Item {
         p2CurrentAnim = ""
         director.p2Model.playHeavyPunch()
     }
-
-    // P2 重腿攻击
     function startAttackHeavyKick2() {
         if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
         p2Attacking = true
@@ -879,8 +640,6 @@ Item {
         p2CurrentAnim = ""
         director.p2Model.playHeavyKick()
     }
-
-    // P2 超重击攻击
     function startAttackHeavyStrike2() {
         if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
         p2Attacking = true
@@ -891,8 +650,6 @@ Item {
         p2CurrentAnim = ""
         director.p2Model.playHeavyStrike()
     }
-
-    // P2 闪避
     function startDodge2(forward) {
         if (p2Jumping) return
         p2Attacking = true
@@ -917,32 +674,24 @@ Item {
         p2CurrentAnim = ""
         director.p2Model.playCrouch()
     }
-
-    // P2 退出下蹲
     function stopCrouch2() {
         p2Crouching = false
         director.p2Model.stopCrouch()
-        // 恢复移动状态
-        if (moveRight2Pressed && !moveLeft2Pressed) {
-            startMoveRight2()
-        } else if (moveLeft2Pressed && !moveRight2Pressed) {
-            startMoveLeft2()
-        }
+        if (moveRight2Pressed && !moveLeft2Pressed) startMoveRight2()
+        else if (moveLeft2Pressed && !moveRight2Pressed) startMoveLeft2()
     }
 
-    // 动态朝向: 始终面向对手
+    // 回合逻辑
     function updateFacing() {
         director.p1Model.facingLeft = (director.p1Model.posXRatio > director.p2Model.posXRatio)
         director.p2Model.facingLeft = (director.p2Model.posXRatio > director.p1Model.posXRatio)
     }
 
-    // 回合结束检查
     function checkRoundEnd() {
         if (roundEnding) return
         if (p1Health <= 0 || p2Health <= 0 || timerSeconds <= 0) {
             roundEnding = true
 
-            // 停止移动动画，防止角色原地做行走动作
             moveTimer.stop()
             moveTimer.moveRight = false
             moveTimer.moveLeft = false
@@ -953,7 +702,6 @@ Item {
             moveTimer2.moveLeft = false
             isMoving2 = false
 
-            // 让角色回到站立状态
             director.p1Model.playStand()
             director.p2Model.playStand()
 
@@ -983,7 +731,6 @@ Item {
         }
     }
 
-    // 回合重置
     function resetRound() {
         if (resettingRound || roundEnding === false) return
         resettingRound = true
@@ -994,7 +741,6 @@ Item {
         roundEnding = false
         director.resetForNewRound(p1CharId, p2CharId)
 
-        // 重置所有移动状态标志，防止回合间状态残留导致无法移动
         moveTimer.stop()
         moveTimer.moveRight = false
         moveTimer.moveLeft = false
@@ -1020,577 +766,6 @@ Item {
         p2CurrentAnim = ""
 
         resettingRound = false
-    }
-
-    // 回合重置定时器
-    Timer {
-        id: roundResetTimer
-        interval: 2000
-        onTriggered: resetRound()
-    }
-
-    // 比赛结果定时器
-    Timer {
-        id: matchResultTimer
-        interval: 3000
-        onTriggered: {
-            if (isOnline && isHost && networkMgr) {
-                networkMgr.sendMessage({"type": "match_end"})
-            }
-            if (stackViewRef) stackViewRef.pop()
-        }
-    }
-
-    // 键盘输入, 使用配置的键位
-    property bool p1LightPunchPressed: false
-    property bool p1LightKickPressed: false
-    property bool p2LightPunchPressed: false
-    property bool p2LightKickPressed: false
-
-    Keys.onPressed: (event) => {
-        if (event.isAutoRepeat || director.phase !== FightDirector.Fighting || resettingRound || roundEnding) return
-        if (isOnline) {
-            var isP1Key = isKeyMatch(event, "P1", "moveLeft") || isKeyMatch(event, "P1", "moveRight") || isKeyMatch(event, "P1", "jump") || isKeyMatch(event, "P1", "crouch") || isKeyMatch(event, "P1", "lightPunch") || isKeyMatch(event, "P1", "lightKick") || isKeyMatch(event, "P1", "heavyPunch") || isKeyMatch(event, "P1", "heavyKick") || isKeyMatch(event, "P1", "heavyStrike") || isKeyMatch(event, "P1", "block")
-            if (isHost && !isP1Key) return
-            if (!isHost && isP1Key) return
-        }
-        handleKeyEvent(event, true)
-    }
-    Keys.onReleased: (event) => {
-        if (event.isAutoRepeat || director.phase !== FightDirector.Fighting || resettingRound || roundEnding) return
-        if (isOnline) {
-            var isP1Key = isKeyMatch(event, "P1", "moveLeft") || isKeyMatch(event, "P1", "moveRight") || isKeyMatch(event, "P1", "jump") || isKeyMatch(event, "P1", "crouch") || isKeyMatch(event, "P1", "lightPunch") || isKeyMatch(event, "P1", "lightKick") || isKeyMatch(event, "P1", "heavyPunch") || isKeyMatch(event, "P1", "heavyKick") || isKeyMatch(event, "P1", "heavyStrike") || isKeyMatch(event, "P1", "block")
-            if (isHost && !isP1Key) return
-            if (!isHost && isP1Key) return
-        }
-        handleKeyEvent(event, false)
-    }
-
-    // 背景层
-    Rectangle {
-        anchors.fill: parent
-        color: "black"
-        z: -2
-    }
-
-    Item {
-        id: bgView
-        anchors.fill: parent
-        clip: true
-        z: 0
-
-        AnimatedImage {
-            id: stageGif
-            width: parent.width * 2
-            height: parent.height
-            source: "qrc:/images/FightBackGround/" + stageId + ".gif"
-            fillMode: Image.PreserveAspectCrop
-            smooth: false
-            mipmap: false
-            cache: true
-            asynchronous: true
-            paused: false
-            horizontalAlignment: Image.AlignLeft
-            verticalAlignment: Image.AlignVCenter
-            x: Math.min(0, Math.max(-(width - parent.width), -root.width * director.cameraOffset * 0.5))
-            y: 0
-        }
-    }
-
-    // P1 角色渲染, 精灵表视口裁剪
-    Item {
-        id: p1Layer
-        x: root.width * (director.p1Model.posXRatio - director.cameraOffset) - width / 2 + director.p1Model.animOffsetX * fitScale * director.p1Model.visualScale * (director.p1Model.facingLeft ? -1 : 1)
-        y: director.p1Model.positionY
-        width: director.p1Model.frameWidth
-        height: director.p1Model.frameHeight
-        transformOrigin: Item.Bottom
-        clip: true
-        z: 1
-
-        transform: [
-            Scale {
-                origin.x: p1Layer.width / 2
-                origin.y: p1Layer.height
-                xScale: fitScale * (director.p1Model.facingLeft ? -1 : 1) * director.p1Model.visualScale
-                yScale: fitScale * director.p1Model.visualScale
-            }
-        ]
-
-        Image {
-            source: director.p1Model.sourcePath
-            width: director.p1Model.totalFrames * director.p1Model.frameWidth
-            height: director.p1Model.frameHeight
-            x: -(director.p1Model.currentFrame * director.p1Model.frameWidth)
-            y: 0
-            fillMode: Image.Stretch
-            smooth: false
-            mipmap: false
-            cache: true
-            asynchronous: false
-        }
-    }
-
-    // P2 角色渲染
-    Item {
-        id: p2Layer
-        x: root.width * (director.p2Model.posXRatio - director.cameraOffset) - width / 2 + director.p2Model.animOffsetX * fitScale * director.p2Model.visualScale * (director.p2Model.facingLeft ? -1 : 1)
-        y: director.p2Model.positionY
-        width: director.p2Model.frameWidth
-        height: director.p2Model.frameHeight
-        transformOrigin: Item.Bottom
-        clip: true
-        z: 1
-
-        transform: [
-            Scale {
-                origin.x: p2Layer.width / 2
-                origin.y: p2Layer.height
-                xScale: fitScale * (director.p2Model.facingLeft ? -1 : 1) * director.p2Model.visualScale
-                yScale: fitScale * director.p2Model.visualScale
-            }
-        ]
-
-        Image {
-            source: director.p2Model.sourcePath
-            width: director.p2Model.totalFrames * director.p2Model.frameWidth
-            height: director.p2Model.frameHeight
-            x: -(director.p2Model.currentFrame * director.p2Model.frameWidth)
-            y: 0
-            fillMode: Image.Stretch
-            smooth: false
-            mipmap: false
-            cache: true
-            asynchronous: false
-        }
-    }
-
-    // Attack VFX 攻击特效
-    Item {
-        id: attackVfx
-        visible: false
-        z: 15
-        width: 32
-        height: 31
-        scale: fitScale * 3.0
-
-        Image { id: vfx1; source: "qrc:/images/Attack/1.png"; anchors.centerIn: parent }
-        Image { id: vfx2; source: "qrc:/images/Attack/2.png"; anchors.centerIn: parent }
-        Image { id: vfx3; source: "qrc:/images/Attack/3.png"; anchors.centerIn: parent }
-
-        Timer {
-            id: vfxTimer
-            interval: 50
-            repeat: true
-            property int step: 0
-            onTriggered: {
-                vfx1.visible = (step === 0)
-                vfx2.visible = (step === 1)
-                vfx3.visible = (step === 2)
-                step++
-                if (step >= 3) {
-                    stop()
-                    attackVfx.visible = false
-                    step = 0
-                    vfx1.visible = false
-                    vfx2.visible = false
-                    vfx3.visible = false
-                }
-            }
-        }
-
-        function play(atkModel, defModel) {
-            var midX = atkModel.posXRatio * 0.3 + defModel.posXRatio * 0.7
-            var neckY = defModel.positionY + defModel.frameHeight * (1 - defModel.visualScale * 0.8)
-            var s = atkModel.state
-            var offset
-            if (atkModel.visualScale <= 1.5) {
-                offset = -30
-            } else {
-                if (s === 8 || s === 10) offset = 120
-                else offset = 60
-            }
-            x = root.width * (midX - director.cameraOffset) - width / 2
-            y = neckY - height / 2 + offset
-            visible = true
-            vfx1.visible = false
-            vfx2.visible = false
-            vfx3.visible = false
-            vfxTimer.step = 0
-            vfxTimer.restart()
-        }
-    }
-
-    // HUD 顶部栏
-    Rectangle {
-        id: hudBar
-        anchors {
-            top: parent.top
-            left: parent.left
-            right: parent.right
-        }
-        height: 82
-        color: "black"
-        z: 10
-
-        Rectangle {
-            anchors {
-                top: parent.top
-                left: parent.left
-                right: parent.right
-            }
-            height: 2
-            color: "darkgoldenrod"
-        }
-        Rectangle {
-            anchors {
-                bottom: parent.bottom
-                left: parent.left
-                right: parent.right
-            }
-            height: 2
-            color: "darkgoldenrod"
-        }
-    }
-
-    // P1 HUD, 头像 + 名字 + 血条 + 能量条
-    Item {
-        anchors {
-            left: parent.left
-            leftMargin: 12
-            top: parent.top
-            topMargin: 8
-        }
-        width: 340
-        height: 76
-        z: 11
-
-        Rectangle {
-            id: p1PortraitFrame
-            anchors {
-                left: parent.left
-                verticalCenter: parent.verticalCenter
-            }
-            width: 54
-            height: 54
-            color: "black"
-            border.color: "darkgoldenrod"
-            border.width: 2
-            radius: 2
-
-            Image {
-                anchors.fill: parent
-                anchors.margins: 2
-                source: p1Avatar
-                fillMode: Image.PreserveAspectCrop
-                asynchronous: true
-                smooth: false
-            }
-        }
-
-        Column {
-            anchors {
-                left: p1PortraitFrame.right
-                leftMargin: 10
-                verticalCenter: parent.verticalCenter
-            }
-            spacing: 4
-
-            Text {
-                text: p1Name
-                font.pixelSize: 12
-                font.bold: true
-                color: "wheat"
-                font.family: "monospace"
-            }
-            // 血条
-            Rectangle {
-                width: 240
-                height: 16
-                color: "black"
-                border.color: "darkgoldenrod"
-                border.width: 1
-                radius: 1
-
-                Rectangle {
-                    anchors {
-                        left: parent.left
-                        leftMargin: 1
-                        verticalCenter: parent.verticalCenter
-                    }
-                    width: Math.max(0, (parent.width - 2) * (p1Health / 100.0))
-                    height: parent.height - 2
-                    color: "firebrick"
-                    radius: 1
-
-                    Rectangle {
-                        anchors {
-                            top: parent.top
-                            bottom: parent.bottom
-                            right: parent.right
-                        }
-                        width: 6
-                        color: "gold"
-                        visible: p1Health > 0
-                    }
-                    Behavior on width {
-                        NumberAnimation {
-                            duration: 200
-                            easing.type: Easing.OutCubic
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // 倒计时器
-    Rectangle {
-        anchors {
-            centerIn: hudBar
-            verticalCenterOffset: 2
-        }
-        width: 52
-        height: 52
-        color: "black"
-        border.color: "darkgoldenrod"
-        border.width: 2
-        radius: 26
-        z: 11
-
-        Text {
-            anchors.centerIn: parent
-            text: timerSeconds
-            font.pixelSize: 26
-            font.bold: true
-            color: timerSeconds <= 10 ? "red" : "wheat"
-            font.family: "monospace"
-        }
-    }
-
-    // 回合显示 + 联机模式标识
-    Text {
-        id: roundText
-        anchors.horizontalCenter: parent.horizontalCenter
-        y: 8
-        text: (isOnline ? "联机对战 · " : "") + "Round " + currentRound
-        font.pixelSize: 14
-        font.bold: true
-        color: "wheat"
-        font.family: "monospace"
-        z: 12
-    }
-
-    // P1 胜场标记
-    Row {
-        anchors {
-            left: parent.left
-            leftMargin: 100
-            top: parent.top
-            topMargin: 8
-        }
-        spacing: 6
-        z: 12
-
-        Repeater {
-            model: 2
-            Rectangle {
-                width: 12
-                height: 12
-                radius: 6
-                color: index < p1Wins ? "gold" : "gray"
-                border.color: "darkgoldenrod"
-                border.width: 1
-            }
-        }
-    }
-
-    // P2 胜场标记
-    Row {
-        anchors {
-            right: parent.right
-            rightMargin: 100
-            top: parent.top
-            topMargin: 8
-        }
-        spacing: 6
-        z: 12
-
-        Repeater {
-            model: 2
-            Rectangle {
-                width: 12
-                height: 12
-                radius: 6
-                color: index < p2Wins ? "gold" : "gray"
-                border.color: "darkgoldenrod"
-                border.width: 1
-            }
-        }
-    }
-
-    // 回合结束提示
-    Text {
-        id: roundResultText
-        anchors.centerIn: parent
-        visible: roundEnding
-        font.pixelSize: 48
-        font.bold: true
-        color: "gold"
-        style: Text.Outline
-        styleColor: "black"
-        z: 20
-        text: {
-            if (p1Wins >= 2) return p1Name + " WINS!"
-            if (p2Wins >= 2) return p2Name + " WINS!"
-            if (p1Health <= 0 && p2Health > 0) return p2Name + " WIN!"
-            if (p2Health <= 0 && p1Health > 0) return p1Name + " WIN!"
-            return "DRAW!"
-        }
-    }
-
-    // P2 HUD, 头像 + 名字 + 血条 + 能量条
-    Item {
-        anchors {
-            right: parent.right
-            rightMargin: 12
-            top: parent.top
-            topMargin: 8
-        }
-        width: 340
-        height: 76
-        z: 11
-
-        Rectangle {
-            id: p2PortraitFrame
-            anchors {
-                right: parent.right
-                verticalCenter: parent.verticalCenter
-            }
-            width: 54
-            height: 54
-            color: "black"
-            border.color: "darkgoldenrod"
-            border.width: 2
-            radius: 2
-
-            Image {
-                anchors.fill: parent
-                anchors.margins: 2
-                source: p2Avatar
-                fillMode: Image.PreserveAspectCrop
-                asynchronous: true
-                smooth: false
-                mirror: true
-            }
-        }
-
-        Column {
-            anchors {
-                right: p2PortraitFrame.left
-                rightMargin: 10
-                verticalCenter: parent.verticalCenter
-            }
-            spacing: 4
-
-            Text {
-                anchors.right: parent.right
-                text: p2Name
-                font.pixelSize: 12
-                font.bold: true
-                color: "wheat"
-                font.family: "monospace"
-                horizontalAlignment: Text.AlignRight
-            }
-            // 血条
-            Rectangle {
-                width: 240
-                height: 16
-                color: "black"
-                border.color: "darkgoldenrod"
-                border.width: 1
-                radius: 1
-
-                Rectangle {
-                    anchors {
-                        right: parent.right
-                        rightMargin: 1
-                        verticalCenter: parent.verticalCenter
-                    }
-                    width: Math.max(0, (parent.width - 2) * (p2Health / 100.0))
-                    height: parent.height - 2
-                    color: "firebrick"
-                    radius: 1
-
-                    Rectangle {
-                        anchors {
-                            top: parent.top
-                            bottom: parent.bottom
-                            left: parent.left
-                        }
-                        width: 6
-                        color: "gold"
-                        visible: p2Health > 0
-                    }
-                    Behavior on width {
-                        NumberAnimation {
-                            duration: 200
-                            easing.type: Easing.OutCubic
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // 底部按钮与调试信息
-    Button {
-        anchors {
-            left: parent.left
-            bottom: parent.bottom
-            margins: 12
-        }
-        width: 80
-        height: 28
-        z: 10
-        text: "<- BACK"
-        onClicked: { if (stackViewRef) stackViewRef.pop() }
-
-        contentItem: Text {
-            text: "<- BACK"
-            color: "darkgoldenrod"
-            font.pixelSize: 11
-            font.family: "monospace"
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-        }
-        background: Rectangle {
-            color: "black"
-            border.color: "darkgoldenrod"
-            border.width: 1
-            radius: 2
-        }
-    }
-
-    // 初始化, 组件加载完成后开始战斗
-    Component.onCompleted: {
-        director.reloadKeyBindings()  // 重新加载最新键位配置
-        director.start(p1CharId, p2CharId)
-        root.forceActiveFocus()
-    }
-
-    Component.onDestruction: {
-        collisionTimer.stop()
-        countdownTimer.stop()
-        moveTimer.stop()
-        moveTimer2.stop()
-        p1ComboTimer.stop()
-        p2ComboTimer.stop()
-        vfxTimer.stop()
-        roundResetTimer.stop()
-        matchResultTimer.stop()
-        director.p1Model.playStand()
-        director.p2Model.playStand()
     }
 
     function resumeP1Movement() {
@@ -1677,6 +852,796 @@ Item {
         }
     }
 
+    // 战斗导演
+    FightDirector {
+        id: director
+        rootHeight: root.height
+        onHitDetected: function(attacker, damage) {
+            function playHurtByAttackType(targetModel, attackerState) {
+                if (attackerState === 7 || attackerState === 8) {
+                    targetModel.playHurt1()
+                } else if (attackerState === 9) {
+                    targetModel.playHurt3()
+                } else if (attackerState === 10) {
+                    targetModel.playHurt2()
+                } else {
+                    targetModel.playHurt()
+                }
+            }
+
+            if (attacker === 1) {
+                p2Health = Math.max(0, p2Health - damage)
+                if (!director.p2Model.isBlocking()) {
+                    playHurtByAttackType(director.p2Model, director.p1Model.state)
+                }
+                if (director.p1Model.state >= 7 && director.p1Model.state <= 11)
+                    attackVfx.play(director.p1Model, director.p2Model)
+            } else {
+                p1Health = Math.max(0, p1Health - damage)
+                if (!director.p1Model.isBlocking()) {
+                    playHurtByAttackType(director.p1Model, director.p2Model.state)
+                }
+                if (director.p2Model.state >= 7 && director.p2Model.state <= 11)
+                    attackVfx.play(director.p2Model, director.p1Model)
+            }
+            checkRoundEnd()
+
+            if (isOnline && isHost && networkMgr) {
+                networkMgr.sendMessage({
+                    "type": "hit",
+                    "attacker": attacker,
+                    "attackerState": attacker === 1 ? director.p1Model.state : director.p2Model.state,
+                    "damage": damage,
+                    "p1Health": p1Health,
+                    "p2Health": p2Health,
+                    "defenderBlocking": attacker === 1 ? director.p2Model.isBlocking() : director.p1Model.isBlocking()
+                })
+            }
+        }
+    }
+
+    // 定时器
+    Timer {
+        id: collisionTimer
+        interval: 33
+        repeat: true
+        running: director.phase === FightDirector.Fighting && !resettingRound && (!isOnline || isHost)
+        onTriggered: {
+            director.checkCollision()
+        }
+    }
+
+    Timer {
+        id: countdownTimer
+        interval: 1000
+        repeat: true
+        running: director.phase === FightDirector.Fighting && !roundEnding && !resettingRound
+        onTriggered: {
+            if (timerSeconds > 0) timerSeconds--
+            if (timerSeconds <= 0) checkRoundEnd()
+        }
+    }
+
+    Timer {
+        id: syncTimer
+        interval: 33
+        repeat: true
+        running: isOnline && isHost && director.phase === FightDirector.Fighting && !resettingRound
+        onTriggered: {
+            if (networkMgr) {
+                networkMgr.sendMessage({
+                    "type": "sync",
+                    "p1Health": p1Health,
+                    "p2Health": p2Health,
+                    "p1x": director.p1Model.posXRatio,
+                    "p2x": director.p2Model.posXRatio,
+                    "timerSeconds": timerSeconds,
+                    "p1Wins": p1Wins,
+                    "p2Wins": p2Wins,
+                    "currentRound": currentRound,
+                    "roundEnding": roundEnding
+                })
+            }
+        }
+    }
+
+    Timer {
+        id: posInterpTimer
+        interval: 16
+        repeat: true
+        running: isOnline && !isHost && syncPosReady && director.phase === FightDirector.Fighting && !resettingRound
+        onTriggered: {
+            if (p1SyncFramesLeft > 0) {
+                director.p1Model.posXRatio += p1SyncStep
+                p1SyncFramesLeft--
+            }
+            director.p1Model.posXRatio += (p1SyncTargetX - director.p1Model.posXRatio) * 0.05
+            director.p2Model.posXRatio += (p2SyncTargetX - director.p2Model.posXRatio) * 0.03
+            director.updateCamera()
+        }
+    }
+
+    Timer {
+        id: moveTimer
+        interval: 16
+        repeat: true
+        running: false
+        property bool moveRight: false
+        property bool moveLeft: false
+        onTriggered: {
+            if (isOnline && !isHost) return
+            var p1 = director.p1Model.posXRatio
+            var p2 = director.p2Model.posXRatio
+            if (moveRight) {
+                var maxPos = (p1 < p2) ? p2 - bodyCollisionDist : p2 + 0.95
+                maxPos = Math.min(maxPos, director.maxCameraOffset + 1.0)
+                director.p1Model.posXRatio = Math.min(p1 + moveStep, maxPos)
+            }
+            if (moveLeft) {
+                var minPos = (p1 > p2) ? p2 + bodyCollisionDist : p2 - 0.95
+                minPos = Math.max(minPos, 0)
+                director.p1Model.posXRatio = Math.max(p1 - moveStep, minPos)
+            }
+            director.updateCamera()
+            updateFacing()
+            var desired = ""
+            if (moveRight) desired = director.p1Model.facingLeft ? "backward" : "forward"
+            if (moveLeft)  desired = director.p1Model.facingLeft ? "forward" : "backward"
+            if (desired !== "" && desired !== p1CurrentAnim) {
+                p1CurrentAnim = desired
+                if (desired === "forward") director.p1Model.playForward()
+                else director.p1Model.playBackward()
+            }
+        }
+    }
+
+    Timer {
+        id: moveTimer2
+        interval: 16
+        repeat: true
+        running: false
+        property bool moveRight: false
+        property bool moveLeft: false
+        onTriggered: {
+            var p2 = director.p2Model.posXRatio
+            var p1 = director.p1Model.posXRatio
+            if (moveRight) {
+                var maxPos = (p2 < p1) ? p1 - bodyCollisionDist : p1 + 0.95
+                maxPos = Math.min(maxPos, director.maxCameraOffset + 1.0)
+                director.p2Model.posXRatio = Math.min(p2 + moveStep, maxPos)
+            }
+            if (moveLeft) {
+                var minPos = (p2 > p1) ? p1 + bodyCollisionDist : p1 - 0.95
+                minPos = Math.max(minPos, 0)
+                director.p2Model.posXRatio = Math.max(p2 - moveStep, minPos)
+            }
+            director.updateCamera()
+            updateFacing()
+            var desired = ""
+            if (moveRight) desired = director.p2Model.facingLeft ? "backward" : "forward"
+            if (moveLeft)  desired = director.p2Model.facingLeft ? "forward" : "backward"
+            if (desired !== "" && desired !== p2CurrentAnim) {
+                p2CurrentAnim = desired
+                if (desired === "forward") director.p2Model.playForward()
+                else director.p2Model.playBackward()
+            }
+        }
+    }
+
+    Timer {
+        id: p1ComboTimer
+        interval: 100
+        onTriggered: {
+            if (p1WaitingCombo) {
+                p1WaitingCombo = false
+                if (p1ComboKeyJ) {
+                    startAttack1()
+                    if (!isOnline || isHost) sendInput("light_punch")
+                } else {
+                    startAttackLightKick1()
+                    if (!isOnline || isHost) sendInput("light_kick")
+                }
+            }
+        }
+    }
+
+    Timer {
+        id: p2ComboTimer
+        interval: 100
+        onTriggered: {
+            if (p2WaitingCombo) {
+                p2WaitingCombo = false
+                if (p2ComboKeyJ) {
+                    startAttack2()
+                    if (!isOnline || !isHost) sendInput("light_punch")
+                } else {
+                    startAttackLightKick2()
+                    if (!isOnline || !isHost) sendInput("light_kick")
+                }
+            }
+        }
+    }
+
+    Timer {
+        id: roundResetTimer
+        interval: 2000
+        onTriggered: resetRound()
+    }
+
+    Timer {
+        id: matchResultTimer
+        interval: 3000
+        onTriggered: {
+            if (isOnline && isHost && networkMgr) {
+                networkMgr.sendMessage({"type": "match_end"})
+            }
+            if (stackViewRef) stackViewRef.pop()
+        }
+    }
+
+    // 键盘输入
+    Keys.onPressed: (event) => {
+        if (event.isAutoRepeat || director.phase !== FightDirector.Fighting || resettingRound || roundEnding) return
+        if (isOnline) {
+            var isP1Key = isKeyMatch(event, "P1", "moveLeft")
+                       || isKeyMatch(event, "P1", "moveRight")
+                       || isKeyMatch(event, "P1", "jump")
+                       || isKeyMatch(event, "P1", "crouch")
+                       || isKeyMatch(event, "P1", "lightPunch")
+                       || isKeyMatch(event, "P1", "lightKick")
+                       || isKeyMatch(event, "P1", "heavyPunch")
+                       || isKeyMatch(event, "P1", "heavyKick")
+                       || isKeyMatch(event, "P1", "heavyStrike")
+                       || isKeyMatch(event, "P1", "block")
+            if (isHost && !isP1Key) return
+            if (!isHost && isP1Key) return
+        }
+        handleKeyEvent(event, true)
+    }
+    Keys.onReleased: (event) => {
+        if (event.isAutoRepeat || director.phase !== FightDirector.Fighting || resettingRound || roundEnding) return
+        if (isOnline) {
+            var isP1Key = isKeyMatch(event, "P1", "moveLeft")
+                       || isKeyMatch(event, "P1", "moveRight")
+                       || isKeyMatch(event, "P1", "jump")
+                       || isKeyMatch(event, "P1", "crouch")
+                       || isKeyMatch(event, "P1", "lightPunch")
+                       || isKeyMatch(event, "P1", "lightKick")
+                       || isKeyMatch(event, "P1", "heavyPunch")
+                       || isKeyMatch(event, "P1", "heavyKick")
+                       || isKeyMatch(event, "P1", "heavyStrike")
+                       || isKeyMatch(event, "P1", "block")
+            if (isHost && !isP1Key) return
+            if (!isHost && isP1Key) return
+        }
+        handleKeyEvent(event, false)
+    }
+
+    // 背景
+    Rectangle {
+        anchors.fill: parent
+        color: "black"
+        z: -2
+    }
+
+    Item {
+        id: bgView
+        anchors.fill: parent
+        clip: true
+        z: 0
+
+        AnimatedImage {
+            id: stageGif
+            width: parent.width * 2
+            height: parent.height
+            source: "qrc:/images/FightBackGround/" + stageId + ".gif"
+            fillMode: Image.PreserveAspectCrop
+            smooth: false
+            mipmap: false
+            cache: true
+            asynchronous: true
+            paused: false
+            horizontalAlignment: Image.AlignLeft
+            verticalAlignment: Image.AlignVCenter
+            x: Math.min(0, Math.max(-(width - parent.width), -root.width * director.cameraOffset * 0.5))
+            y: 0
+        }
+    }
+
+    // 角色渲染
+    Item {
+        id: p1Layer
+        x: root.width * (director.p1Model.posXRatio - director.cameraOffset) - width / 2 + director.p1Model.animOffsetX * fitScale * director.p1Model.visualScale * (director.p1Model.facingLeft ? -1 : 1)
+        y: director.p1Model.positionY
+        width: director.p1Model.frameWidth
+        height: director.p1Model.frameHeight
+        transformOrigin: Item.Bottom
+        clip: true
+        z: 1
+
+        transform: [
+            Scale {
+                origin.x: p1Layer.width / 2
+                origin.y: p1Layer.height
+                xScale: fitScale * (director.p1Model.facingLeft ? -1 : 1) * director.p1Model.visualScale
+                yScale: fitScale * director.p1Model.visualScale
+            }
+        ]
+
+        Image {
+            source: director.p1Model.sourcePath
+            width: director.p1Model.totalFrames * director.p1Model.frameWidth
+            height: director.p1Model.frameHeight
+            x: -(director.p1Model.currentFrame * director.p1Model.frameWidth)
+            y: 0
+            fillMode: Image.Stretch
+            smooth: false
+            mipmap: false
+            cache: true
+            asynchronous: false
+        }
+    }
+
+    Item {
+        id: p2Layer
+        x: root.width * (director.p2Model.posXRatio - director.cameraOffset) - width / 2 + director.p2Model.animOffsetX * fitScale * director.p2Model.visualScale * (director.p2Model.facingLeft ? -1 : 1)
+        y: director.p2Model.positionY
+        width: director.p2Model.frameWidth
+        height: director.p2Model.frameHeight
+        transformOrigin: Item.Bottom
+        clip: true
+        z: 1
+
+        transform: [
+            Scale {
+                origin.x: p2Layer.width / 2
+                origin.y: p2Layer.height
+                xScale: fitScale * (director.p2Model.facingLeft ? -1 : 1) * director.p2Model.visualScale
+                yScale: fitScale * director.p2Model.visualScale
+            }
+        ]
+
+        Image {
+            source: director.p2Model.sourcePath
+            width: director.p2Model.totalFrames * director.p2Model.frameWidth
+            height: director.p2Model.frameHeight
+            x: -(director.p2Model.currentFrame * director.p2Model.frameWidth)
+            y: 0
+            fillMode: Image.Stretch
+            smooth: false
+            mipmap: false
+            cache: true
+            asynchronous: false
+        }
+    }
+
+    // 攻击特效
+    Item {
+        id: attackVfx
+        visible: false
+        z: 15
+        width: 32
+        height: 31
+        scale: fitScale * 3.0
+
+        Image { id: vfx1; source: "qrc:/images/Attack/1.png"; anchors.centerIn: parent }
+        Image { id: vfx2; source: "qrc:/images/Attack/2.png"; anchors.centerIn: parent }
+        Image { id: vfx3; source: "qrc:/images/Attack/3.png"; anchors.centerIn: parent }
+
+        Timer {
+            id: vfxTimer
+            interval: 50
+            repeat: true
+            property int step: 0
+            onTriggered: {
+                vfx1.visible = (step === 0)
+                vfx2.visible = (step === 1)
+                vfx3.visible = (step === 2)
+                step++
+                if (step >= 3) {
+                    stop()
+                    attackVfx.visible = false
+                    step = 0
+                    vfx1.visible = false
+                    vfx2.visible = false
+                    vfx3.visible = false
+                }
+            }
+        }
+
+        function play(atkModel, defModel) {
+            var midX = atkModel.posXRatio * 0.3 + defModel.posXRatio * 0.7
+            var neckY = defModel.positionY + defModel.frameHeight * (1 - defModel.visualScale * 0.8)
+            var s = atkModel.state
+            var offset
+            if (atkModel.visualScale <= 1.5) {
+                offset = -30
+            } else {
+                if (s === 8 || s === 10) offset = 120
+                else offset = 60
+            }
+            x = root.width * (midX - director.cameraOffset) - width / 2
+            y = neckY - height / 2 + offset
+            visible = true
+            vfx1.visible = false
+            vfx2.visible = false
+            vfx3.visible = false
+            vfxTimer.step = 0
+            vfxTimer.restart()
+        }
+    }
+
+    // HUD
+    Rectangle {
+        id: hudBar
+        anchors {
+            top: parent.top
+            left: parent.left
+            right: parent.right
+        }
+        height: 82
+        color: "black"
+        z: 10
+
+        Rectangle {
+            anchors {
+                top: parent.top
+                left: parent.left
+                right: parent.right
+            }
+            height: 2
+            color: "darkgoldenrod"
+        }
+        Rectangle {
+            anchors {
+                bottom: parent.bottom
+                left: parent.left
+                right: parent.right
+            }
+            height: 2
+            color: "darkgoldenrod"
+        }
+    }
+
+    // P1 HUD
+    Item {
+        anchors {
+            left: parent.left
+            leftMargin: 12
+            top: parent.top
+            topMargin: 8
+        }
+        width: 340
+        height: 76
+        z: 11
+
+        Rectangle {
+            id: p1PortraitFrame
+            anchors {
+                left: parent.left
+                verticalCenter: parent.verticalCenter
+            }
+            width: 54
+            height: 54
+            color: "black"
+            border.color: "darkgoldenrod"
+            border.width: 2
+            radius: 2
+
+            Image {
+                anchors.fill: parent
+                anchors.margins: 2
+                source: p1Avatar
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                smooth: false
+            }
+        }
+
+        Column {
+            anchors {
+                left: p1PortraitFrame.right
+                leftMargin: 10
+                verticalCenter: parent.verticalCenter
+            }
+            spacing: 4
+
+            Text {
+                text: p1Name
+                font.pixelSize: 12
+                font.bold: true
+                color: "wheat"
+                font.family: "monospace"
+            }
+
+            Rectangle {
+                width: 240
+                height: 16
+                color: "black"
+                border.color: "darkgoldenrod"
+                border.width: 1
+                radius: 1
+
+                Rectangle {
+                    anchors {
+                        left: parent.left
+                        leftMargin: 1
+                        verticalCenter: parent.verticalCenter
+                    }
+                    width: Math.max(0, (parent.width - 2) * (p1Health / 100.0))
+                    height: parent.height - 2
+                    color: "firebrick"
+                    radius: 1
+
+                    Rectangle {
+                        anchors {
+                            top: parent.top
+                            bottom: parent.bottom
+                            right: parent.right
+                        }
+                        width: 6
+                        color: "gold"
+                        visible: p1Health > 0
+                    }
+                    Behavior on width {
+                        NumberAnimation {
+                            duration: 200
+                            easing.type: Easing.OutCubic
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 倒计时
+    Rectangle {
+        anchors {
+            centerIn: hudBar
+            verticalCenterOffset: 2
+        }
+        width: 52
+        height: 52
+        color: "black"
+        border.color: "darkgoldenrod"
+        border.width: 2
+        radius: 26
+        z: 11
+
+        Text {
+            anchors.centerIn: parent
+            text: timerSeconds
+            font.pixelSize: 26
+            font.bold: true
+            color: timerSeconds <= 10 ? "red" : "wheat"
+            font.family: "monospace"
+        }
+    }
+
+    // 回合与联机标识
+    Text {
+        id: roundText
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: 8
+        text: (isOnline ? "联机对战 · " : "") + "Round " + currentRound
+        font.pixelSize: 14
+        font.bold: true
+        color: "wheat"
+        font.family: "monospace"
+        z: 12
+    }
+
+    // P1 胜场标记
+    Row {
+        anchors {
+            left: parent.left
+            leftMargin: 100
+            top: parent.top
+            topMargin: 8
+        }
+        spacing: 6
+        z: 12
+        Repeater {
+            model: 2
+            Rectangle {
+                width: 12
+                height: 12
+                radius: 6
+                color: index < p1Wins ? "gold" : "gray"
+                border.color: "darkgoldenrod"
+                border.width: 1
+            }
+        }
+    }
+
+    // P2 胜场标记
+    Row {
+        anchors {
+            right: parent.right
+            rightMargin: 100
+            top: parent.top
+            topMargin: 8
+        }
+        spacing: 6
+        z: 12
+        Repeater {
+            model: 2
+            Rectangle {
+                width: 12
+                height: 12
+                radius: 6
+                color: index < p2Wins ? "gold" : "gray"
+                border.color: "darkgoldenrod"
+                border.width: 1
+            }
+        }
+    }
+
+    // 回合结束提示
+    Text {
+        id: roundResultText
+        anchors.centerIn: parent
+        visible: roundEnding
+        font.pixelSize: 48
+        font.bold: true
+        color: "gold"
+        style: Text.Outline
+        styleColor: "black"
+        z: 20
+        text: {
+            if (p1Wins >= 2) return p1Name + " WINS!"
+            if (p2Wins >= 2) return p2Name + " WINS!"
+            if (p1Health <= 0 && p2Health > 0) return p2Name + " WIN!"
+            if (p2Health <= 0 && p1Health > 0) return p1Name + " WIN!"
+            return "DRAW!"
+        }
+    }
+
+    // P2 HUD
+    Item {
+        anchors {
+            right: parent.right
+            rightMargin: 12
+            top: parent.top
+            topMargin: 8
+        }
+        width: 340
+        height: 76
+        z: 11
+
+        Rectangle {
+            id: p2PortraitFrame
+            anchors {
+                right: parent.right
+                verticalCenter: parent.verticalCenter
+            }
+            width: 54
+            height: 54
+            color: "black"
+            border.color: "darkgoldenrod"
+            border.width: 2
+            radius: 2
+
+            Image {
+                anchors.fill: parent
+                anchors.margins: 2
+                source: p2Avatar
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                smooth: false
+                mirror: true
+            }
+        }
+
+        Column {
+            anchors {
+                right: p2PortraitFrame.left
+                rightMargin: 10
+                verticalCenter: parent.verticalCenter
+            }
+            spacing: 4
+
+            Text {
+                anchors.right: parent.right
+                text: p2Name
+                font.pixelSize: 12
+                font.bold: true
+                color: "wheat"
+                font.family: "monospace"
+                horizontalAlignment: Text.AlignRight
+            }
+
+            Rectangle {
+                width: 240
+                height: 16
+                color: "black"
+                border.color: "darkgoldenrod"
+                border.width: 1
+                radius: 1
+
+                Rectangle {
+                    anchors {
+                        right: parent.right
+                        rightMargin: 1
+                        verticalCenter: parent.verticalCenter
+                    }
+                    width: Math.max(0, (parent.width - 2) * (p2Health / 100.0))
+                    height: parent.height - 2
+                    color: "firebrick"
+                    radius: 1
+
+                    Rectangle {
+                        anchors {
+                            top: parent.top
+                            bottom: parent.bottom
+                            left: parent.left
+                        }
+                        width: 6
+                        color: "gold"
+                        visible: p2Health > 0
+                    }
+                    Behavior on width {
+                        NumberAnimation {
+                            duration: 200
+                            easing.type: Easing.OutCubic
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 返回按钮
+    Button {
+        anchors {
+            left: parent.left
+            bottom: parent.bottom
+            margins: 12
+        }
+        width: 80
+        height: 28
+        z: 10
+        text: "BACK"
+        onClicked: { if (stackViewRef) stackViewRef.pop() }
+
+        contentItem: Text {
+            text: "BACK"
+            color: "darkgoldenrod"
+            font.pixelSize: 11
+            font.family: "monospace"
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+        }
+        background: Rectangle {
+            color: "black"
+            border.color: "darkgoldenrod"
+            border.width: 1
+            radius: 2
+        }
+    }
+
+    // 生命周期
+    Component.onCompleted: {
+        director.reloadKeyBindings()
+        director.start(p1CharId, p2CharId)
+        root.forceActiveFocus()
+    }
+
+    Component.onDestruction: {
+        collisionTimer.stop()
+        countdownTimer.stop()
+        moveTimer.stop()
+        moveTimer2.stop()
+        p1ComboTimer.stop()
+        p2ComboTimer.stop()
+        vfxTimer.stop()
+        roundResetTimer.stop()
+        matchResultTimer.stop()
+        director.p1Model.playStand()
+        director.p2Model.playStand()
+    }
+
+    // 信号连接
     Connections {
         target: director.p1Model
         function onJumpFinished() { p1Jumping = false; resumeP1Movement() }
@@ -1723,12 +1688,14 @@ Item {
                     if (!msg.defenderBlocking) {
                         playHurt(director.p2Model, attackerState)
                     }
-                    if (attackerState >= 7 && attackerState <= 11) attackVfx.play(director.p1Model, director.p2Model)
+                    if (attackerState >= 7 && attackerState <= 11)
+                        attackVfx.play(director.p1Model, director.p2Model)
                 } else {
                     if (!msg.defenderBlocking) {
                         playHurt(director.p1Model, attackerState)
                     }
-                    if (attackerState >= 7 && attackerState <= 11) attackVfx.play(director.p2Model, director.p1Model)
+                    if (attackerState >= 7 && attackerState <= 11)
+                        attackVfx.play(director.p2Model, director.p1Model)
                 }
                 checkRoundEnd()
             } else if (msg.type === "sync" && !isHost) {
@@ -1748,7 +1715,6 @@ Item {
                     timerSeconds = 60
                     director.resetForNewRound(p1CharId, p2CharId)
 
-                    // 重置所有移动状态标志，防止回合间状态残留
                     moveTimer.stop()
                     moveTimer.moveRight = false
                     moveTimer.moveLeft = false
@@ -1778,7 +1744,6 @@ Item {
                     roundResetTimer.stop()
                     matchResultTimer.stop()
                 }
-                // 位置: 从sync差值推算P1每帧步长, 客机匀速推进消除瞬移
                 p1SyncTargetX = msg.p1x
                 p2SyncTargetX = msg.p2x
                 if (!syncPosReady) {

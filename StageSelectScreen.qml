@@ -10,26 +10,26 @@ import FightGame
 Item {
     id: root
 
-    property var    stackViewRef: null
-    property bool   isOnline:   false
-    property bool   isHost:     false
-    property var    networkMgr: null
-    property string p1Name:     ""
-    property string p1Avatar:   ""
+    property var stackViewRef: null
+    property bool isOnline: false
+    property bool isHost: false
+    property var networkMgr: null
+    property string p1Name: ""
+    property string p1Avatar: ""
     property string p1Portrait: ""
-    property string p1CharId:   ""
-    property string p2Name:     ""
-    property string p2Avatar:   ""
+    property string p1CharId: ""
+    property string p2Name: ""
+    property string p2Avatar: ""
     property string p2Portrait: ""
-    property string p2CharId:   ""
+    property string p2CharId: ""
 
     property var maps: [
-        { id: "AmusementPark",  name: "Amusement Park" },
-        { id: "Bali",           name: "Bali" },
-        { id: "Gyeongbokgung",  name: "Gyeongbokgung" },
-        { id: "jiulong",        name: "Jiulong" },
-        { id: "Monaco",         name: "Monaco" },
-        { id: "OrochiShermie",  name: "Orochi Shermie" }
+        { id: "AmusementPark", name: "Amusement Park" },
+        { id: "Bali", name: "Bali" },
+        { id: "Gyeongbokgung", name: "Gyeongbokgung" },
+        { id: "jiulong", name: "Jiulong" },
+        { id: "Monaco", name: "Monaco" },
+        { id: "OrochiShermie", name: "Orochi Shermie" }
     ]
 
     property int selectedIndex: 4  // 默认选中 Monaco
@@ -192,17 +192,17 @@ Item {
             if (comp.status === Component.Ready) {
                 var props = {
                     "stackViewRef": stackViewRef,
-                    "p1Name":     root.p1Name,
-                    "p1Avatar":   root.p1Avatar,
+                    "p1Name": root.p1Name,
+                    "p1Avatar": root.p1Avatar,
                     "p1Portrait": root.p1Portrait,
-                    "p1CharId":   root.p1CharId,
-                    "p2Name":     root.p2Name,
-                    "p2Avatar":   root.p2Avatar,
+                    "p1CharId": root.p1CharId,
+                    "p2Name": root.p2Name,
+                    "p2Avatar": root.p2Avatar,
                     "p2Portrait": root.p2Portrait,
-                    "p2CharId":   root.p2CharId,
-                    "stageId":    stage.id,
-                    "isOnline":   isOnline,
-                    "isHost":     isHost,
+                    "p2CharId": root.p2CharId,
+                    "stageId": stage.id,
+                    "isOnline": isOnline,
+                    "isHost": isHost,
                     "networkMgr": networkMgr
                 }
                 stackViewRef.push(comp, props)
@@ -237,17 +237,17 @@ Item {
                 if (comp.status === Component.Ready) {
                     var props = {
                         "stackViewRef": stackViewRef,
-                        "p1Name":     root.p1Name,
-                        "p1Avatar":   root.p1Avatar,
+                        "p1Name": root.p1Name,
+                        "p1Avatar": root.p1Avatar,
                         "p1Portrait": root.p1Portrait,
-                        "p1CharId":   root.p1CharId,
-                        "p2Name":     root.p2Name,
-                        "p2Avatar":   root.p2Avatar,
+                        "p1CharId": root.p1CharId,
+                        "p2Name": root.p2Name,
+                        "p2Avatar": root.p2Avatar,
                         "p2Portrait": root.p2Portrait,
-                        "p2CharId":   root.p2CharId,
-                        "stageId":    msg.stageId,
-                        "isOnline":   true,
-                        "isHost":     false,
+                        "p2CharId": root.p2CharId,
+                        "stageId": msg.stageId,
+                        "isOnline": true,
+                        "isHost": false,
                         "networkMgr": networkMgr
                     }
                     stackViewRef.push(comp, props)

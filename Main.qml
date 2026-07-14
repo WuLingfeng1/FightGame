@@ -39,7 +39,10 @@ ApplicationWindow {
     // 全局键位配置实例
     KeyBindingConfig {
         id: globalKeyBindings
-        Component.onCompleted: loadFromFile("/wlf/FightGame/config/keybindings.json")
+        Component.onCompleted: {
+            if (!loadFromFile("/wlf/FightGame/config/keybindings.json"))
+                loadFromFile(":/config/keybindings.json")
+        }
     }
 
     StackView {
