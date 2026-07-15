@@ -20,7 +20,7 @@ struct AnimParams
     bool loop = true;           // 是否循环播放(站立/行走为true, 开场为false)
     int pauseFrame = -1;        // 开场暂停帧索引(-1=不暂停)
     int pauseDuration = 0;      // 暂停时长(毫秒)
-    int feetBottom = 0;         // 站立时脚底到精灵表底部的距离(用于脚部对齐)
+    int feetBottom = 0;         // 站立时脚底到精灵表顶部的距离(用于脚部对齐)
     int feetMargin = 0;         // 站立时脚底到窗口底部的边距(用于脚部对齐)
     int jumpHeight = 200;       // 跳跃抛物线峰值高度(像素)
     int divFrame = 0;           // 方向帧分割点(对角跳用, 左半=前跳 右半=后跳)

@@ -17,10 +17,10 @@ Item {
     id: root
 
     // 外部传入属性
-    property var    stackViewRef: null
-    property bool   isOnline: false
-    property bool   isHost: false
-    property var    networkMgr: null
+    property var stackViewRef: null
+    property bool isOnline: false
+    property bool isHost: false
+    property var networkMgr: null
 
     property real fitScale: Math.min(root.width / 900, root.height / 640)
 
@@ -28,12 +28,12 @@ Item {
     // 角色数据
 
     property var characters: [
-        { cid: "Kusanagi", name: "草薙京",   avatar: "qrc:/images/avatar/Kusanagi.jpg",  portrait: "qrc:/images/portrait/Kusanagi.jpg" },
-        { cid: "Kula",     name: "库拉",     avatar: "qrc:/images/avatar/Kula.jpg",      portrait: "qrc:/images/portrait/Kula.jpg" },
-        { cid: "Orochi",   name: "大蛇",     avatar: "qrc:/images/avatar/Orochi.jpg",    portrait: "qrc:/images/portrait/Orochi.jpg" },
-        { cid: "Yagami",   name: "八神庵",   avatar: "qrc:/images/avatar/Yagami.jpg",    portrait: "qrc:/images/portrait/Yagami.jpg" },
-        { cid: "Shiranui", name: "不知火舞", avatar: "qrc:/images/avatar/Shiranui.jpg",  portrait: "qrc:/images/portrait/Shiranui.jpg" },
-        { cid: "Kdash",    name: "K",        avatar: "qrc:/images/avatar/Kdash.jpg",     portrait: "qrc:/images/portrait/Kdash.jpg" }
+        { cid: "Kusanagi", name: "草薙京", avatar: "qrc:/images/avatar/Kusanagi.jpg", portrait: "qrc:/images/portrait/Kusanagi.jpg" },
+        { cid: "Kula", name: "库拉", avatar: "qrc:/images/avatar/Kula.jpg", portrait: "qrc:/images/portrait/Kula.jpg" },
+        { cid: "Orochi", name: "大蛇", avatar: "qrc:/images/avatar/Orochi.jpg", portrait: "qrc:/images/portrait/Orochi.jpg" },
+        { cid: "Yagami", name: "八神庵", avatar: "qrc:/images/avatar/Yagami.jpg", portrait: "qrc:/images/portrait/Yagami.jpg" },
+        { cid: "Shiranui", name: "不知火舞", avatar: "qrc:/images/avatar/Shiranui.jpg", portrait: "qrc:/images/portrait/Shiranui.jpg" },
+        { cid: "Kdash", name: "K", avatar: "qrc:/images/avatar/Kdash.jpg", portrait: "qrc:/images/portrait/Kdash.jpg" }
     ]
 
 
@@ -108,17 +108,17 @@ Item {
 
         stackViewRef.push(comp, {
             "stackViewRef": stackViewRef,
-            "p1Name":       p1.name,
-            "p1Avatar":     p1.avatar,
-            "p1Portrait":   p1.portrait,
-            "p1CharId":     p1.cid,
-            "p2Name":       p2.name,
-            "p2Avatar":     p2.avatar,
-            "p2Portrait":   p2.portrait,
-            "p2CharId":     p2.cid,
-            "isOnline":     true,
-            "isHost":       isHost,
-            "networkMgr":   networkMgr
+            "p1Name": p1.name,
+            "p1Avatar": p1.avatar,
+            "p1Portrait": p1.portrait,
+            "p1CharId": p1.cid,
+            "p2Name": p2.name,
+            "p2Avatar": p2.avatar,
+            "p2Portrait": p2.portrait,
+            "p2CharId": p2.cid,
+            "isOnline": true,
+            "isHost": isHost,
+            "networkMgr": networkMgr
         })
     }
 
@@ -132,10 +132,10 @@ Item {
     }
 
     onCurrentTurnChanged: refresh()
-    onPreviewP1Changed:   refresh()
-    onPreviewP2Changed:   refresh()
-    onLockedP1Changed:    refresh()
-    onLockedP2Changed:    refresh()
+    onPreviewP1Changed: refresh()
+    onPreviewP2Changed: refresh()
+    onLockedP1Changed: refresh()
+    onLockedP2Changed: refresh()
 
     Connections {
         target: networkMgr
@@ -400,38 +400,38 @@ Item {
             onClicked: {
                 if (isOnline) {
                     if (isHost && currentTurn === 1) {
-                        lockedP1    = previewP1
-                        previewP1   = -1
+                        lockedP1 = previewP1
+                        previewP1 = -1
                         currentTurn = 0
                         var p1 = characters[lockedP1]
                         networkMgr.sendMessage({
-                            "type":     "p1_select",
-                            "cid":      p1.cid,
-                            "name":     p1.name,
-                            "avatar":   p1.avatar,
+                            "type": "p1_select",
+                            "cid": p1.cid,
+                            "name": p1.name,
+                            "avatar": p1.avatar,
                             "portrait": p1.portrait
                         })
                     } else if (!isHost && currentTurn === 2) {
-                        lockedP2    = previewP2
-                        previewP2   = -1
+                        lockedP2 = previewP2
+                        previewP2 = -1
                         currentTurn = 0
                         var p2 = characters[lockedP2]
                         networkMgr.sendMessage({
-                            "type":     "p2_select",
-                            "cid":      p2.cid,
-                            "name":     p2.name,
-                            "avatar":   p2.avatar,
+                            "type": "p2_select",
+                            "cid": p2.cid,
+                            "name": p2.name,
+                            "avatar": p2.avatar,
                             "portrait": p2.portrait
                         })
                     }
                 } else {
                     if (currentTurn === 1) {
-                        lockedP1    = previewP1
-                        previewP1   = -1
+                        lockedP1 = previewP1
+                        previewP1 = -1
                         currentTurn = 2
                     } else if (currentTurn === 2) {
-                        lockedP2    = previewP2
-                        previewP2   = -1
+                        lockedP2 = previewP2
+                        previewP2 = -1
                         currentTurn = 0
                     }
                 }
@@ -477,14 +477,14 @@ Item {
                         return
                     stackViewRef.push(comp, {
                         "stackViewRef": stackViewRef,
-                        "p1Name":       p1.name,
-                        "p1Avatar":     p1.avatar,
-                        "p1Portrait":   p1.portrait,
-                        "p1CharId":     p1.cid,
-                        "p2Name":       p2.name,
-                        "p2Avatar":     p2.avatar,
-                        "p2Portrait":   p2.portrait,
-                        "p2CharId":     p2.cid
+                        "p1Name": p1.name,
+                        "p1Avatar": p1.avatar,
+                        "p1Portrait": p1.portrait,
+                        "p1CharId": p1.cid,
+                        "p2Name": p2.name,
+                        "p2Avatar": p2.avatar,
+                        "p2Portrait": p2.portrait,
+                        "p2CharId": p2.cid
                     })
                 }
             }
