@@ -66,9 +66,9 @@ void CharacterModel::playStand()
     m_state = Stand;
     m_currentFrame = 0; // 从第2帧开始(避开站立的起始过渡帧)
     m_loopAnim = true;
-    m_visualScale = 1.0;     // 必须在 applyAnim 之前设置, setPosY 依赖此值
-    m_animOffsetX = 0;       // 站立动画无水平偏移
-    m_hitThisAttack = false; // 重置命中标志
+    m_visualScale = m_stand.visualScale;     // 必须在 applyAnim 之前设置, setPosY 依赖此值
+    m_animOffsetX = 0;        // 站立动画无水平偏移
+    m_hitThisAttack = false;  // 重置命中标志
     applyAnim(m_stand);
     m_timer.setInterval(m_stand.interval);
     m_timer.start();
@@ -88,7 +88,7 @@ void CharacterModel::playForward()
     m_state = Forward;
     m_currentFrame = 0;
     m_loopAnim = m_forward.loop;
-    m_visualScale = 1.0; // 必须在 applyAnim 之前设置
+    m_visualScale = m_forward.visualScale; // 必须在 applyAnim 之前设置
     m_animOffsetX = 0;
     applyAnim(m_forward);
     m_timer.setInterval(m_forward.interval);
@@ -108,7 +108,7 @@ void CharacterModel::playBackward()
     m_state = Backward;
     m_currentFrame = 0;
     m_loopAnim = m_backward.loop;
-    m_visualScale = 1.0; // 必须在 applyAnim 之前设置
+    m_visualScale = m_backward.visualScale; // 必须在 applyAnim 之前设置
     m_animOffsetX = 0;
     applyAnim(m_backward);
     m_timer.setInterval(m_backward.interval);

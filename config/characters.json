@@ -213,6 +213,27 @@
             "blockHoldFrame": 2
         }
     },
+    "Kusanagi": {
+        "facingLeft": true,
+        "posX": 0.78,
+        "opening": {
+            "cols": 22,
+            "fw": 251,
+            "fh": 355,
+            "interval": 80,
+            "path": "qrc:/images/character/Kusanagi/opening.png"
+        },
+        "stand": {
+            "cols": 10,
+            "fw": 251,
+            "fh": 355,
+            "interval": 120,
+            "path": "qrc:/images/character/Kusanagi/stand.png",
+            "feetBottom": 312,
+            "feetMargin": 82,
+            "visualScale": 0.75
+        }
+    },
     "Yagami": {
         "facingLeft": false,
         "posX": 0.22,
@@ -243,7 +264,7 @@
             "interval": 80,
             "path": "qrc:/images/character/Yagami/Forward.png",
             "loop": true,
-            "visualScale": 1.52
+            "visualScale": 1
         },
         "backward": {
             "cols": 9,
@@ -253,8 +274,7 @@
             "feetMargin": 82,
             "interval": 80,
             "path": "qrc:/images/character/Yagami/Backward.png",
-            "loop": true,
-            "visualScale": 1.52
+            "loop": true
         },
         "jump": {
             "cols": 13,
