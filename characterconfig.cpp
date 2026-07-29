@@ -40,6 +40,7 @@ static AnimParams parseAnim(const QJsonObject &obj)
     a.offsetXPost = obj.value("offsetXPost").toInt(0);
     a.offsetXEnd = obj.value("offsetXEnd").toInt(0);
     a.blockHoldFrame = obj.value("blockHoldFrame").toInt(0);
+    a.crouchHoldFrame = obj.value("crouchHoldFrame").toInt(0);
     return a;
 }
 

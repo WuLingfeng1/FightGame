@@ -183,6 +183,8 @@ private:
     AnimParams m_standBlock;            // 站立防御动画参数副本
     int m_blockHoldFrame = 0;           // 防御动画停顿帧索引
     bool m_blockReleased = false;       // 防御键是否已松开
+    int m_crouchHoldFrame = 0;          // 下蹲停顿帧索引(0=不停顿)
+    bool m_crouchReleased = false;      // 下蹲键是否已松开(用于播放起身动画)
     bool m_crouching = false;           // 是否处于蹲姿
     bool m_loopAnim = true;             // 当前动画是否循环
     double m_cfgPosX = 0.5;             // 水平位置比例(可运行时修改)

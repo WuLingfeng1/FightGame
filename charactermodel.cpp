@@ -35,6 +35,7 @@ void CharacterModel::configure(const CharacterData &cfg)
     m_dodge = cfg.dodge;
     m_standBlock = cfg.standBlock;
     m_blockHoldFrame = cfg.standBlock.blockHoldFrame;
+    m_crouchHoldFrame = cfg.crouch.crouchHoldFrame;
     m_jumpHeight = cfg.jump.jumpHeight;
     m_refFrameWidth = cfg.stand.fw;
     setFacingLeft(cfg.facingLeft);
@@ -510,6 +511,7 @@ void CharacterModel::playHurt3()
 }
 
 // 下蹲: Orochi冻结在第0帧(蹲姿), Yagami循环播放
+// crouchHoldFrame>0 时: 播放至停顿帧后冻结, 松手后播放起身帧->切Stand
 void CharacterModel::playCrouch()
 {
     if (m_crouch.cols <= 0) return;
@@ -522,8 +524,13 @@ void CharacterModel::playCrouch()
     m_visualScale = m_crouch.visualScale;
     m_animOffsetX = m_crouch.offsetX;
     m_currentAnim = m_crouch;
+    m_crouchReleased = false;
     applyAnim(m_crouch);
-    if (m_crouch.loop) {
+    if (m_crouchHoldFrame > 0) {
+        m_loopAnim = false;
+        m_timer.setInterval(m_crouch.interval);
+        m_timer.start();
+    } else if (m_crouch.loop) {
         m_timer.setInterval(m_crouch.interval);
         m_timer.start();
     }
@@ -557,10 +564,23 @@ void CharacterModel::playCrouchAttack()
     emit stateChanged();
 }
 
-// 退出下蹲
+// 退出下蹲: crouchHoldFrame>0 时从停顿帧下一帧播放起身动画, 播完切Stand
 void CharacterModel::stopCrouch()
 {
     m_crouching = false;
+    if (m_state == CrouchAttack) { playStand(); return; }
+    if (m_state == Crouch && m_crouchHoldFrame > 0 && !m_crouchReleased) {
+        m_crouchReleased = true;
+        m_currentFrame = m_crouchHoldFrame + 1;
+        if (m_currentFrame >= m_totalFrames) {
+            playStand();
+            return;
+        }
+        m_timer.setInterval(m_crouch.interval);
+        m_timer.start();
+        emit frameChanged();
+        return;
+    }
     if (m_state == Crouch || m_state == CrouchAttack) { playStand(); }
 }
 
@@ -847,6 +867,24 @@ void CharacterModel::onTick()
         return;
     }
 
+    // 下蹲停顿/起身: crouchHoldFrame>0 时, 未松手冻在停顿帧, 松手播放起身
+    if (m_state == Crouch && m_crouchHoldFrame > 0) {
+        if (!m_crouchReleased) {
+            if (m_currentFrame >= m_crouchHoldFrame) {
+                m_currentFrame = m_crouchHoldFrame;
+                m_timer.stop();
+                emit frameChanged();
+                return;
+            }
+        } else {
+            if (m_currentFrame >= m_totalFrames) {
+                m_currentFrame = m_totalFrames - 1;
+                m_timer.stop();
+                playStand();
+                return;
+            }
+        }
+    }
     // 下蹲循环/冻结
     if (m_state == Crouch && m_currentFrame >= m_totalFrames) {
         if (m_loopAnim) {

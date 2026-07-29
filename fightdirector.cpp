@@ -17,7 +17,7 @@ FightDirector::FightDirector(QObject *parent)
     connect(m_p1Model, &CharacterModel::openingFinished, this, &FightDirector::onP1OpeningFinished);
     connect(m_p2Model, &CharacterModel::openingFinished, this, &FightDirector::onP2OpeningFinished);
 
-    QFile file(":/config/characters.json");
+    QFile file("/wlf/FightGame/config/characters.json");
     if (file.open(QIODevice::ReadOnly)) {
         m_jsonConfig = QJsonDocument::fromJson(file.readAll()).object();
         file.close();
