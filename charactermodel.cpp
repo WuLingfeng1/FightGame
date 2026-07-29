@@ -863,6 +863,7 @@ void CharacterModel::onTick()
     if (m_state == DiagonalJump && m_currentFrame >= m_djStartFrame + m_djTotalFrames) {
         m_currentFrame = m_djStartFrame + m_djTotalFrames - 1;
         m_timer.stop();
+        if (m_opponent) m_facingLeft = (m_cfgPosX > m_opponent->posXRatio());
         emit jumpFinished();
         return;
     }
@@ -1019,7 +1020,6 @@ void CharacterModel::onTick()
         if (m_opponent) {
             double oppX = m_opponent->posXRatio();
             newX = std::max(std::max(0.0, oppX - 0.95), std::min(newX, std::min(3.0, oppX + 0.95)));
-            m_facingLeft = (newX > oppX);
         }
         m_cfgPosX = newX;
         m_animOffsetX = m_djOffsetFirst + (int) ((m_djOffsetLast - m_djOffsetFirst) * t);

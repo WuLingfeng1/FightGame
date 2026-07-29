@@ -915,7 +915,8 @@ Item {
         id: countdownTimer
         interval: 1000
         repeat: true
-        running: director.phase === FightDirector.Fighting && !roundEnding && !resettingRound
+        // running: director.phase === FightDirector.Fighting && !roundEnding && !resettingRound
+        running: false  // DEBUG: 计时器已停
         onTriggered: {
             if (timerSeconds > 0) timerSeconds--
             if (timerSeconds <= 0) checkRoundEnd()

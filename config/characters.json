@@ -259,11 +259,11 @@
             "cols": 19,
             "fw": 251,
             "fh": 335,
-            "interval": 50,
+            "interval": 40,
             "path": "qrc:/images/character/Kusanagi/jump.png",
             "loop": false,
             "jumpHeight": 150,
-            "visualScale": 1.5
+            "visualScale": 1.4
         },
         "crouch": {
             "cols": 4,
@@ -276,6 +276,24 @@
             "feetBottom": 312,
             "feetMargin": 82,
             "crouchHoldFrame": 2
+        },
+        "diagonalJump": {
+            "cols": 35,
+            "fw": 251,
+            "fh": 335,
+            "feetBottom": 320,
+            "feetMargin": 82,
+            "interval": 50,
+            "path": "qrc:/images/character/Kusanagi/DiagonalJump.png",
+            "loop": false,
+            "jumpHeight": 120,
+            "jumpDistance": 0.45,
+            "visualScale": 1.6,
+            "divFrame": 17,
+            "offsetXFwd": 80,
+            "offsetXLast": -80,
+            "offsetXBwd": 0,
+            "offsetXBwdLast": 80
         }
     },
     "Yagami": {
