@@ -41,6 +41,7 @@ static AnimParams parseAnim(const QJsonObject &obj)
     a.offsetXEnd = obj.value("offsetXEnd").toInt(0);
     a.blockHoldFrame = obj.value("blockHoldFrame").toInt(0);
     a.crouchHoldFrame = obj.value("crouchHoldFrame").toInt(0);
+    a.heavyKickJumpHeight = obj.value("heavyKickJumpHeight").toInt(0);
     return a;
 }
 

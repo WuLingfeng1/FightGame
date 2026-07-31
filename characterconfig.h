@@ -47,6 +47,7 @@ struct AnimParams
     int offsetXEnd = 0;         // 闪避尾帧目标水平偏移(Orochi专用)
     int blockHoldFrame = 0;     // 防御动画停顿帧(0=不停顿)
     int crouchHoldFrame = 0;    // 下蹲停顿帧(0=不停顿, 按住蹲键停在该帧, 松手播放后续起身)
+    int heavyKickJumpHeight = 0;// 重腿攻击小跳高度(0=不跳, 仅Kusanagi使用)
 };
 
 // 角色配置: 包含一个角色的所有动画参数和初始属性

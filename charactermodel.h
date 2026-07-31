@@ -206,6 +206,7 @@ private:
     int m_dodgeOffsetXPost = 0;         // 闪避瞬移后段水平偏移(Orochi专用)
     int m_dodgeOffsetXEnd = 0;          // 闪避尾帧目标水平偏移(Orochi专用)
     bool m_dodgeStandPending = false;   // 延迟playStand标志
+    bool m_attackJumping = false;       // 攻击中是否带小跳(heavyKick专用)
 
     // 碰撞检测相关
     int m_hurtboxW = 120;              // 受击框宽度(像素)

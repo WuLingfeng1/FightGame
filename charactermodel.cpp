@@ -264,6 +264,10 @@ void CharacterModel::playHeavyKick()
     m_animOffsetX = m_heavyKick.offsetX;
     m_currentAnim = m_heavyKick;
     m_hitThisAttack = false;
+    if (m_heavyKick.heavyKickJumpHeight > 0) {
+        m_jumpHeight = m_heavyKick.heavyKickJumpHeight;
+        m_attackJumping = true;
+    }
     applyAnim(m_heavyKick);
     m_timer.setInterval(m_heavyKick.interval);
     m_timer.start();
@@ -682,6 +686,21 @@ void CharacterModel::setPosY()
             }
         }
         m_posY = groundY + arcOffset;
+    } else if (m_attackJumping) {
+        double t = 0;
+        if (m_totalFrames > 1) t = (double) m_currentFrame / (m_totalFrames - 1);
+        double arcOffset = -m_jumpHeight * 4.0 * t * (1.0 - t);
+        double fb = m_heavyKick.feetBottom, fm = m_heavyKick.feetMargin;
+        if (fb <= 0 || fm <= 0) {
+            fb = m_stand.feetBottom;
+            fm = m_stand.feetMargin;
+        }
+        double groundY = m_rootHeight - fm - fb;
+        if (m_visualScale > 1.0)
+            groundY += (m_frameHeight - fb) * (m_visualScale - 1.0);
+        else if (m_visualScale < 1.0)
+            groundY -= (m_frameHeight - fb) * (1.0 - m_visualScale);
+        m_posY = groundY + arcOffset;
     } else if (m_state == Opening || m_state == Waiting) {
         m_posY = m_rootHeight - m_frameHeight - 60.0;
     } else {
@@ -747,7 +766,7 @@ void CharacterModel::setPosY()
         }
         if (fb > 0 && fm > 0) {
             // HeavyStrike/Dodge: 确保底部位置与 stand 一致
-            if (m_state == HeavyStrike || (m_state == Dodge && m_dodge.dodgeStartFrame > 0)) {
+            if ((m_state == HeavyStrike && m_heavyStrike.fh != m_stand.fh) || (m_state == Dodge && m_dodge.dodgeStartFrame > 0)) {
                 double standBottom = m_rootHeight - m_stand.feetMargin - m_stand.feetBottom + m_stand.fh;
                 if (m_state == Dodge) {
                     m_posY = standBottom - m_stand.feetBottom - m_frameHeight + (int) (fb * m_visualScale);
@@ -806,6 +825,7 @@ bool CharacterModel::tryFinishState()
     case HeavyPunch:
     case HeavyKick:
     case HeavyStrike:
+        if (m_attackJumping) m_attackJumping = false;
         emit attackFinished();
         break;
     default:
@@ -1044,6 +1064,8 @@ void CharacterModel::onTick()
     }
 
     if (m_state == HeavyStrike) emit posXRatioChanged();
+
+    if (m_attackJumping) setPosY();
 
     emit frameChanged();
 }
