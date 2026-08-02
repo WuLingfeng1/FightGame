@@ -179,8 +179,10 @@ bool FightDirector::checkCollision()
     const double windowH = 640.0;
     bool anyHit = false;
 
-    // 检查 P1 是否攻击 P2
-    if (m_p1Model->isAttacking() && m_p1Model->isAttackActive() && m_p2Model->state() != CharacterModel::Dodge) {
+    // 检查 P1 是否攻击 P2 (defender击飞中或起身中免疫)
+    if (m_p1Model->isAttacking() && m_p1Model->isAttackActive()
+        && m_p2Model->state() != CharacterModel::Dodge
+        && !(m_p2Model->m_flyActive || m_p2Model->state() == CharacterModel::Rise)) {
         double hitNormX = m_p1Model->hitboxX();
         double hitY = m_p1Model->hitboxY();
         double hitR = m_p1Model->hitboxRadius();
@@ -210,8 +212,10 @@ bool FightDirector::checkCollision()
         }
     }
 
-    // 检查 P2 是否攻击 P1
-    if (m_p2Model->isAttacking() && m_p2Model->isAttackActive() && m_p1Model->state() != CharacterModel::Dodge) {
+    // 检查 P2 是否攻击 P1 (defender击飞中或起身中免疫)
+    if (m_p2Model->isAttacking() && m_p2Model->isAttackActive()
+        && m_p1Model->state() != CharacterModel::Dodge
+        && !(m_p1Model->m_flyActive || m_p1Model->state() == CharacterModel::Rise)) {
         double hitNormX = m_p2Model->hitboxX();
         double hitY = m_p2Model->hitboxY();
         double hitR = m_p2Model->hitboxRadius();

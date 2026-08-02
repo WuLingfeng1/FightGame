@@ -200,10 +200,10 @@ Item {
             } else {
                 if (isP1) {
                     p1Blocking = false
-                    if (director.p1Model.state === 16) director.p1Model.releaseStandBlock()
+                    if (director.p1Model.state === 16 || director.p1Model.state === 12 || director.p1Model.state === 17) director.p1Model.releaseStandBlock()
                 } else {
                     p2Blocking = false
-                    if (director.p2Model.state === 16) director.p2Model.releaseStandBlock()
+                    if (director.p2Model.state === 16 || director.p2Model.state === 12 || director.p2Model.state === 17) director.p2Model.releaseStandBlock()
                 }
             }
         } else if (action === "dodge_forward") {
@@ -316,7 +316,7 @@ Item {
     // P1 移动
     function startMoveRight() {
         moveRightPressed = true
-        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
+        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16 || director.p1Model.state === 12 || director.p1Model.state === 17) return
         updateFacing()
         moveTimer.moveLeft = false
         moveTimer.moveRight = true
@@ -334,7 +334,7 @@ Item {
     }
     function startMoveLeft() {
         moveLeftPressed = true
-        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
+        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16 || director.p1Model.state === 12 || director.p1Model.state === 17) return
         updateFacing()
         moveTimer.moveRight = false
         moveTimer.moveLeft = true
@@ -352,7 +352,7 @@ Item {
     }
     function stopMoveRight() {
         moveRightPressed = false
-        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
+        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16 || director.p1Model.state === 12 || director.p1Model.state === 17) return
         updateFacing()
         if (moveLeftPressed) {
             moveTimer.moveRight = false
@@ -375,7 +375,7 @@ Item {
     }
     function stopMoveLeft() {
         moveLeftPressed = false
-        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
+        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16 || director.p1Model.state === 12 || director.p1Model.state === 17) return
         updateFacing()
         if (moveRightPressed) {
             moveTimer.moveLeft = false
@@ -399,7 +399,7 @@ Item {
 
     // P1 跳跃
     function startJump() {
-        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
+        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16 || director.p1Model.state === 12 || director.p1Model.state === 17) return
         p1Jumping = true
         var wasMoving = isMoving
         var animBeforeJump = p1CurrentAnim
@@ -417,7 +417,7 @@ Item {
 
     // P1 攻击
     function startAttack1() {
-        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
+        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16 || director.p1Model.state === 12 || director.p1Model.state === 17) return
         p1Attacking = true
         moveTimer.moveRight = false
         moveTimer.moveLeft = false
@@ -427,7 +427,7 @@ Item {
         director.p1Model.playLightPunch()
     }
     function startAttackLightKick1() {
-        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
+        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16 || director.p1Model.state === 12 || director.p1Model.state === 17) return
         p1Attacking = true
         moveTimer.moveRight = false
         moveTimer.moveLeft = false
@@ -437,7 +437,7 @@ Item {
         director.p1Model.playLightKick()
     }
     function startAttackHeavyPunch1() {
-        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
+        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16 || director.p1Model.state === 12 || director.p1Model.state === 17) return
         p1Attacking = true
         moveTimer.moveRight = false
         moveTimer.moveLeft = false
@@ -447,7 +447,7 @@ Item {
         director.p1Model.playHeavyPunch()
     }
     function startAttackHeavyKick1() {
-        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
+        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16 || director.p1Model.state === 12 || director.p1Model.state === 17) return
         p1Attacking = true
         moveTimer.moveRight = false
         moveTimer.moveLeft = false
@@ -457,7 +457,7 @@ Item {
         director.p1Model.playHeavyKick()
     }
     function startAttackHeavyStrike1() {
-        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16) return
+        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16 || director.p1Model.state === 12 || director.p1Model.state === 17) return
         p1Attacking = true
         moveTimer.moveRight = false
         moveTimer.moveLeft = false
@@ -479,7 +479,7 @@ Item {
 
     // P1 下蹲
     function startCrouch1() {
-        if (p1Jumping || p1Attacking || p1Blocking || director.p1Model.state === 16) return
+        if (p1Jumping || p1Attacking || p1Blocking || director.p1Model.state === 16 || director.p1Model.state === 12 || director.p1Model.state === 17) return
         p1Crouching = true
         moveRightPressed = false
         moveLeftPressed = false
@@ -500,7 +500,7 @@ Item {
     // P2 移动
     function startMoveRight2() {
         moveRight2Pressed = true
-        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
+        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16 || director.p2Model.state === 12 || director.p2Model.state === 17) return
         updateFacing()
         moveTimer2.moveLeft = false
         moveTimer2.moveRight = true
@@ -518,7 +518,7 @@ Item {
     }
     function startMoveLeft2() {
         moveLeft2Pressed = true
-        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
+        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16 || director.p2Model.state === 12 || director.p2Model.state === 17) return
         updateFacing()
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = true
@@ -536,7 +536,7 @@ Item {
     }
     function stopMoveRight2() {
         moveRight2Pressed = false
-        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
+        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16 || director.p2Model.state === 12 || director.p2Model.state === 17) return
         updateFacing()
         if (moveLeft2Pressed) {
             moveTimer2.moveRight = false
@@ -559,7 +559,7 @@ Item {
     }
     function stopMoveLeft2() {
         moveLeft2Pressed = false
-        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
+        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16 || director.p2Model.state === 12 || director.p2Model.state === 17) return
         updateFacing()
         if (moveRight2Pressed) {
             moveTimer2.moveLeft = false
@@ -583,7 +583,7 @@ Item {
 
     // P2 跳跃
     function startJump2() {
-        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
+        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16 || director.p2Model.state === 12 || director.p2Model.state === 17) return
         p2Jumping = true
         var wasMoving = isMoving2
         var animBeforeJump = p2CurrentAnim
@@ -601,7 +601,7 @@ Item {
 
     // P2 攻击
     function startAttack2() {
-        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
+        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16 || director.p2Model.state === 12 || director.p2Model.state === 17) return
         p2Attacking = true
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = false
@@ -611,7 +611,7 @@ Item {
         director.p2Model.playLightPunch()
     }
     function startAttackLightKick2() {
-        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
+        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16 || director.p2Model.state === 12 || director.p2Model.state === 17) return
         p2Attacking = true
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = false
@@ -621,7 +621,7 @@ Item {
         director.p2Model.playLightKick()
     }
     function startAttackHeavyPunch2() {
-        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
+        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16 || director.p2Model.state === 12 || director.p2Model.state === 17) return
         p2Attacking = true
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = false
@@ -631,7 +631,7 @@ Item {
         director.p2Model.playHeavyPunch()
     }
     function startAttackHeavyKick2() {
-        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
+        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16 || director.p2Model.state === 12 || director.p2Model.state === 17) return
         p2Attacking = true
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = false
@@ -641,7 +641,7 @@ Item {
         director.p2Model.playHeavyKick()
     }
     function startAttackHeavyStrike2() {
-        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16) return
+        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16 || director.p2Model.state === 12 || director.p2Model.state === 17) return
         p2Attacking = true
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = false
@@ -663,7 +663,7 @@ Item {
 
     // P2 下蹲
     function startCrouch2() {
-        if (p2Jumping || p2Attacking || p2Blocking || director.p2Model.state === 16) return
+        if (p2Jumping || p2Attacking || p2Blocking || director.p2Model.state === 16 || director.p2Model.state === 12 || director.p2Model.state === 17) return
         p2Crouching = true
         moveRight2Pressed = false
         moveLeft2Pressed = false
@@ -772,6 +772,7 @@ Item {
         updateFacing()
         director.updateCamera()
         if (p1Crouching || p1Blocking) return
+        if (director.p1Model.state === 12 || director.p1Model.state === 17) return
         if (moveRightPressed && !moveLeftPressed) {
             isMoving = true
             moveTimer.moveLeft = false
@@ -814,6 +815,7 @@ Item {
         updateFacing()
         director.updateCamera()
         if (p2Crouching || p2Blocking) return
+        if (director.p2Model.state === 12 || director.p2Model.state === 17) return
         if (moveRight2Pressed && !moveLeft2Pressed) {
             isMoving2 = true
             moveTimer2.moveLeft = false
@@ -860,10 +862,10 @@ Item {
             function playHurtByAttackType(targetModel, attackerState) {
                 if (attackerState === 7 || attackerState === 8) {
                     targetModel.playHurt1()
-                } else if (attackerState === 9) {
-                    targetModel.playHurt3()
-                } else if (attackerState === 10) {
+                } else if (attackerState === 9 || attackerState === 10) {
                     targetModel.playHurt2()
+                } else if (attackerState === 11) {
+                    targetModel.playHurt3()
                 } else {
                     targetModel.playHurt()
                 }
@@ -971,6 +973,7 @@ Item {
         property bool moveLeft: false
         onTriggered: {
             if (isOnline && !isHost) return
+            if (director.p1Model.state === 12 || director.p1Model.state === 17) return
             var p1 = director.p1Model.posXRatio
             var p2 = director.p2Model.posXRatio
             if (moveRight) {
@@ -1004,6 +1007,7 @@ Item {
         property bool moveRight: false
         property bool moveLeft: false
         onTriggered: {
+            if (director.p2Model.state === 12 || director.p2Model.state === 17) return
             var p2 = director.p2Model.posXRatio
             var p1 = director.p1Model.posXRatio
             if (moveRight) {
@@ -1677,10 +1681,10 @@ Item {
                 var playHurt = function(targetModel, atkState) {
                     if (atkState === 7 || atkState === 8) {
                         targetModel.playHurt1()
-                    } else if (atkState === 9) {
-                        targetModel.playHurt3()
-                    } else if (atkState === 10) {
+                    } else if (atkState === 9 || atkState === 10) {
                         targetModel.playHurt2()
+                    } else if (atkState === 11) {
+                        targetModel.playHurt3()
                     } else {
                         targetModel.playHurt()
                     }

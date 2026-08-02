@@ -42,6 +42,11 @@ static AnimParams parseAnim(const QJsonObject &obj)
     a.blockHoldFrame = obj.value("blockHoldFrame").toInt(0);
     a.crouchHoldFrame = obj.value("crouchHoldFrame").toInt(0);
     a.heavyKickJumpHeight = obj.value("heavyKickJumpHeight").toInt(0);
+    a.flyHeight = obj.value("flyHeight").toInt(0);
+    a.flyPeakT = obj.value("flyPeakT").toDouble(0.2);
+    a.flyLandT = obj.value("flyLandT").toDouble(0.4);
+    a.flyDistance = obj.value("flyDistance").toDouble(0);
+    a.riseFollowUp = obj.value("riseFollowUp").toInt(0);
     return a;
 }
 
@@ -67,6 +72,7 @@ CharacterData CharacterConfig::load(const QJsonObject &json, const QString &id)
     cfg.hurt1 = parseAnim(json.value("hurt1").toObject());
     cfg.hurt2 = parseAnim(json.value("hurt2").toObject());
     cfg.hurt3 = parseAnim(json.value("hurt3").toObject());
+    cfg.rise = parseAnim(json.value("rise").toObject());
     cfg.crouch = parseAnim(json.value("crouch").toObject());
     cfg.crouchAttack = parseAnim(json.value("crouchAttack").toObject());
     cfg.dodge = parseAnim(json.value("dodge").toObject());

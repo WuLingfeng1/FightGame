@@ -57,7 +57,8 @@ public:
         Crouch,
         CrouchAttack,
         Dodge,
-        StandBlock
+        StandBlock,
+        Rise
     };
     Q_ENUM(State)
 
@@ -104,7 +105,8 @@ public:
     Q_INVOKABLE void playHurt();                     // 切换到受击动画(通用)
     Q_INVOKABLE void playHurt1();                    // 切换到轻度受击动画
     Q_INVOKABLE void playHurt2();                    // 切换到中度受击动画
-    Q_INVOKABLE void playHurt3();                    // 切换到重度受击动画
+    Q_INVOKABLE void playHurt3();                    // 切换到重度受击动画(击飞)
+    Q_INVOKABLE void playRise();                     // 切换到起身动画(击飞倒地后)
     Q_INVOKABLE void playCrouch();                   // 切换到下蹲动画
     Q_INVOKABLE void playCrouchAttack();             // 切换到下蹲攻击动画
     Q_INVOKABLE void stopCrouch();                   // 退出下蹲状态
@@ -177,6 +179,7 @@ private:
     AnimParams m_hurt1;                 // 轻度受击动画参数副本
     AnimParams m_hurt2;                 // 中度受击动画参数副本
     AnimParams m_hurt3;                 // 重度受击动画参数副本
+    AnimParams m_rise;                  // 起身动画参数副本
     AnimParams m_crouch;                // 下蹲动画参数副本
     AnimParams m_crouchAttack;          // 下蹲攻击动画参数副本
     AnimParams m_dodge;                 // 闪避动画参数副本
@@ -207,6 +210,13 @@ private:
     int m_dodgeOffsetXEnd = 0;          // 闪避尾帧目标水平偏移(Orochi专用)
     bool m_dodgeStandPending = false;   // 延迟playStand标志
     bool m_attackJumping = false;       // 攻击中是否带小跳(heavyKick专用)
+    int m_flyHeight = 0;                // 受击击飞高度(从配置加载)
+    bool m_flyActive = false;           // 当前受击动画是否带击飞抛物线
+    double m_flyPeakT = 0.2;            // 击飞抛物线峰点(0~1)
+    double m_flyLandT = 0.4;            // 击飞落地位置(0~1)
+    double m_flyDistance = 0;           // 击飞水平位移距离(归一化坐标)
+    double m_flyStartX = 0;             // 击飞起点的X比例
+    double m_flyDir = 1.0;              // 击飞方向(+1远离对手, -1朝向对手), 起跳时捕获
 
     // 碰撞检测相关
     int m_hurtboxW = 120;              // 受击框宽度(像素)

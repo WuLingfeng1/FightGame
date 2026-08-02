@@ -72,6 +72,8 @@ qt_add_resources(appFightGame "appresources"
         images/character/Kusanagi/HeavyKick.png
         images/character/Kusanagi/heavystrick.png
         images/character/Kusanagi/Dodge.png
+        images/character/Kusanagi/hurt2.png
+        images/character/Kusanagi/knockaway.png
         images/character/Yagami/Stand.png
         images/character/Yagami/opening.png
         images/character/Yagami/Backward.png
@@ -80,7 +82,7 @@ qt_add_resources(appFightGame "appresources"
         images/character/Yagami/Dodge.png
         images/character/Yagami/Forward.png
         images/character/Yagami/Jump.png
-        images/character/Yagami/Knockdown.png
+        images/character/Yagami/Knockaway.png
         images/character/Yagami/PowerUp.png
         images/character/Yagami/Rise.png
         images/character/Yagami/Run.png

@@ -1,6 +1,7 @@
 #include "charactermodel.h"
 #include <algorithm>
 
+
 CharacterModel::CharacterModel(QObject *parent)
     : QObject(parent)
 {
@@ -30,6 +31,7 @@ void CharacterModel::configure(const CharacterData &cfg)
     m_hurt1 = cfg.hurt1;
     m_hurt2 = cfg.hurt2;
     m_hurt3 = cfg.hurt3;
+    m_rise = cfg.rise;
     m_crouch = cfg.crouch;
     m_crouchAttack = cfg.crouchAttack;
     m_dodge = cfg.dodge;
@@ -85,6 +87,7 @@ void CharacterModel::playForward()
 {
     if (m_forward.cols <= 0) return;                      // 未配置行走动画则忽略
     if (m_state == Forward && m_timer.isActive()) return; // 已在行走中则跳过
+    if (m_state == Hurt || m_state == Rise) return;       // 受击/起身中不可移动
     m_timer.stop();
     m_state = Forward;
     m_currentFrame = 0;
@@ -105,6 +108,7 @@ void CharacterModel::playBackward()
 {
     if (m_backward.cols <= 0) return;                      // 未配置后退动画则忽略
     if (m_state == Backward && m_timer.isActive()) return; // 已在后退中则跳过
+    if (m_state == Hurt || m_state == Rise) return;       // 受击/起身中不可移动
     m_timer.stop();
     m_state = Backward;
     m_currentFrame = 0;
@@ -123,6 +127,7 @@ void CharacterModel::playBackward()
 // 直跳: 不循环, 播完触发jumpFinished
 void CharacterModel::playJump()
 {
+    if (m_state == Hurt || m_state == Rise) return; // 受击/起身中锁定操作
     if (m_jump.cols <= 0) return;
     m_timer.stop();
     m_state = Jump;
@@ -143,6 +148,7 @@ void CharacterModel::playJump()
 // 帧段由 divFrame 分割: 左半=右向跳跃 右半=左向跳跃
 void CharacterModel::playDiagonalJump(bool forward)
 {
+    if (m_state == Hurt || m_state == Rise) return; // 受击/起身中锁定操作
     if (m_diagonalJump.cols <= 0 || m_diagonalJump.divFrame <= 0) return;
     m_timer.stop();
     m_state = DiagonalJump;
@@ -181,6 +187,7 @@ void CharacterModel::playDiagonalJump(bool forward)
 // 轻拳
 void CharacterModel::playLightPunch()
 {
+    if (m_state == Hurt || m_state == Rise) return; // 受击/起身中锁定操作
     if (m_lightPunch.cols <= 0) return;
     if (m_crouching) return;
     if (m_state == LightPunch && m_timer.isActive()) return;
@@ -205,6 +212,7 @@ void CharacterModel::playLightPunch()
 // 轻腿
 void CharacterModel::playLightKick()
 {
+    if (m_state == Hurt || m_state == Rise) return; // 受击/起身中锁定操作
     if (m_lightKick.cols <= 0) return;
     if (m_crouching) return;
     if (m_state == LightKick && m_timer.isActive()) return;
@@ -229,6 +237,7 @@ void CharacterModel::playLightKick()
 // 重拳
 void CharacterModel::playHeavyPunch()
 {
+    if (m_state == Hurt || m_state == Rise) return; // 受击/起身中锁定操作
     if (m_heavyPunch.cols <= 0) return;
     if (m_crouching) return;
     if (m_state == HeavyPunch && m_timer.isActive()) return;
@@ -253,6 +262,7 @@ void CharacterModel::playHeavyPunch()
 // 重腿
 void CharacterModel::playHeavyKick()
 {
+    if (m_state == Hurt || m_state == Rise) return; // 受击/起身中锁定操作
     if (m_heavyKick.cols <= 0) return;
     if (m_crouching) return;
     if (m_state == HeavyKick && m_timer.isActive()) return;
@@ -281,6 +291,7 @@ void CharacterModel::playHeavyKick()
 // 超重击
 void CharacterModel::playHeavyStrike()
 {
+    if (m_state == Hurt || m_state == Rise) return; // 受击/起身中锁定操作
     if (m_heavyStrike.cols <= 0) return;
     if (m_crouching) return;
     m_timer.stop();
@@ -304,6 +315,7 @@ void CharacterModel::playHeavyStrike()
 // 闪避
 void CharacterModel::playDodge(bool forward)
 {
+    if (m_state == Hurt || m_state == Rise) return; // 受击/起身中锁定操作
     if (m_dodge.cols <= 0) return;
     m_timer.stop();
     m_state = Dodge;
@@ -514,10 +526,35 @@ void CharacterModel::playHurt3()
     emit stateChanged();
 }
 
+// 起身: 击飞倒地后播放, 播完自动切Stand
+void CharacterModel::playRise()
+{
+    if (m_rise.cols <= 0) {
+        playStand();
+        return;
+    }
+    m_timer.stop();
+    m_state = Rise;
+    m_currentFrame = 0;
+    m_loopAnim = false;
+    m_visualScale = m_rise.visualScale;
+    m_animOffsetX = m_rise.offsetX;
+    m_currentAnim = m_rise;
+    applyAnim(m_rise);
+    m_timer.setInterval(m_rise.interval);
+    m_timer.start();
+    emit frameChanged();
+    emit sourcePathChanged();
+    emit sizeChanged();
+    emit positionChanged();
+    emit stateChanged();
+}
+
 // 下蹲: Orochi冻结在第0帧(蹲姿), Yagami循环播放
 // crouchHoldFrame>0 时: 播放至停顿帧后冻结, 松手后播放起身帧->切Stand
 void CharacterModel::playCrouch()
 {
+    if (m_state == Hurt || m_state == Rise) return; // 受击/起身中锁定操作
     if (m_crouch.cols <= 0) return;
     if (m_state == Crouch || m_state == CrouchAttack) return;
     m_timer.stop();
@@ -548,6 +585,7 @@ void CharacterModel::playCrouch()
 // 下蹲攻击: 播完回到蹲姿
 void CharacterModel::playCrouchAttack()
 {
+    if (m_state == Hurt || m_state == Rise) return; // 受击/起身中锁定操作
     if (m_crouchAttack.cols <= 0) return;
     if (m_state == CrouchAttack && m_timer.isActive()) return;
     m_timer.stop();
@@ -591,6 +629,7 @@ void CharacterModel::stopCrouch()
 // 站立防御: 循环播放防御动画
 void CharacterModel::playStandBlock()
 {
+    if (m_state == Hurt || m_state == Rise) return; // 受击/起身中锁定操作
     if (m_standBlock.cols <= 0) return;
     m_timer.stop();
     m_state = StandBlock;
@@ -652,6 +691,15 @@ void CharacterModel::applyAnim(const AnimParams &p)
     m_frameWidth = p.fw;
     m_frameHeight = p.fh;
     m_totalFrames = p.cols;
+    m_flyActive = (p.flyHeight > 0);
+    m_flyHeight = p.flyHeight;
+    m_flyPeakT = p.flyPeakT;
+    m_flyLandT = p.flyLandT;
+    m_flyDistance = p.flyDistance;
+    if (m_flyActive) {
+        m_flyStartX = m_cfgPosX;
+        m_flyDir = (m_opponent && m_cfgPosX > m_opponent->posXRatio()) ? 1.0 : -1.0;
+    }
     setPosY();
 }
 
@@ -691,6 +739,33 @@ void CharacterModel::setPosY()
         if (m_totalFrames > 1) t = (double) m_currentFrame / (m_totalFrames - 1);
         double arcOffset = -m_jumpHeight * 4.0 * t * (1.0 - t);
         double fb = m_heavyKick.feetBottom, fm = m_heavyKick.feetMargin;
+        if (fb <= 0 || fm <= 0) {
+            fb = m_stand.feetBottom;
+            fm = m_stand.feetMargin;
+        }
+        double groundY = m_rootHeight - fm - fb;
+        if (m_visualScale > 1.0)
+            groundY += (m_frameHeight - fb) * (m_visualScale - 1.0);
+        else if (m_visualScale < 1.0)
+            groundY -= (m_frameHeight - fb) * (1.0 - m_visualScale);
+        m_posY = groundY + arcOffset;
+    } else if (m_flyActive) {
+        // 受击击飞: 参数化抛物线(峰m_flyPeakT, 落地m_flyLandT), 与倒地帧时序同步
+        double t = 0;
+        if (m_totalFrames > 1) t = (double) m_currentFrame / (m_totalFrames - 1);
+        double arcOffset = 0;
+        double peakT = m_flyPeakT, landT = m_flyLandT;
+        if (t < landT) {
+            if (t < peakT) {
+                double u = t / peakT; // 上升: 0→1(峰)
+                arcOffset = -m_flyHeight * u * (2.0 - u);
+            } else {
+                double u = (t - peakT) / (landT - peakT); // 下落: 0→1
+                double v = 1.0 - u;
+                arcOffset = -m_flyHeight * v * v;
+            }
+        }
+        double fb = m_currentAnim.feetBottom, fm = m_currentAnim.feetMargin;
         if (fb <= 0 || fm <= 0) {
             fb = m_stand.feetBottom;
             fm = m_stand.feetMargin;
@@ -755,6 +830,10 @@ void CharacterModel::setPosY()
             fb = m_standBlock.feetBottom;
             fm = m_standBlock.feetMargin;
             break;
+        case Rise:
+            fb = m_rise.feetBottom;
+            fm = m_rise.feetMargin;
+            break;
         default:
             fb = m_stand.feetBottom;
             fm = m_stand.feetMargin;
@@ -811,6 +890,12 @@ bool CharacterModel::tryFinishState()
     m_timer.stop();
 
     State prevState = m_state;
+    // 击飞受击结束后播放起身动画(riseFollowUp>0且配置了rise)
+    if (prevState == Hurt && m_currentAnim.riseFollowUp > 0 && m_rise.cols > 0) {
+        playRise();
+        emit hurtFinished();
+        return true;
+    }
     playStand();
 
     switch (prevState) {
@@ -1063,9 +1148,20 @@ void CharacterModel::onTick()
         emit posXRatioChanged();
     }
 
+    // 击飞水平位移: 远离对手线性飞出, 落地时(landT)停止
+    if (m_state == Hurt && m_flyActive && m_flyDistance > 0 && m_opponent) {
+        double t = 0;
+        if (m_totalFrames > 1) t = (double) m_currentFrame / (m_totalFrames - 1);
+        double slideT = std::min(t / m_flyLandT, 1.0);
+        m_cfgPosX = m_flyStartX + m_flyDir * m_flyDistance * slideT;
+        m_cfgPosX = std::max(0.0, std::min(m_cfgPosX, 3.0));
+        emit posXRatioChanged();
+    }
+
     if (m_state == HeavyStrike) emit posXRatioChanged();
 
     if (m_attackJumping) setPosY();
+    if (m_flyActive) setPosY();
 
     emit frameChanged();
 }
@@ -1133,6 +1229,11 @@ double CharacterModel::hurtboxY() const
 void CharacterModel::applyKnockback()
 {
     if (!m_opponent || m_knockbackToApply <= 0) return;
+    // 击飞动画水平位移由flyDistance控制, 不叠加普通击退
+    if (m_currentAnim.flyDistance > 0) {
+        m_knockbackToApply = 0;
+        return;
+    }
 
     m_knockbackRemaining = m_knockbackToApply / 1000.0;
     m_knockbackFrames = m_currentAnim.cols; // 分散到整个受击动画
