@@ -47,6 +47,7 @@ static AnimParams parseAnim(const QJsonObject &obj)
     a.flyLandT = obj.value("flyLandT").toDouble(0.4);
     a.flyDistance = obj.value("flyDistance").toDouble(0);
     a.riseFollowUp = obj.value("riseFollowUp").toInt(0);
+    a.openingVoiceMs = obj.value("openingVoiceMs").toInt(0);
     return a;
 }
 

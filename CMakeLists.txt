@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.22)
 project(FightGame VERSION 0.1 LANGUAGES CXX)
 set(QT_QML_GENERATE_QMLLS_INI ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick Network Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Quick Network Widgets Multimedia)
 qt_standard_project_setup(REQUIRES 6.9)
 
 qt_add_executable(appFightGame  WIN32)
@@ -24,6 +24,7 @@ qt_add_qml_module(appFightGame
     SOURCES keybindingconfig.h keybindingconfig.cpp
     SOURCES networkmanager.h networkmanager.cpp
     SOURCES roommanager.h roommanager.cpp
+    SOURCES voicemanager.h voicemanager.cpp
 )
 qt_add_resources(appFightGame "appresources"
     PREFIX "/"
@@ -113,11 +114,55 @@ qt_add_resources(appFightGame "appresources"
         images/Attack/2.png
         images/Attack/3.png
         images/FightBackGround/jiulong.gif
+        resources/voices/Orochi/heavyKick1.wav
+        resources/voices/Orochi/heavyPunch1.wav
+        resources/voices/Orochi/hitHeavyKick1.wav
+        resources/voices/Orochi/hitHeavyPunch1.wav
+        resources/voices/Orochi/hitKick1.wav
+        resources/voices/Orochi/hitPunch1.wav
+        resources/voices/Orochi/hitStrike1.wav
+        resources/voices/Orochi/hurt1.wav
+        resources/voices/Orochi/jump1.wav
+        resources/voices/Orochi/kick1.wav
+        resources/voices/Orochi/opening1.wav
+        resources/voices/Orochi/punch1.wav
+        resources/voices/Orochi/step1.wav
+        resources/voices/Orochi/step2.wav
+        resources/voices/Orochi/strike1.wav
+        resources/voices/Orochi/win1.wav
+        resources/voices/Orochi/win2.wav
+        resources/voices/Orochi/win3.wav
+        resources/voices/Yagami/dodge1.wav
+        resources/voices/Yagami/heavyKick1.wav
+        resources/voices/Yagami/heavyPunch1.wav
+        resources/voices/Yagami/hitHeavyKick1.wav
+        resources/voices/Yagami/hitHeavyPunch1.wav
+        resources/voices/Yagami/hitKick1.wav
+        resources/voices/Yagami/hitPunch1.wav
+        resources/voices/Yagami/hitStrike1.wav
+        resources/voices/Yagami/hurt1.wav
+        resources/voices/Yagami/hurt2.wav
+        resources/voices/Yagami/jump1.wav
+        resources/voices/Yagami/kick1.wav
+        resources/voices/Yagami/opening1.wav
+        resources/voices/Yagami/punch1.wav
+        resources/voices/Yagami/step1.wav
+        resources/voices/Yagami/step2.wav
+        resources/voices/Yagami/strike1.wav
+        resources/voices/Yagami/swingHeavyKick1.wav
+        resources/voices/Yagami/swingHeavyPunch1.wav
+        resources/voices/Yagami/swingKick1.wav
+        resources/voices/Yagami/swingPunch1.wav
+        resources/voices/Yagami/swingStrike1.wav
+        resources/voices/Yagami/win1.wav
+        resources/voices/Yagami/win2.wav
+        resources/voices/Yagami/win3.wav
+        resources/voices/Yagami/win4.wav
 )
 
 target_compile_features(appFightGame PRIVATE cxx_std_23)
 target_link_libraries(appFightGame
-    PRIVATE Qt6::Quick Qt6::Network Qt6::Widgets
+    PRIVATE Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Multimedia
 )
 
 set(CMAKE_INSTALL_PREFIX "/opt/${PROJECT_NAME}" CACHE PATH "Install path prefix" FORCE)

@@ -707,11 +707,18 @@ Item {
 
             if (p1Health <= 0 && p2Health > 0) {
                 p2Wins++
+                if (voiceManager) voiceManager.play(p2CharId, "win")
             } else if (p2Health <= 0 && p1Health > 0) {
                 p1Wins++
+                if (voiceManager) voiceManager.play(p1CharId, "win")
             } else if (timerSeconds <= 0) {
-                if (p1Health > p2Health) p1Wins++
-                else if (p2Health > p1Health) p2Wins++
+                if (p1Health > p2Health) {
+                    p1Wins++
+                    if (voiceManager) voiceManager.play(p1CharId, "win")
+                } else if (p2Health > p1Health) {
+                    p2Wins++
+                    if (voiceManager) voiceManager.play(p2CharId, "win")
+                }
             }
 
             if (isOnline && isHost && networkMgr) {
@@ -854,6 +861,11 @@ Item {
         }
     }
 
+    // 语音管理器: QML渲染层实例, 即C++逻辑层单例(双层架构共享)
+    VoiceManager {
+        id: voiceManager
+    }
+
     // 战斗导演
     FightDirector {
         id: director
@@ -875,6 +887,8 @@ Item {
                 p2Health = Math.max(0, p2Health - damage)
                 if (!director.p2Model.isBlocking()) {
                     playHurtByAttackType(director.p2Model, director.p1Model.state)
+                } else {
+                    if (voiceManager) voiceManager.play(p2CharId, "block")
                 }
                 if (director.p1Model.state >= 7 && director.p1Model.state <= 11)
                     attackVfx.play(director.p1Model, director.p2Model)
@@ -882,6 +896,8 @@ Item {
                 p1Health = Math.max(0, p1Health - damage)
                 if (!director.p1Model.isBlocking()) {
                     playHurtByAttackType(director.p1Model, director.p2Model.state)
+                } else {
+                    if (voiceManager) voiceManager.play(p1CharId, "block")
                 }
                 if (director.p2Model.state >= 7 && director.p2Model.state <= 11)
                     attackVfx.play(director.p2Model, director.p1Model)

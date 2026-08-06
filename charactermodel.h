@@ -10,6 +10,7 @@
 #include <QString>
 #include <QtQml/qqmlregistration.h>
 #include "characterconfig.h"
+#include "voicemanager.h"
 
 // 角色模型: 管理单个角色的动画状态机, 驱动精灵表逐帧播放
 // 状态流转: Waiting -> Opening -> Stand <-> Forward / Backward
@@ -116,6 +117,8 @@ public:
     void reset();                                    // 重置到初始状态
     void updateRootHeight(double h);                 // 更新窗口高度(用于Y坐标计算)
     State state() const { return m_state; }
+    QString charId() const { return m_charId; }                         // 角色标识符
+    QString attackAction() const;                                       // 当前攻击动作名(punch/kick/heavyPunch/heavyKick/strike)
     int stateInt() const { return static_cast<int>(m_state); }            // 状态整数形式(用于QML)
     Q_INVOKABLE bool isBlocking() const { return m_state == StandBlock; } // 是否处于防御状态
 
@@ -228,6 +231,9 @@ private:
     int m_knockbackFrames = 0;         // 剩余击退帧数
 
     CharacterModel *m_opponent = nullptr; // 对手角色引用, 用于跳跃朝向更新
+    QString m_charId;                     // 角色标识符(用于语音资源定位)
+    int m_openingVoiceMs = 0;             // 开场语音时长(毫秒), 末帧保持等待语音播完
+    int m_openingElapsed = 0;             // 开场已播放毫秒数
     friend class FightDirector;           // 允许 FightDirector 直接设置 m_rootHeight
     double m_rootHeight = 640;            // 窗口高度(用于Y坐标计算)
 };

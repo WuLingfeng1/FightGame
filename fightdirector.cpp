@@ -2,6 +2,7 @@
 #include "charactermodel.h"
 #include "characterconfig.h"
 #include "keybindingconfig.h"
+#include "voicemanager.h"
 #include <QDebug>
 #include <algorithm>
 #include <cmath>
@@ -208,6 +209,7 @@ bool FightDirector::checkCollision()
             }
             m_p2Model->m_knockbackToApply = finalKnockback;
             emit hitDetected(1, finalDamage);
+            VoiceManager::instance().play(m_p1Model->charId(), QStringLiteral("hit") + m_p1Model->attackAction());
             anyHit = true;
         }
     }
@@ -241,6 +243,7 @@ bool FightDirector::checkCollision()
             }
             m_p1Model->m_knockbackToApply = finalKnockback;
             emit hitDetected(2, finalDamage);
+            VoiceManager::instance().play(m_p2Model->charId(), QStringLiteral("hit") + m_p2Model->attackAction());
             anyHit = true;
         }
     }

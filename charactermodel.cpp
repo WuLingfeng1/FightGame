@@ -16,6 +16,7 @@ CharacterModel::~CharacterModel()
 
 void CharacterModel::configure(const CharacterData &cfg)
 {
+    m_charId = cfg.id;
     m_opening = cfg.opening;
     m_stand = cfg.stand;
     m_forward = cfg.forward;
@@ -40,6 +41,7 @@ void CharacterModel::configure(const CharacterData &cfg)
     m_crouchHoldFrame = cfg.crouch.crouchHoldFrame;
     m_jumpHeight = cfg.jump.jumpHeight;
     m_refFrameWidth = cfg.stand.fw;
+    m_openingVoiceMs = cfg.opening.openingVoiceMs;
     setFacingLeft(cfg.facingLeft);
     setPosXRatio(cfg.posX);
     m_state = Waiting;
@@ -47,10 +49,25 @@ void CharacterModel::configure(const CharacterData &cfg)
     m_crouching = false; // 重置下蹲状态
 }
 
+// 当前攻击动作名: 用于命中音播放
+QString CharacterModel::attackAction() const
+{
+    switch (m_state) {
+    case LightPunch:   return QStringLiteral("punch");
+    case LightKick:    return QStringLiteral("kick");
+    case HeavyPunch:   return QStringLiteral("heavyPunch");
+    case HeavyKick:    return QStringLiteral("heavyKick");
+    case HeavyStrike:  return QStringLiteral("strike");
+    default:           return QString();
+    }
+}
+
 // 播放开场: 仅Waiting状态可进入, 播完自动切Stand
 void CharacterModel::playOpening()
 {
     if (m_state != Waiting) return;
+    VoiceManager::instance().play(m_charId, QStringLiteral("opening"));
+    m_openingElapsed = 0;
     m_state = Opening;
     m_currentFrame = 0;
     applyAnim(m_opening);
@@ -129,6 +146,8 @@ void CharacterModel::playJump()
 {
     if (m_state == Hurt || m_state == Rise) return; // 受击/起身中锁定操作
     if (m_jump.cols <= 0) return;
+    VoiceManager::instance().play(m_charId, QStringLiteral("jump"));
+    VoiceManager::instance().play(m_charId, QStringLiteral("step"));
     m_timer.stop();
     m_state = Jump;
     m_currentFrame = 0;
@@ -191,6 +210,8 @@ void CharacterModel::playLightPunch()
     if (m_lightPunch.cols <= 0) return;
     if (m_crouching) return;
     if (m_state == LightPunch && m_timer.isActive()) return;
+    VoiceManager::instance().play(m_charId, QStringLiteral("punch"));
+    VoiceManager::instance().play(m_charId, QStringLiteral("swingPunch"));
     m_timer.stop();
     m_state = LightPunch;
     m_currentFrame = 0;
@@ -216,6 +237,8 @@ void CharacterModel::playLightKick()
     if (m_lightKick.cols <= 0) return;
     if (m_crouching) return;
     if (m_state == LightKick && m_timer.isActive()) return;
+    VoiceManager::instance().play(m_charId, QStringLiteral("kick"));
+    VoiceManager::instance().play(m_charId, QStringLiteral("swingKick"));
     m_timer.stop();
     m_state = LightKick;
     m_currentFrame = 0;
@@ -241,6 +264,8 @@ void CharacterModel::playHeavyPunch()
     if (m_heavyPunch.cols <= 0) return;
     if (m_crouching) return;
     if (m_state == HeavyPunch && m_timer.isActive()) return;
+    VoiceManager::instance().play(m_charId, QStringLiteral("heavyPunch"));
+    VoiceManager::instance().play(m_charId, QStringLiteral("swingHeavyPunch"));
     m_timer.stop();
     m_state = HeavyPunch;
     m_currentFrame = 0;
@@ -266,6 +291,8 @@ void CharacterModel::playHeavyKick()
     if (m_heavyKick.cols <= 0) return;
     if (m_crouching) return;
     if (m_state == HeavyKick && m_timer.isActive()) return;
+    VoiceManager::instance().play(m_charId, QStringLiteral("heavyKick"));
+    VoiceManager::instance().play(m_charId, QStringLiteral("swingHeavyKick"));
     m_timer.stop();
     m_state = HeavyKick;
     m_currentFrame = 0;
@@ -294,6 +321,8 @@ void CharacterModel::playHeavyStrike()
     if (m_state == Hurt || m_state == Rise) return; // 受击/起身中锁定操作
     if (m_heavyStrike.cols <= 0) return;
     if (m_crouching) return;
+    VoiceManager::instance().play(m_charId, QStringLiteral("strike"));
+    VoiceManager::instance().play(m_charId, QStringLiteral("swingStrike"));
     m_timer.stop();
     m_state = HeavyStrike;
     m_currentFrame = 0;
@@ -317,6 +346,8 @@ void CharacterModel::playDodge(bool forward)
 {
     if (m_state == Hurt || m_state == Rise) return; // 受击/起身中锁定操作
     if (m_dodge.cols <= 0) return;
+    VoiceManager::instance().play(m_charId, QStringLiteral("dodge"));
+    VoiceManager::instance().play(m_charId, QStringLiteral("step"));
     m_timer.stop();
     m_state = Dodge;
     m_loopAnim = false;
@@ -394,6 +425,7 @@ void CharacterModel::playHurt()
         }
         return;
     }
+    VoiceManager::instance().play(m_charId, QStringLiteral("hurt"));
     m_timer.stop();
     m_state = Hurt;
     m_currentFrame = 0;
@@ -432,6 +464,7 @@ void CharacterModel::playHurt1()
         }
         return;
     }
+    VoiceManager::instance().play(m_charId, QStringLiteral("hurt"));
     m_timer.stop();
     m_state = Hurt;
     m_currentFrame = 0;
@@ -470,6 +503,7 @@ void CharacterModel::playHurt2()
         }
         return;
     }
+    VoiceManager::instance().play(m_charId, QStringLiteral("hurt"));
     m_timer.stop();
     m_state = Hurt;
     m_currentFrame = 0;
@@ -508,6 +542,7 @@ void CharacterModel::playHurt3()
         }
         return;
     }
+    VoiceManager::instance().play(m_charId, QStringLiteral("hurt"));
     m_timer.stop();
     m_state = Hurt;
     m_currentFrame = 0;
@@ -588,6 +623,8 @@ void CharacterModel::playCrouchAttack()
     if (m_state == Hurt || m_state == Rise) return; // 受击/起身中锁定操作
     if (m_crouchAttack.cols <= 0) return;
     if (m_state == CrouchAttack && m_timer.isActive()) return;
+    VoiceManager::instance().play(m_charId, QStringLiteral("punch"));
+    VoiceManager::instance().play(m_charId, QStringLiteral("swingPunch"));
     m_timer.stop();
     m_state = CrouchAttack;
     m_currentFrame = 0;
@@ -890,6 +927,11 @@ bool CharacterModel::tryFinishState()
     m_timer.stop();
 
     State prevState = m_state;
+    // 开场: 若语音未播完则保持末帧等待
+    if (prevState == Opening && m_openingVoiceMs > 0 && m_openingElapsed < m_openingVoiceMs) {
+        m_timer.start();
+        return true;
+    }
     // 击飞受击结束后播放起身动画(riseFollowUp>0且配置了rise)
     if (prevState == Hurt && m_currentAnim.riseFollowUp > 0 && m_rise.cols > 0) {
         playRise();
@@ -921,6 +963,8 @@ bool CharacterModel::tryFinishState()
 
 void CharacterModel::onTick()
 {
+    if (m_state == Opening)
+        m_openingElapsed += m_timer.interval();
     // 开场暂停帧处理
     if (m_state == Opening && m_opening.pauseFrame > 0) {
         if (m_currentFrame == m_opening.pauseFrame - 1) {

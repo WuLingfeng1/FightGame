@@ -7,7 +7,8 @@
       "fw": 384,
       "fh": 512,
       "interval": 50,
-      "path": "qrc:/images/character/Orochi/opening.png"
+      "path": "qrc:/images/character/Orochi/opening.png",
+      "openingVoiceMs": 5200
     },
     "stand": {
       "cols": 27,
@@ -189,14 +190,14 @@
       "path": "qrc:/images/character/Orochi/Dodge.png",
       "loop": false,
       "visualScale": 1.0,
-      "feetBottom": 476,
+      "feetBottom": 312,
       "feetMargin": 82,
       "dodgeStartFrame": 8,
       "dodgeEndFrame": 15,
       "dodgeDistance": 0.3,
-      "offsetX": 60,
-      "offsetXPost": 17,
-      "offsetXEnd": 4,
+      "offsetX": 0,
+      "offsetXPost": 0,
+      "offsetXEnd": 0,
       "dodgeSwitchFrame": 8
     },
     "standBlock": {
@@ -461,7 +462,8 @@
       "interval": 100,
       "path": "qrc:/images/character/Yagami/opening.png",
       "pauseFrame": 1,
-      "pauseDuration": 600
+      "pauseDuration": 600,
+      "openingVoiceMs": 0
     },
     "stand": {
       "cols": 9,
@@ -648,7 +650,7 @@
       "cols": 30,
       "fw": 384,
       "fh": 512,
-      "interval": 60,
+      "interval": 40,
       "path": "qrc:/images/character/Yagami/Knockaway.png",
       "loop": false,
       "visualScale": 1.3,
