@@ -1,8 +1,8 @@
 #include "fightdirector.h"
+#include "voicemanager.h"
 #include "charactermodel.h"
 #include "characterconfig.h"
 #include "keybindingconfig.h"
-#include "voicemanager.h"
 #include <QDebug>
 #include <algorithm>
 #include <cmath>

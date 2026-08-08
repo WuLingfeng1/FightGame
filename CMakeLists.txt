@@ -132,7 +132,6 @@ qt_add_resources(appFightGame "appresources"
         resources/voices/Orochi/win1.wav
         resources/voices/Orochi/win2.wav
         resources/voices/Orochi/win3.wav
-        resources/voices/Yagami/dodge1.wav
         resources/voices/Yagami/heavyKick1.wav
         resources/voices/Yagami/heavyPunch1.wav
         resources/voices/Yagami/hitHeavyKick1.wav
@@ -149,11 +148,6 @@ qt_add_resources(appFightGame "appresources"
         resources/voices/Yagami/step1.wav
         resources/voices/Yagami/step2.wav
         resources/voices/Yagami/strike1.wav
-        resources/voices/Yagami/swingHeavyKick1.wav
-        resources/voices/Yagami/swingHeavyPunch1.wav
-        resources/voices/Yagami/swingKick1.wav
-        resources/voices/Yagami/swingPunch1.wav
-        resources/voices/Yagami/swingStrike1.wav
         resources/voices/Yagami/win1.wav
         resources/voices/Yagami/win2.wav
         resources/voices/Yagami/win3.wav

@@ -7,13 +7,12 @@
 #include "appcontroller.h"
 
 #include <QApplication>
-#include <QDebug>
 
-int main(int argc, char *argv[]) {
-    qDebug() << "[BOOT] main started";
+int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
+    AppController::singleton();
 
     return QCoreApplication::exec();
 }

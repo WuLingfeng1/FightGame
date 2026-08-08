@@ -52,8 +52,8 @@ struct AnimParams
     double flyPeakT = 0.2;      // 击飞抛物线峰点位置(0~1, 总帧比例)
     double flyLandT = 0.4;      // 击飞落地位置(0~1, 峰后落地)
     double flyDistance = 0;     // 击飞水平位移距离(归一化坐标, 0=不水平位移)
-    int riseFollowUp = 0;       // 此动画结束后是否播放起身动画(0=否, 1=是, 配合rise配置)
-    int openingVoiceMs = 0;     // 开场语音时长(毫秒), 开场阶段延长到此值播完语音(0=不延长)
+    int riseFollowUp = 0;
+    int openingVoiceMs = 0; // 开场语音时长(ms)
 };
 
 // 角色配置: 包含一个角色的所有动画参数和初始属性
@@ -90,3 +90,4 @@ class CharacterConfig
 public:
     static CharacterData load(const QJsonObject &json, const QString &id);
 };
+
