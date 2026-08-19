@@ -8,7 +8,7 @@
       "fh": 512,
       "interval": 50,
       "path": "qrc:/images/character/Orochi/opening.png",
-      "openingVoiceMs": 5200
+      "openingVoiceMs": 3600
     },
     "stand": {
       "cols": 27,

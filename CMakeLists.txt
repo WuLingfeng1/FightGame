@@ -25,6 +25,7 @@ qt_add_qml_module(appFightGame
     SOURCES networkmanager.h networkmanager.cpp
     SOURCES roommanager.h roommanager.cpp
     SOURCES voicemanager.h voicemanager.cpp
+    SOURCES musicmanager.h musicmanager.cpp
 )
 qt_add_resources(appFightGame "appresources"
     PREFIX "/"
@@ -152,6 +153,11 @@ qt_add_resources(appFightGame "appresources"
         resources/voices/Yagami/win2.wav
         resources/voices/Yagami/win3.wav
         resources/voices/Yagami/win4.wav
+        resources/BackGround/AmusementPark.flac
+        resources/BackGround/Bali.flac
+        resources/BackGround/Gyeongbokgung.flac
+        resources/BackGround/jiulong.flac
+        resources/BackGround/Monaco.flac
 )
 
 target_compile_features(appFightGame PRIVATE cxx_std_23)

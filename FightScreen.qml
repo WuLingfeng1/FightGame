@@ -44,6 +44,10 @@ Item {
     property bool   isHost: false
     property var    networkMgr: null
 
+    MusicManager {
+        id: bgm
+    }
+
     // 游戏状态
     property real fitScale: Math.min(root.width / 900, root.height / 640)
     property real moveStep: 0.008
@@ -1630,6 +1634,7 @@ Item {
         director.reloadKeyBindings()
         director.start(p1CharId, p2CharId)
         root.forceActiveFocus()
+        bgm.playStage(stageId)
     }
 
     Component.onDestruction: {
@@ -1644,6 +1649,7 @@ Item {
         matchResultTimer.stop()
         director.p1Model.playStand()
         director.p2Model.playStand()
+        bgm.stop()
     }
 
     // 信号连接
