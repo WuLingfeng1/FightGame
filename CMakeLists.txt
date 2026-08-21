@@ -74,6 +74,7 @@ qt_add_resources(appFightGame "appresources"
         images/character/Kusanagi/HeavyKick.png
         images/character/Kusanagi/heavystrick.png
         images/character/Kusanagi/Dodge.png
+        images/character/Kusanagi/standblock.png
         images/character/Kusanagi/hurt2.png
         images/character/Kusanagi/knockaway.png
         images/character/Yagami/Stand.png
@@ -154,6 +155,8 @@ qt_add_resources(appFightGame "appresources"
         resources/voices/Kusanagi/heavyPunch1.mp3
         resources/voices/Kusanagi/heavyKick1.mp3
         resources/voices/Kusanagi/strike1.mp3
+        resources/voices/Kusanagi/step1.mp3
+        resources/voices/Kusanagi/step2.mp3
         resources/voices/Kusanagi/hurt1.mp3
         resources/voices/Kusanagi/hurt2.mp3
         resources/voices/Kusanagi/hurt3.mp3

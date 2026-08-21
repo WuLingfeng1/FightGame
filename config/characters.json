@@ -450,6 +450,18 @@
       "flyLandT": 0.5,
       "riseFollowUp": 0,
       "flyDistance": 0.5
+    },
+    "standBlock": {
+      "cols": 6,
+      "fw": 251,
+      "fh": 355,
+      "interval": 80,
+      "path": "qrc:/images/character/Kusanagi/standblock.png",
+      "loop": false,
+      "visualScale": 0.9,
+      "feetBottom": 325,
+      "feetMargin": 72,
+      "blockHoldFrame": 3
     }
   },
   "Yagami": {

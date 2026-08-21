@@ -208,8 +208,13 @@ bool FightDirector::checkCollision()
                 finalKnockback /= 2;
             }
             m_p2Model->m_knockbackToApply = finalKnockback;
+            // 命中/格挡音效在 emit 之前播放, 确保攻击者仍处于攻击状态, attackAction() 有效
+            if (m_p2Model->isBlocking()) {
+                VoiceManager::instance().play(m_p1Model->charId(), QStringLiteral("step"));
+            } else {
+                VoiceManager::instance().play(m_p1Model->charId(), QStringLiteral("hit") + m_p1Model->attackAction());
+            }
             emit hitDetected(1, finalDamage);
-            VoiceManager::instance().play(m_p1Model->charId(), QStringLiteral("hit") + m_p1Model->attackAction());
             anyHit = true;
         }
     }
@@ -242,8 +247,13 @@ bool FightDirector::checkCollision()
                 finalKnockback /= 2;
             }
             m_p1Model->m_knockbackToApply = finalKnockback;
+            // 命中/格挡音效在 emit 之前播放, 确保攻击者仍处于攻击状态, attackAction() 有效
+            if (m_p1Model->isBlocking()) {
+                VoiceManager::instance().play(m_p2Model->charId(), QStringLiteral("step"));
+            } else {
+                VoiceManager::instance().play(m_p2Model->charId(), QStringLiteral("hit") + m_p2Model->attackAction());
+            }
             emit hitDetected(2, finalDamage);
-            VoiceManager::instance().play(m_p2Model->charId(), QStringLiteral("hit") + m_p2Model->attackAction());
             anyHit = true;
         }
     }
