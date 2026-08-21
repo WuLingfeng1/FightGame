@@ -130,9 +130,7 @@ qt_add_resources(appFightGame "appresources"
         resources/voices/Orochi/step1.wav
         resources/voices/Orochi/step2.wav
         resources/voices/Orochi/strike1.wav
-        resources/voices/Orochi/win1.wav
-        resources/voices/Orochi/win2.wav
-        resources/voices/Orochi/win3.wav
+        resources/voices/Orochi/win.wav
         resources/voices/Yagami/heavyKick1.wav
         resources/voices/Yagami/heavyPunch1.wav
         resources/voices/Yagami/hitHeavyKick1.wav
@@ -150,14 +148,27 @@ qt_add_resources(appFightGame "appresources"
         resources/voices/Yagami/step2.wav
         resources/voices/Yagami/strike1.wav
         resources/voices/Yagami/win1.wav
-        resources/voices/Yagami/win2.wav
-        resources/voices/Yagami/win3.wav
-        resources/voices/Yagami/win4.wav
+        resources/voices/Kusanagi/opening1.mp3
+        resources/voices/Kusanagi/punch1.mp3
+        resources/voices/Kusanagi/kick1.mp3
+        resources/voices/Kusanagi/heavyPunch1.mp3
+        resources/voices/Kusanagi/heavyKick1.mp3
+        resources/voices/Kusanagi/strike1.mp3
+        resources/voices/Kusanagi/hurt1.mp3
+        resources/voices/Kusanagi/hurt2.mp3
+        resources/voices/Kusanagi/hurt3.mp3
+        resources/voices/Kusanagi/hitPunch1.mp3
+        resources/voices/Kusanagi/hitKick1.mp3
+        resources/voices/Kusanagi/hitHeavyPunch1.mp3
+        resources/voices/Kusanagi/hitHeavyKick1.mp3
+        resources/voices/Kusanagi/hitStrike1.mp3
         resources/BackGround/AmusementPark.flac
         resources/BackGround/Bali.flac
         resources/BackGround/Gyeongbokgung.flac
         resources/BackGround/jiulong.flac
         resources/BackGround/Monaco.flac
+        resources/select/select.flac
+        resources/select/victory.flac
 )
 
 target_compile_features(appFightGame PRIVATE cxx_std_23)

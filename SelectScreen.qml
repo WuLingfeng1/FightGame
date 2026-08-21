@@ -129,7 +129,11 @@ Item {
         if (isOnline && !isHost)
             currentTurn = 0
         refresh()
+        MusicManager.playSelect()
     }
+
+    StackView.onActivated: MusicManager.playSelect()
+    Component.onDestruction: MusicManager.stop()
 
     onCurrentTurnChanged: refresh()
     onPreviewP1Changed:   refresh()

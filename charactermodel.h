@@ -121,6 +121,7 @@ public:
     QString attackAction() const;
     int stateInt() const { return static_cast<int>(m_state); }            // 状态整数形式(用于QML)
     Q_INVOKABLE bool isBlocking() const { return m_state == StandBlock; } // 是否处于防御状态
+    Q_INVOKABLE void setStayDown(bool on);                                 // 设置被击倒保持倒地(不起身)
 
     // 碰撞检测相关
     bool isAttacking() const;                   // 是否处于攻击状态
@@ -226,6 +227,7 @@ private:
     int m_hurtboxH = 250;              // 受击框高度(像素)
     AnimParams m_currentAnim;          // 当前动画参数引用(用于读取攻击点)
     bool m_hitThisAttack = false;      // 本次攻击是否已命中(防止重复命中)
+    bool m_stayDown = false;           // 被击倒后保持倒地(回合结束时击飞不起身)
     int m_knockbackToApply = 0;        // 待应用的击退距离(由攻击者设置)
     double m_knockbackRemaining = 0.0; // 剩余击退距离(归一化坐标)
     int m_knockbackFrames = 0;         // 剩余击退帧数

@@ -44,10 +44,6 @@ Item {
     property bool   isHost: false
     property var    networkMgr: null
 
-    MusicManager {
-        id: bgm
-    }
-
     // 游戏状态
     property real fitScale: Math.min(root.width / 900, root.height / 640)
     property real moveStep: 0.008
@@ -706,8 +702,24 @@ Item {
             moveTimer2.moveLeft = false
             isMoving2 = false
 
-            director.p1Model.playStand()
-            director.p2Model.playStand()
+            var koModel = null
+            var winModel = null
+            if (p1Health <= 0) { koModel = director.p1Model; winModel = director.p2Model }
+            else if (p2Health <= 0) { koModel = director.p2Model; winModel = director.p1Model }
+
+            if (koModel) {
+                // 被击倒者处于受击态: 不强行走站立, 让击飞播完并保持倒地
+                if (koModel.state === 12) {
+                    koModel.setStayDown(true)
+                } else {
+                    koModel.playStand()
+                }
+                winModel.playStand()
+            } else {
+                // 平局/超时: 两者站定
+                director.p1Model.playStand()
+                director.p2Model.playStand()
+            }
 
             if (p1Health <= 0 && p2Health > 0) {
                 p2Wins++
@@ -728,6 +740,7 @@ Item {
             }
 
             if (p1Wins >= 2 || p2Wins >= 2) {
+                MusicManager.playVictory()
                 matchResultTimer.start()
             } else {
                 roundResetTimer.start()
@@ -1634,7 +1647,7 @@ Item {
         director.reloadKeyBindings()
         director.start(p1CharId, p2CharId)
         root.forceActiveFocus()
-        bgm.playStage(stageId)
+        MusicManager.playStage(stageId)
     }
 
     Component.onDestruction: {
@@ -1649,7 +1662,7 @@ Item {
         matchResultTimer.stop()
         director.p1Model.playStand()
         director.p2Model.playStand()
-        bgm.stop()
+        MusicManager.stop()
     }
 
     // 信号连接
@@ -1774,13 +1787,17 @@ Item {
                 p2Wins = msg.p2Wins
                 roundEnding = true
                 if (p1Wins >= 2 || p2Wins >= 2) {
+                    MusicManager.playVictory()
                     matchResultTimer.start()
                 } else {
                     roundResetTimer.start()
                 }
             } else if (msg.type === "match_end" && !isHost) {
                 roundEnding = true
-                if (!matchResultTimer.running) matchResultTimer.start()
+                if (!matchResultTimer.running) {
+                    MusicManager.playVictory()
+                    matchResultTimer.start()
+                }
             }
         }
     }

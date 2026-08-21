@@ -263,7 +263,7 @@
       "interval": 40,
       "path": "qrc:/images/character/Kusanagi/jump.png",
       "loop": false,
-      "jumpHeight": 150,
+      "jumpHeight": 480,
       "visualScale": 1.4
     },
     "crouch": {
@@ -287,7 +287,7 @@
       "interval": 50,
       "path": "qrc:/images/character/Kusanagi/DiagonalJump.png",
       "loop": false,
-      "jumpHeight": 100,
+      "jumpHeight": 480,
       "jumpDistance": 0.45,
       "visualScale": 1.8,
       "divFrame": 17,
@@ -650,7 +650,7 @@
       "cols": 30,
       "fw": 384,
       "fh": 512,
-      "interval": 60,
+      "interval": 40,
       "path": "qrc:/images/character/Yagami/Knockaway.png",
       "loop": false,
       "visualScale": 1.3,

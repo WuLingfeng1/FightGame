@@ -48,6 +48,12 @@ void CharacterModel::configure(const CharacterData &cfg)
     m_state = Waiting;
     m_currentFrame = 0;
     m_crouching = false; // 重置下蹲状态
+    m_stayDown = false;  // 重置被击倒保持倒地标志
+}
+
+void CharacterModel::setStayDown(bool on)
+{
+    m_stayDown = on;
 }
 
 QString CharacterModel::attackAction() const {
@@ -87,6 +93,7 @@ void CharacterModel::playStand()
     m_visualScale = m_stand.visualScale;     // 必须在 applyAnim 之前设置, setPosY 依赖此值
     m_animOffsetX = 0;        // 站立动画无水平偏移
     m_hitThisAttack = false;  // 重置命中标志
+    m_attackJumping = false;  // 重置重腿小跳标志(回合结束/重置等强制切站立时防止残留浮动)
     applyAnim(m_stand);
     m_timer.setInterval(m_stand.interval);
     m_timer.start();
@@ -925,6 +932,11 @@ bool CharacterModel::tryFinishState()
     // 击飞受击结束后播放起身动画(riseFollowUp>0且配置了rise)
     if (prevState == Hurt && m_currentAnim.riseFollowUp > 0 && m_rise.cols > 0) {
         playRise();
+        emit hurtFinished();
+        return true;
+    }
+    // 被击倒(回合结束): 击飞受击播完保持倒地不起身
+    if (m_stayDown && prevState == Hurt && m_flyActive) {
         emit hurtFinished();
         return true;
     }

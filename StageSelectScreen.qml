@@ -36,6 +36,9 @@ Item {
     property real cardW: 260
     property real cardH: 180
 
+    Component.onCompleted: MusicManager.playSelect()
+    StackView.onActivated: MusicManager.playSelect()
+
     // 纯黑背景
     Rectangle {
         anchors.fill: parent
