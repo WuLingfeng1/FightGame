@@ -40,7 +40,7 @@ ApplicationWindow {
     KeyBindingConfig {
         id: globalKeyBindings
         Component.onCompleted: {
-            if (!loadFromFile("/wlf/FightGame/config/keybindings.json"))
+            if (!loadFromFile("config/keybindings.json"))
                 loadFromFile(":/config/keybindings.json")
         }
     }

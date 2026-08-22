@@ -20,7 +20,7 @@ FightDirector::FightDirector(QObject *parent)
     connect(m_p1Model, &CharacterModel::winFinished, this, &FightDirector::onP1WinFinished);
     connect(m_p2Model, &CharacterModel::winFinished, this, &FightDirector::onP2WinFinished);
 
-    QFile file("/wlf/FightGame/config/characters.json");
+    QFile file(":/config/characters.json");
     if (file.open(QIODevice::ReadOnly)) {
         m_jsonConfig = QJsonDocument::fromJson(file.readAll()).object();
         file.close();
@@ -29,7 +29,7 @@ FightDirector::FightDirector(QObject *parent)
     }
 
     // 加载键位配置: 优先读外部文件, 回退到资源默认
-    if (!m_keyBindings->loadFromFile("/wlf/FightGame/config/keybindings.json")) {
+    if (!m_keyBindings->loadFromFile("config/keybindings.json")) {
         m_keyBindings->loadFromFile(":/config/keybindings.json");
     }
 }
@@ -38,7 +38,7 @@ FightDirector::FightDirector(QObject *parent)
 void FightDirector::reloadKeyBindings()
 {
     if (m_keyBindings) {
-        if (!m_keyBindings->loadFromFile("/wlf/FightGame/config/keybindings.json")) {
+        if (!m_keyBindings->loadFromFile("config/keybindings.json")) {
             m_keyBindings->loadFromFile(":/config/keybindings.json");
         }
     }

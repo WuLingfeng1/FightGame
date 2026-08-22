@@ -223,7 +223,7 @@ Item {
 
             onClicked: {
                 keyBindingConfig.resetToDefault()
-                keyBindingConfig.saveToFile("/wlf/FightGame/config/keybindings.json")
+                keyBindingConfig.saveToFile("config/keybindings.json")
             }
         }
 
@@ -243,7 +243,7 @@ Item {
             }
 
             onClicked: {
-                keyBindingConfig.saveToFile("/wlf/FightGame/config/keybindings.json")
+                keyBindingConfig.saveToFile("config/keybindings.json")
                 if (stackViewRef) stackViewRef.pop()
             }
         }

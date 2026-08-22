@@ -32,6 +32,8 @@ qt_add_resources(appFightGame "appresources"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}"
     FILES
         images/background.jpg
+        config/characters.json
+        config/keybindings.json
         images/avatar/Kdash.jpg
         images/avatar/Kula.jpg
         images/avatar/Kusanagi.jpg
