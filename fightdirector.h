@@ -22,6 +22,7 @@ class FightDirector : public QObject
     Q_PROPERTY(double rootHeight READ rootHeight WRITE setRootHeight NOTIFY rootHeightChanged)
     Q_PROPERTY(double cameraOffset READ cameraOffset NOTIFY cameraOffsetChanged)
     Q_PROPERTY(double maxCameraOffset READ maxCameraOffset CONSTANT)
+    Q_PROPERTY(bool previewWin READ previewWin WRITE setPreviewWin NOTIFY previewWinChanged) // 调试: 开场阶段播放胜利动画
 
     QML_ELEMENT
 public:
@@ -37,6 +38,8 @@ public:
     double rootHeight() const { return m_rootHeight; }
     double cameraOffset() const { return m_cameraOffset; }
     double maxCameraOffset() const { return kStageWidth - 1.0; }
+    bool previewWin() const { return m_previewWin; }
+    void setPreviewWin(bool on) { m_previewWin = on; emit previewWinChanged(); }
     void setRootHeight(double h); // QML窗口高度变化时更新
 
     Q_INVOKABLE void start(const QString &p1CharId, const QString &p2CharId);
@@ -49,11 +52,14 @@ signals:
     void phaseChanged();
     void rootHeightChanged();
     void cameraOffsetChanged();
+    void previewWinChanged();
     void hitDetected(int attacker, int damage); // 命中信号: attacker=1或2, damage=伤害值
 
 private slots:
     void onP1OpeningFinished(); // P1开场完毕 - 触发P2开场
     void onP2OpeningFinished(); // P2开场完毕 - 进入战斗阶段
+    void onP1WinFinished();     // 预览模式: P1胜行动画完毕 - 播放P2胜行动画
+    void onP2WinFinished();     // 预览模式: P2胜行动画完毕 - 进入战斗阶段
 
 private:
     void loadConfig(const QString &charId, CharacterModel *model); // 从JSON加载角色配置
@@ -65,5 +71,6 @@ private:
     int m_phase = Fighting;
     double m_rootHeight = 640; // 窗口高度
     double m_cameraOffset = 0; // 镜头左边界在世界坐标中的偏移
+    bool m_previewWin = false; // 调试预览: 开场阶段播放胜利动画+语音 (调参完成后已关闭)
     QJsonObject m_jsonConfig;  // 已加载的角色配置JSON
 };

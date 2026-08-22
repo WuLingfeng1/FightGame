@@ -37,6 +37,8 @@ void CharacterModel::configure(const CharacterData &cfg)
     m_crouchAttack = cfg.crouchAttack;
     m_dodge = cfg.dodge;
     m_standBlock = cfg.standBlock;
+    m_win = cfg.win;
+    m_lose = cfg.lose;
     m_blockHoldFrame = cfg.standBlock.blockHoldFrame;
     m_crouchHoldFrame = cfg.crouch.crouchHoldFrame;
     m_jumpHeight = cfg.jump.jumpHeight;
@@ -49,6 +51,7 @@ void CharacterModel::configure(const CharacterData &cfg)
     m_currentFrame = 0;
     m_crouching = false; // 重置下蹲状态
     m_stayDown = false;  // 重置被击倒保持倒地标志
+    m_pendingLose = false; // 重置失败动画等待标志
 }
 
 void CharacterModel::setStayDown(bool on)
@@ -702,6 +705,66 @@ void CharacterModel::releaseStandBlock()
     }
 }
 
+// 标记击飞败者: 落地起身后自动播放失败动画
+void CharacterModel::markPendingLose()
+{
+    m_pendingLose = true;
+}
+
+// 胜利动画: 三回合结束后胜者播放, 带胜利语音, 语音播完自动切站立
+void CharacterModel::playWin()
+{
+    if (m_win.cols <= 0) {
+        playStand();
+        return;
+    }
+    VoiceManager::instance().play(m_charId, QStringLiteral("win"));
+    m_timer.stop();
+    m_state = Win;
+    m_currentFrame = 0;
+    m_loopAnim = false;
+    m_visualScale = m_win.visualScale;
+    m_animOffsetX = m_win.offsetX;
+    m_currentAnim = m_win;
+    m_openingVoiceMs = m_win.openingVoiceMs;
+    m_openingElapsed = 0;
+    m_attackJumping = false;
+    applyAnim(m_win);
+    m_timer.setInterval(m_win.interval);
+    m_timer.start();
+    emit frameChanged();
+    emit sourcePathChanged();
+    emit sizeChanged();
+    emit positionChanged();
+    emit stateChanged();
+}
+
+// 失败动画: 三回合结束后败者播放, 全程沉默
+void CharacterModel::playLose()
+{
+    if (m_lose.cols <= 0) {
+        playStand();
+        return;
+    }
+    m_timer.stop();
+    m_state = Lose;
+    m_currentFrame = 0;
+    m_loopAnim = false;
+    m_visualScale = m_lose.visualScale;
+    m_animOffsetX = m_lose.offsetX;
+    m_currentAnim = m_lose;
+    m_openingVoiceMs = 0;
+    m_attackJumping = false;
+    applyAnim(m_lose);
+    m_timer.setInterval(m_lose.interval);
+    m_timer.start();
+    emit frameChanged();
+    emit sourcePathChanged();
+    emit sizeChanged();
+    emit positionChanged();
+    emit stateChanged();
+}
+
 void CharacterModel::reset()
 {
     m_timer.stop();
@@ -869,6 +932,14 @@ void CharacterModel::setPosY()
             fb = m_rise.feetBottom;
             fm = m_rise.feetMargin;
             break;
+        case Win:
+            fb = m_win.feetBottom;
+            fm = m_win.feetMargin;
+            break;
+        case Lose:
+            fb = m_lose.feetBottom;
+            fm = m_lose.feetMargin;
+            break;
         default:
             fb = m_stand.feetBottom;
             fm = m_stand.feetMargin;
@@ -925,6 +996,11 @@ bool CharacterModel::tryFinishState()
     m_timer.stop();
 
     State prevState = m_state;
+    // 胜利语音持帧: 帧播完后保持最后一帧直到语音播完
+    if (prevState == Win && m_openingVoiceMs > 0 && m_openingElapsed < m_openingVoiceMs) {
+        m_timer.start();
+        return true;
+    }
     if (prevState == Opening && m_openingVoiceMs > 0 && m_openingElapsed < m_openingVoiceMs) {
         m_timer.start();
         return true;
@@ -938,6 +1014,23 @@ bool CharacterModel::tryFinishState()
     // 被击倒(回合结束): 击飞受击播完保持倒地不起身
     if (m_stayDown && prevState == Hurt && m_flyActive) {
         emit hurtFinished();
+        return true;
+    }
+    // 击飞败者落地起身后自动播放失败动画
+    if (m_pendingLose && (prevState == Hurt || prevState == Rise)) {
+        m_pendingLose = false;
+        playLose();
+        return true;
+    }
+    // 胜利/失败动画: 保持最终姿态定格, 不切回站立 (由战斗画面停留后退出)
+    if (prevState == Win) {
+        m_timer.stop();
+        emit winFinished();
+        return true;
+    }
+    if (prevState == Lose) {
+        m_timer.stop();
+        emit loseFinished();
         return true;
     }
     playStand();
@@ -965,7 +1058,7 @@ bool CharacterModel::tryFinishState()
 
 void CharacterModel::onTick()
 {
-    if (m_state == Opening)
+    if (m_state == Opening || m_state == Win)
         m_openingElapsed += m_timer.interval();
     // 开场暂停帧处理
     if (m_state == Opening && m_opening.pauseFrame > 0) {

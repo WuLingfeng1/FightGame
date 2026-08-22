@@ -212,6 +212,29 @@
       "feetMargin": 82,
       "offsetX": 15,
       "blockHoldFrame": 2
+    },
+    "win": {
+      "cols": 40,
+      "fw": 251,
+      "fh": 355,
+      "interval": 100,
+      "path": "qrc:/images/character/Orochi/win.png",
+      "loop": false,
+      "visualScale": 1.0,
+      "feetBottom": 325,
+      "feetMargin": 82,
+      "openingVoiceMs": 2330
+    },
+    "lose": {
+      "cols": 21,
+      "fw": 251,
+      "fh": 355,
+      "interval": 100,
+      "path": "qrc:/images/character/Orochi/lose.png",
+      "loop": false,
+      "visualScale": 1.0,
+      "feetBottom": 347,
+      "feetMargin": 82
     }
   },
   "Kusanagi": {
@@ -459,9 +482,32 @@
       "path": "qrc:/images/character/Kusanagi/standblock.png",
       "loop": false,
       "visualScale": 0.9,
-      "feetBottom": 325,
+      "feetBottom": 355,
       "feetMargin": 72,
       "blockHoldFrame": 3
+    },
+    "win": {
+      "cols": 13,
+      "fw": 251,
+      "fh": 355,
+      "interval": 100,
+      "path": "qrc:/images/character/Kusanagi/win.png",
+      "loop": false,
+      "visualScale": 0.8,
+      "feetBottom": 345,
+      "feetMargin": 72,
+      "openingVoiceMs": 2500
+    },
+    "lose": {
+      "cols": 6,
+      "fw": 251,
+      "fh": 355,
+      "interval": 100,
+      "path": "qrc:/images/character/Kusanagi/lose.png",
+      "loop": false,
+      "visualScale": 0.8,
+      "feetBottom": 345,
+      "feetMargin": 72
     }
   },
   "Yagami": {
@@ -721,6 +767,29 @@
       "loop": false,
       "visualScale": 0.9,
       "feetBottom": 512,
+      "feetMargin": 82
+    },
+    "win": {
+      "cols": 20,
+      "fw": 251,
+      "fh": 355,
+      "interval": 100,
+      "path": "qrc:/images/character/Yagami/win.png",
+      "loop": false,
+      "visualScale": 0.8,
+      "feetBottom": 345,
+      "feetMargin": 82,
+      "openingVoiceMs": 2480
+    },
+    "lose": {
+      "cols": 8,
+      "fw": 251,
+      "fh": 355,
+      "interval": 100,
+      "path": "qrc:/images/character/Yagami/lose.png",
+      "loop": false,
+      "visualScale": 0.8,
+      "feetBottom": 345,
       "feetMargin": 82
     }
   }

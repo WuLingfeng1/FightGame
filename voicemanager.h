@@ -24,7 +24,9 @@ public:
     void setVolume(qreal v);
     bool enabled() const { return m_enabled; }
     void setEnabled(bool on);
-signals: void volumeChanged(); void enabledChanged();
+signals:
+    void volumeChanged();
+    void enabledChanged();
 private:
     QStringList variants(const QString &charId, const QString &action);
     QStringList localVariants(const QString &charId, const QString &action);

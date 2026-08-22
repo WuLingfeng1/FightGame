@@ -50,6 +50,9 @@ ApplicationWindow {
         anchors.fill: parent
 
         initialItem: Item {
+            Component.onCompleted: MusicManager.playBegin()
+            Component.onDestruction: MusicManager.stop()
+
             Image {
                 anchors.fill: parent
                 source: "qrc:/images/background.jpg"

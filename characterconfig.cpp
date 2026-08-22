@@ -78,5 +78,7 @@ CharacterData CharacterConfig::load(const QJsonObject &json, const QString &id)
     cfg.crouchAttack = parseAnim(json.value("crouchAttack").toObject());
     cfg.dodge = parseAnim(json.value("dodge").toObject());
     cfg.standBlock = parseAnim(json.value("standBlock").toObject());
+    cfg.win = parseAnim(json.value("win").toObject());
+    cfg.lose = parseAnim(json.value("lose").toObject());
     return cfg;
 }

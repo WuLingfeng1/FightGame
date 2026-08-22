@@ -61,6 +61,8 @@ qt_add_resources(appFightGame "appresources"
         images/character/Orochi/Crouch.png
         images/character/Orochi/Dodge.png
         images/character/Orochi/StandBlock.png
+        images/character/Orochi/win.png
+        images/character/Orochi/lose.png
         images/character/Kusanagi/opening.png
         images/character/Kusanagi/stand.png
         images/character/Kusanagi/forward.png
@@ -77,6 +79,8 @@ qt_add_resources(appFightGame "appresources"
         images/character/Kusanagi/standblock.png
         images/character/Kusanagi/hurt2.png
         images/character/Kusanagi/knockaway.png
+        images/character/Kusanagi/win.png
+        images/character/Kusanagi/lose.png
         images/character/Yagami/Stand.png
         images/character/Yagami/opening.png
         images/character/Yagami/Backward.png
@@ -106,6 +110,8 @@ qt_add_resources(appFightGame "appresources"
         images/character/Yagami/AirHeavyPunch.png
         images/character/Yagami/ReverseStrike.png
         images/character/Yagami/ReverseStrike2.png
+        images/character/Yagami/win.png
+        images/character/Yagami/lose.png
         images/character/Yagami/JumpAttack.png
         images/FightBackGround/AmusementPark.gif
         images/FightBackGround/Bali.gif
@@ -148,7 +154,7 @@ qt_add_resources(appFightGame "appresources"
         resources/voices/Yagami/step1.wav
         resources/voices/Yagami/step2.wav
         resources/voices/Yagami/strike1.wav
-        resources/voices/Yagami/win1.wav
+        resources/voices/Yagami/win.wav
         resources/voices/Kusanagi/opening1.mp3
         resources/voices/Kusanagi/punch1.mp3
         resources/voices/Kusanagi/kick1.mp3
@@ -165,11 +171,13 @@ qt_add_resources(appFightGame "appresources"
         resources/voices/Kusanagi/hitHeavyPunch1.mp3
         resources/voices/Kusanagi/hitHeavyKick1.mp3
         resources/voices/Kusanagi/hitStrike1.mp3
+        resources/voices/Kusanagi/win.mp3
         resources/BackGround/AmusementPark.flac
         resources/BackGround/Bali.flac
         resources/BackGround/Gyeongbokgung.flac
         resources/BackGround/jiulong.flac
         resources/BackGround/Monaco.flac
+        resources/select/begin.flac
         resources/select/select.flac
         resources/select/victory.flac
 )

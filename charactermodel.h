@@ -59,7 +59,9 @@ public:
         CrouchAttack,
         Dodge,
         StandBlock,
-        Rise
+        Rise,
+        Win,
+        Lose
     };
     Q_ENUM(State)
 
@@ -114,6 +116,11 @@ public:
     Q_INVOKABLE void playDodge(bool forward);        // 切换到闪避动画
     Q_INVOKABLE void playStandBlock();               // 切换到站立防御动画
     Q_INVOKABLE void releaseStandBlock();            // 松开防御键, 播放剩余帧后切回站立
+    Q_INVOKABLE void playWin();                      // 切换到胜利动画(三回合结束后胜者)
+    Q_INVOKABLE void playLose();                     // 切换到失败动画(三回合结束后败者)
+    Q_INVOKABLE void markPendingLose();              // 标记击飞败者: 落地起身后自动播放失败动画
+    Q_INVOKABLE bool hasWinAnim() const { return m_win.cols > 0; }
+    Q_INVOKABLE bool hasLoseAnim() const { return m_lose.cols > 0; }
     void reset();                                    // 重置到初始状态
     void updateRootHeight(double h);                 // 更新窗口高度(用于Y坐标计算)
     State state() const { return m_state; }
@@ -147,6 +154,8 @@ signals:
     void attackFinished();    // 攻击动画播放完毕
     void hurtFinished();      // 受击动画播放完毕
     void dodgeFinished();     // 闪避动画播放完毕
+    void winFinished();       // 胜利动画播放完毕
+    void loseFinished();      // 失败动画播放完毕
     void stateChanged();      // 状态变更
 
 private slots:
@@ -188,6 +197,9 @@ private:
     AnimParams m_crouchAttack;          // 下蹲攻击动画参数副本
     AnimParams m_dodge;                 // 闪避动画参数副本
     AnimParams m_standBlock;            // 站立防御动画参数副本
+    AnimParams m_win;                   // 胜利动画参数副本
+    AnimParams m_lose;                  // 失败动画参数副本
+    bool m_pendingLose = false;         // 击飞败者等待落地起身后播放失败动画
     int m_blockHoldFrame = 0;           // 防御动画停顿帧索引
     bool m_blockReleased = false;       // 防御键是否已松开
     int m_crouchHoldFrame = 0;          // 下蹲停顿帧索引(0=不停顿)

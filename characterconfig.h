@@ -53,7 +53,7 @@ struct AnimParams
     double flyLandT = 0.4;      // 击飞落地位置(0~1, 峰后落地)
     double flyDistance = 0;     // 击飞水平位移距离(归一化坐标, 0=不水平位移)
     int riseFollowUp = 0;
-    int openingVoiceMs = 0; // 开场语音时长(ms)
+    int openingVoiceMs = 0;     // 开场语音时长(ms)
 };
 
 // 角色配置: 包含一个角色的所有动画参数和初始属性
@@ -82,6 +82,8 @@ struct CharacterData
     AnimParams crouchAttack; // 下蹲攻击动画参数
     AnimParams dodge;        // 闪避动画参数
     AnimParams standBlock;   // 站立防御动画参数
+    AnimParams win;          // 胜利动画参数
+    AnimParams lose;         // 失败动画参数
 };
 
 // 角色配置加载器: 从 JSON 对象解析出 CharacterData

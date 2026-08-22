@@ -1,4 +1,8 @@
-// voicemanager.cpp — 每次play新建独立QMediaPlayer, 不竞争
+// Module
+// File: voicemanager.cpp   Version: 0.1.0   License: AGPLv3
+// Created:Linfeng Wu       2026-08-22 17:02:24
+// Description:
+//       每次play新建独立QMediaPlayer, 不竞争
 #include "voicemanager.h"
 #include <QDir>
 #include <QFile>
@@ -113,10 +117,13 @@ QStringList VoiceManager::variants(const QString &charId, const QString &action)
             QString num = entry.mid(action.size());
             num = num.left(num.indexOf('.'));
 
-            bool ok = false;
-            num.toInt(&ok);
-            if (!ok)
-                continue;
+            // 接受无数字后缀的基础文件(如 win.wav / win.mp3), 也接受带数字的多变体(如 win1.wav)
+            bool ok = num.isEmpty();
+            if (!ok) {
+                num.toInt(&ok);
+                if (!ok)
+                    continue;
+            }
 
             const QString path = root + '/' + entry;
             if (!seen.contains(path)) {

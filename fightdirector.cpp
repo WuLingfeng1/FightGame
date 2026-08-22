@@ -17,6 +17,8 @@ FightDirector::FightDirector(QObject *parent)
 
     connect(m_p1Model, &CharacterModel::openingFinished, this, &FightDirector::onP1OpeningFinished);
     connect(m_p2Model, &CharacterModel::openingFinished, this, &FightDirector::onP2OpeningFinished);
+    connect(m_p1Model, &CharacterModel::winFinished, this, &FightDirector::onP1WinFinished);
+    connect(m_p2Model, &CharacterModel::winFinished, this, &FightDirector::onP2WinFinished);
 
     QFile file("/wlf/FightGame/config/characters.json");
     if (file.open(QIODevice::ReadOnly)) {
@@ -74,7 +76,13 @@ void FightDirector::start(const QString &p1CharId, const QString &p2CharId)
     m_phase = Opening_P1;
     emit phaseChanged();
 
-    m_p1Model->playOpening(); // 先播放P1的开场
+    if (m_previewWin) {
+        // 调试预览: 用胜利动画+语音替代开场, 方便开局查看胜行动作效果
+        qDebug() << "[FightDirector] previewWin mode: playing win as opening";
+        m_p1Model->playWin();
+    } else {
+        m_p1Model->playOpening(); // 先播放P1的开场
+    }
 }
 
 // 回合重置: 加载配置, 直接进入战斗阶段, 跳过开场动画
@@ -136,6 +144,28 @@ void FightDirector::onP2OpeningFinished()
     qDebug() << "[FightDirector] P2 opening finished, fight begins";
     m_phase = Fighting;
     emit phaseChanged();
+}
+
+// 预览模式: P1胜行动画播完, 播放P2胜行动画
+void FightDirector::onP1WinFinished()
+{
+    if (!m_previewWin || m_phase != Opening_P1) return;
+    qDebug() << "[FightDirector] P1 win preview finished, starting P2";
+    m_phase = Opening_P2;
+    emit phaseChanged();
+    m_p2Model->playWin();
+}
+
+// 预览模式: P2胜行动画播完, 进入战斗阶段
+void FightDirector::onP2WinFinished()
+{
+    if (!m_previewWin || m_phase != Opening_P2) return;
+    qDebug() << "[FightDirector] P2 win preview finished, fight begins";
+    m_phase = Fighting;
+    emit phaseChanged();
+    // 胜利姿态冻结了, 进入战斗前复位为站立
+    m_p1Model->playStand();
+    m_p2Model->playStand();
 }
 
 // 格斗运镜: 始终确保两角色在屏内, 容不下时回退中点跟随

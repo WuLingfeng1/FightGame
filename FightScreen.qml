@@ -56,6 +56,9 @@ Item {
     property int  currentRound: 1
     property bool roundEnding: false
     property bool resettingRound: false
+    property bool matchEndActive: false
+    property bool matchWinnerDone: false
+    property bool matchLoserDone: false
     property bool p1Blocking: false
     property bool p2Blocking: false
     property bool isMoving: false
@@ -707,20 +710,6 @@ Item {
             if (p1Health <= 0) { koModel = director.p1Model; winModel = director.p2Model }
             else if (p2Health <= 0) { koModel = director.p2Model; winModel = director.p1Model }
 
-            if (koModel) {
-                // 被击倒者处于受击态: 不强行走站立, 让击飞播完并保持倒地
-                if (koModel.state === 12) {
-                    koModel.setStayDown(true)
-                } else {
-                    koModel.playStand()
-                }
-                winModel.playStand()
-            } else {
-                // 平局/超时: 两者站定
-                director.p1Model.playStand()
-                director.p2Model.playStand()
-            }
-
             if (p1Health <= 0 && p2Health > 0) {
                 p2Wins++
             } else if (p2Health <= 0 && p1Health > 0) {
@@ -741,10 +730,57 @@ Item {
 
             if (p1Wins >= 2 || p2Wins >= 2) {
                 MusicManager.playVictory()
-                matchResultTimer.start()
+                startMatchEndAnimations()
+                matchResultTimer.start()  // 兜底定时器, 防止动画异常卡死
             } else {
+                // 非最终局: 被击倒者保持倒地/站立, 回合重置
+                if (koModel) {
+                    if (koModel.state === 12) {
+                        koModel.setStayDown(true)
+                    } else {
+                        koModel.playStand()
+                    }
+                    winModel.playStand()
+                } else {
+                    director.p1Model.playStand()
+                    director.p2Model.playStand()
+                }
                 roundResetTimer.start()
             }
+        }
+    }
+
+    // 最终局结束: 胜者播放胜利动画+语音, 败者播放失败动画(全程沉默)
+    // 若败者正在受击/击飞, 标记等待其落地起身后自动播放失败动画
+    function startMatchEndAnimations() {
+        matchEndActive = true
+        matchWinnerDone = false
+        matchLoserDone = false
+        var winModel = p1Wins >= 2 ? director.p1Model : director.p2Model
+        var loseModel = p1Wins >= 2 ? director.p2Model : director.p1Model
+        if (winModel.hasWinAnim()) {
+            winModel.playWin()
+        } else {
+            matchWinnerDone = true
+        }
+        if (loseModel.hasLoseAnim()) {
+            if (loseModel.state === 12) {
+                loseModel.markPendingLose()
+            } else {
+                loseModel.playLose()
+            }
+        } else {
+            matchLoserDone = true
+        }
+        checkMatchEndDone()
+    }
+
+    function checkMatchEndDone() {
+        if (!matchEndActive) return
+        if (matchWinnerDone && matchLoserDone) {
+            matchEndActive = false
+            // 双方动作播完后, 让胜利画面停留片刻再退出
+            matchEndHoldTimer.start()
         }
     }
 
@@ -1092,7 +1128,20 @@ Item {
 
     Timer {
         id: matchResultTimer
-        interval: 3000
+        interval: 12000  // 兜底: 若胜/败动画异常未播完, 到时强制退出
+        onTriggered: {
+            matchEndActive = false
+            if (isOnline && isHost && networkMgr) {
+                networkMgr.sendMessage({"type": "match_end"})
+            }
+            if (stackViewRef) stackViewRef.pop()
+        }
+    }
+
+    // 胜利画面停留: 双方胜/败动作都播完后, 再停留一小段时间展示结果
+    Timer {
+        id: matchEndHoldTimer
+        interval: 2500
         onTriggered: {
             if (isOnline && isHost && networkMgr) {
                 networkMgr.sendMessage({"type": "match_end"})
@@ -1273,17 +1322,16 @@ Item {
 
         function play(atkModel, defModel) {
             var midX = atkModel.posXRatio * 0.3 + defModel.posXRatio * 0.7
-            var neckY = defModel.positionY + defModel.frameHeight * (1 - defModel.visualScale * 0.8)
+            // 以防御方视觉身体中心为基准定位攻击特效
+            var topY = defModel.positionY + defModel.frameHeight * (1 - fitScale * defModel.visualScale)
+            var centerY = topY + defModel.frameHeight * fitScale * defModel.visualScale / 2
             var s = atkModel.state
-            var offset
-            if (atkModel.visualScale <= 1.5) {
-                offset = -30
-            } else {
-                if (s === 8 || s === 10) offset = 120
-                else offset = 60
-            }
+            var offset = 0
+            if (s === 8 || s === 10) offset = 25        // 踢击特效略低
+            else if (s === 14) offset = 40              // 下蹲攻击特效更低
+            else if (s === 7 || s === 9) offset = -10   // 拳击特效略高
             x = root.width * (midX - director.cameraOffset) - width / 2
-            y = neckY - height / 2 + offset
+            y = centerY - height / 2 + offset
             visible = true
             vfx1.visible = false
             vfx2.visible = false
@@ -1660,6 +1708,7 @@ Item {
         vfxTimer.stop()
         roundResetTimer.stop()
         matchResultTimer.stop()
+        matchEndHoldTimer.stop()
         director.p1Model.playStand()
         director.p2Model.playStand()
         MusicManager.stop()
@@ -1672,6 +1721,8 @@ Item {
         function onAttackFinished() { p1Attacking = false; resumeP1Movement() }
         function onHurtFinished() { p1Attacking = false; p1Jumping = false; p1Crouching = false; resumeP1Movement() }
         function onDodgeFinished() { p1Attacking = false; resumeP1Movement() }
+        function onWinFinished() { matchWinnerDone = true; checkMatchEndDone() }
+        function onLoseFinished() { matchLoserDone = true; checkMatchEndDone() }
         function onPosXRatioChanged() { director.updateCamera() }
     }
 
@@ -1681,6 +1732,8 @@ Item {
         function onAttackFinished() { p2Attacking = false; resumeP2Movement() }
         function onHurtFinished() { p2Attacking = false; p2Jumping = false; p2Crouching = false; resumeP2Movement() }
         function onDodgeFinished() { p2Attacking = false; resumeP2Movement() }
+        function onWinFinished() { matchWinnerDone = true; checkMatchEndDone() }
+        function onLoseFinished() { matchLoserDone = true; checkMatchEndDone() }
         function onPosXRatioChanged() { director.updateCamera() }
     }
 
@@ -1788,14 +1841,16 @@ Item {
                 roundEnding = true
                 if (p1Wins >= 2 || p2Wins >= 2) {
                     MusicManager.playVictory()
+                    startMatchEndAnimations()
                     matchResultTimer.start()
                 } else {
                     roundResetTimer.start()
                 }
             } else if (msg.type === "match_end" && !isHost) {
                 roundEnding = true
-                if (!matchResultTimer.running) {
+                if (!matchEndActive && !matchResultTimer.running) {
                     MusicManager.playVictory()
+                    startMatchEndAnimations()
                     matchResultTimer.start()
                 }
             }

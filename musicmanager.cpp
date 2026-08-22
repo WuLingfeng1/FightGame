@@ -91,6 +91,11 @@ void MusicManager::playTrack(const QString &resPath, const QString &cacheName, b
     m_player->play();
 }
 
+void MusicManager::playBegin()
+{
+    playTrack(QStringLiteral(":/resources/select/begin.flac"), QStringLiteral("begin"), true);
+}
+
 void MusicManager::playSelect()
 {
     playTrack(QStringLiteral(":/resources/select/select.flac"), QStringLiteral("select"), true);

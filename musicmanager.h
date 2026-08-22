@@ -20,6 +20,7 @@ public:
     static MusicManager *create(QQmlEngine *qmlEngine, QJSEngine *jsEngine);
     static MusicManager *instance();
 
+    Q_INVOKABLE void playBegin();                        // 开始界面音乐(循环)
     Q_INVOKABLE void playSelect();                       // 选人/选图界面音乐(循环)
     Q_INVOKABLE void playStage(const QString &stageId);   // 战斗场景音乐(循环)
     Q_INVOKABLE void playVictory();                       // 胜利音乐(单次)
