@@ -52,6 +52,7 @@ ApplicationWindow {
         initialItem: Item {
             Component.onCompleted: MusicManager.playBegin()
             Component.onDestruction: MusicManager.stop()
+            StackView.onActivated: MusicManager.playBegin()
 
             Image {
                 anchors.fill: parent

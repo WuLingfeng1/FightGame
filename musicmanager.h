@@ -1,5 +1,5 @@
-// musicmanager.h — 背景音乐单例: 选人/场景/胜利音乐
 #pragma once
+
 #include <QObject>
 #include <QString>
 #include <QtQml/qqmlregistration.h>

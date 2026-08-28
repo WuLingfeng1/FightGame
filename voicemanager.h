@@ -1,5 +1,5 @@
-// voicemanager.h — QMediaPlayer, 每次play独立建player(无竞争)
 #pragma once
+
 #include <QObject>
 #include <QMediaPlayer>
 #include <QAudioOutput>

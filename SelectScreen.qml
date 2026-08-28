@@ -133,7 +133,6 @@ Item {
     }
 
     StackView.onActivated: MusicManager.playSelect()
-    Component.onDestruction: MusicManager.stop()
 
     onCurrentTurnChanged: refresh()
     onPreviewP1Changed:   refresh()

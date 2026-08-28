@@ -1710,7 +1710,6 @@ Item {
         matchEndHoldTimer.stop()
         director.p1Model.playStand()
         director.p2Model.playStand()
-        MusicManager.stop()
     }
 
     // 信号连接

@@ -312,7 +312,7 @@
       "loop": false,
       "jumpHeight": 480,
       "jumpDistance": 0.45,
-      "visualScale": 1.8,
+      "visualScale": 1.5,
       "divFrame": 17,
       "offsetXFwd": 0,
       "offsetXLast": 0,

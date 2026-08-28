@@ -1,0 +1,44 @@
+FightGame 代码改进与功能添加总结
+
+整理日期: 2026-08-28
+
+
+一.总体概览
+
+项目从"双角色(Yagami/Orochi)基础对战"新增为"三角色、带完整语音/音乐/胜利结算"的较完整格斗游戏,主要改进方向：
+1. 新增第三名角色 草薙京Kusanagi（kug），含全套动作与语音资源；
+2. 引入统一的 VoiceManager 语音系统与 MusicManager 背景音乐系统；
+3. 完成受击/击飞/起身/闪避/防御等战斗机制的补全；
+4. 新增三回合结束后的胜者(win)/败者(lose)结算动画与语音；
+
+涉及文件（代码层）：
+    charactermodel.h/.cpp   kug角色模型状态机
+    fightdirector.h/.cpp    战斗导演/碰撞检测/阶段控制
+    characterconfig.h/.cpp  kug角色配置数据层
+    voicemanager.h/.cpp     语音系统（新增）
+    musicmanager.h/.cpp     音乐系统（新增）
+    FightScreen.qml         战斗画面（胜利失败动作结算的渲染）
+    Main.qml                开始界面（背景音乐）
+    SelectScreen.qml / StageSelectScreen.qml  选人/选图音乐接入
+    config/characters.json  角色配置(主要为kug角色配置,还有一部分为新增的击飞动作和胜利失败结算的动作)
+
+
+二.使用的库与模块
+
+1. Qt Multimedia（新增依赖，CMake 中 find_package 增加 Multimedia）
+    QMediaPlayer / QAudioOutput：语音与音乐播放后端，支持 wav / mp3 / flac 多种格式
+    使用方式：
+      a) VoiceManager：每次 play() 独立 new QMediaPlayer + QAudioOutput，音量 = 全局音量 × 动作音量系数(actionVolume)，播放结束通过mediaStatusChanged(EndOfMedia) 触发 deleteLater 释放，实现无竞争并发
+      b) MusicManager：单例持有单个 QMediaPlayer，setLoops(Infinite/1) 控制循环，用于选人/选图/开始界面/战斗场景/胜利场景的 BGM
+
+2. QtCore
+    QTimer：动画逐帧驱动（charactermodel）、回合重置/结算定时器（FightScreen）
+    QJsonDocument / QJsonObject / QJsonParseError：解析 characters.json/keybindings.json 角色与键位配置
+    QFile / QDir / QStandardPaths / QFileInfo：将 qrc 内的音频/资源解包到本地缓存目录后再交给 QMediaPlayer 播放（QMediaPlayer 不能直接播 qrc 路径，需 unpack 到 CacheLocation）
+    QRandomGenerator：多语音变体(win1/win2...)随机挑选
+    QHash / QSet / QStringList：语音文件变体缓存、动作音量表、去重
+
+
+三.问题缺陷
+1.由于暑假在家只有一台电脑,所以联机部分没有实施同步,以上修改仅适用与本地对战
+2.由于资源有限并没有找到orochi的受击击飞帧图资源,所以orochi受到超重击的时候还是延用的旧版本受击动作
