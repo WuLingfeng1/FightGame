@@ -210,6 +210,135 @@ private slots:
         QCOMPARE(checks, 198);
     }
 
+    void sunshineAvailabilityCooldownAndAtlas() {
+        CharacterModel model;
+        model.configure(character("Yagami"));
+        model.playStand();
+        QVERIFY(!model.hasSunshine());
+        QVERIFY(!model.playSunshine());
+        model.configure(character("Orochi"));
+        model.playStand();
+        QVERIFY(model.hasSunshine());
+        QVERIFY(model.playSunshine());
+        QCOMPARE(model.state(), CharacterModel::Sunshine);
+        QCOMPARE(model.sheetColumns(), 8);
+        QCOMPARE(model.totalFrames(), 64);
+        QCOMPARE(model.sunshineCooldown(), 8);
+        tick(model, 4);
+        QVERIFY(!model.playSunshine());
+        QCOMPARE(model.currentFrame(), 4);
+        QSignalSpy finished(&model, &CharacterModel::attackFinished);
+        for (int frame=4; frame<64; ++frame) {
+            QCOMPARE(model.isAttackActive(), frame >= 28 && frame <= 49);
+            tick(model);
+        }
+        QCOMPARE(model.state(), CharacterModel::Stand);
+        QCOMPARE(finished.count(), 1);
+        QCOMPARE(model.sheetColumns(), model.totalFrames());
+        QVERIFY(!model.playSunshine());
+        QSignalSpy cooldown(&model, &CharacterModel::sunshineCooldownChanged);
+        QTest::qWait(1100);
+        QVERIFY(model.sunshineCooldown() < 8);
+        QVERIFY(cooldown.count() >= 1);
+        model.configure(character("Orochi"));
+        model.playStand();
+        QCOMPARE(model.sunshineCooldown(), 0);
+        QVERIFY(model.playSunshine());
+    }
+
+    void sunshineCannotStartDuringJumpHurtOrDodge() {
+        CharacterModel model;
+        const auto cfg=character("Orochi");
+        model.configure(cfg);model.playStand();model.playJump();
+        QVERIFY(!model.playSunshine());
+        model.configure(cfg);model.playStand();model.playHurt();
+        QVERIFY(!model.playSunshine());
+        model.configure(cfg);model.playStand();model.playDodge(true);
+        QVERIFY(!model.playSunshine());
+        QCOMPARE(model.sunshineCooldown(),0);
+    }
+
+    void sunshineHasSixDistinctGuardableDamageStages() {
+        for(bool guard:{false,true})for(bool reverse:{false,true}) {
+            FightDirector d;d.resetForNewRound(reverse?"Yagami":"Orochi",reverse?"Orochi":"Yagami");
+            auto a=reverse?d.p2Model():d.p1Model();auto b=reverse?d.p1Model():d.p2Model();
+            a->setPosXRatio(.02);b->setPosXRatio(.98);if(guard)b->playStandBlock();
+            QSignalSpy hits(&d,&FightDirector::hitDetected);
+            connect(&d,&FightDirector::hitDetected,b,[&](int,int){if(guard)b->playSunshineBlock();else b->playSunshineHurt();});
+            QVERIFY(a->playSunshine());int total=0,index=0;
+            const QList<int> frames={28,32,36,40,44,49};
+            for(int frame=0;frame<64;++frame) {
+                const bool expected=frames.contains(frame);
+                QCOMPARE(d.checkCollision(),expected);
+                if(expected) {
+                    QCOMPARE(hits.count(),++index);QCOMPARE(d.lastHitPart(),index);
+                    QCOMPARE(hits.last()[1].toInt(),guard?3:6);total+=hits.last()[1].toInt();
+                }
+                QVERIFY(!d.checkCollision()); // No duplicate damage within a stage.
+                tick(*b);tick(*a);
+            }
+            QCOMPARE(index,6);QCOMPARE(total,guard?18:36);
+        }
+    }
+
+    void sunshineRespectsDodgeInvulnerability() {
+        FightDirector director;
+        director.resetForNewRound("Orochi","Yagami");
+        auto attacker=director.p1Model();auto defender=director.p2Model();
+        QVERIFY(attacker->playSunshine());
+        tick(*attacker,28);defender->playDodge(true);
+        QVERIFY(!director.checkCollision());
+        defender->playStand();
+        QVERIFY(director.checkCollision());
+    }
+
+    void sunshineReactionRecoversForEveryCharacter() {
+        for (const QString &name : {"Orochi","Yagami","Kusanagi"}) {
+            CharacterModel defender,attacker;
+            defender.configure(character(name));attacker.configure(character("Orochi"));
+            defender.setOpponent(&attacker);attacker.setPosXRatio(0.2);defender.setPosXRatio(0.8);
+            defender.playStand();defender.playCrouch();
+            defender.playSunshineHurt();
+            QCOMPARE(defender.state(),CharacterModel::Hurt);
+            const double groundY=defender.positionY();
+            const double startX=defender.posXRatio();
+            for (int i=0;i<30;++i) {
+                tick(defender);
+                QCOMPARE(defender.positionY(),groundY);
+                QVERIFY(defender.posXRatio()>=startX);
+                QVERIFY(defender.posXRatio()-startX<=0.04001);
+                QCOMPARE(defender.state(),CharacterModel::Hurt);
+            }
+            tick(defender,7); // 1110 ms: release into the final launch.
+            const double launchY=defender.positionY();
+            tick(defender);
+            QVERIFY(defender.positionY()<launchY);
+            int frames=0;
+            while (defender.state()!=CharacterModel::Stand && frames++<100) tick(defender);
+            QVERIFY2(defender.state()==CharacterModel::Stand,qPrintable(name));
+            QVERIFY(defender.posXRatio()>0.8);
+            defender.playForward();
+            QCOMPARE(defender.state(),CharacterModel::Forward);
+        }
+    }
+
+    void sunshineBindingsAndTextureLimits() {
+        KeyBindingConfig keys;
+        QCOMPARE(keys.getBinding("P1","sunshine"),QString("O"));
+        QCOMPARE(keys.getBinding("P2","sunshine"),QString("NumPad6"));
+        QImage atlas(QStringLiteral(FIGHTGAME_SOURCE_DIR "/images/character/Orochi/SunshineAtlas.png"));
+        QVERIFY(!atlas.isNull());
+        QCOMPARE(atlas.size(),QSize(3072,4096));
+        QVERIFY(atlas.width()<=4096 && atlas.height()<=4096);
+        QImage original(QStringLiteral(FIGHTGAME_SOURCE_DIR "/images/character/Orochi/SunShine.png"));
+        QVERIFY(!original.isNull());
+        for (int frame=0;frame<64;++frame) {
+            const QImage source = original.copy(frame*384,0,384,512);
+            const QImage packed = atlas.copy((frame%8)*384,(frame/8)*512,384,512);
+            QVERIFY2(source==packed,qPrintable(QString("Original frame %1 was changed or skipped").arg(frame)));
+        }
+    }
+
     void qqCrouchAttacksNeverMakeTheCharacterGiant() {
         for(const QString &name:{"Orochi","Yagami","Kusanagi"}) {
             const auto cfg=character(name);
