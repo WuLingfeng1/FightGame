@@ -339,6 +339,68 @@ private slots:
         }
     }
 
+    void sunshineLaunchWaitsForTheCasterFinalFlash() {
+        for (const QString &name : {"Orochi","Yagami","Kusanagi"}) {
+            CharacterModel attacker,defender;
+            attacker.configure(character("Orochi"));defender.configure(character(name));
+            attacker.setOpponent(&defender);defender.setOpponent(&attacker);
+            attacker.setPosXRatio(.2);defender.setPosXRatio(.7);
+            attacker.playStand();defender.playStand();
+            QVERIFY(attacker.playSunshine());tick(attacker,28);
+            defender.playSunshineHurt();
+            const double groundY=defender.positionY();
+            const QString recoilSheet=defender.sourcePath();
+            // Faster/slower clocks cannot launch the victim before frame 50.
+            tick(defender,60);
+            QCOMPARE(defender.positionY(),groundY);
+            QCOMPARE(defender.sourcePath(),recoilSheet);
+            QVERIFY(defender.posXRatio()<=.74001);
+            tick(attacker,21);tick(defender);
+            QCOMPARE(attacker.currentFrame(),49);
+            QCOMPARE(defender.sourcePath(),recoilSheet);
+            tick(attacker);tick(defender);
+            QCOMPARE(attacker.currentFrame(),50);
+            const double launchY=defender.positionY();
+            tick(defender);QVERIFY(defender.positionY()<launchY);
+        }
+    }
+
+    void interruptedSunshineRecoilDoesNotLeakIntoNextRound() {
+        CharacterModel model;
+        model.configure(character("Yagami"));model.playStand();
+        model.playSunshineHurt();tick(model,10);
+        model.playStand();tick(model,50);
+        QCOMPARE(model.state(),CharacterModel::Stand);
+        model.playSunshineHurt();tick(model,10);
+        model.configure(character("Orochi"));model.playStand();tick(model,50);
+        QCOMPARE(model.state(),CharacterModel::Stand);
+    }
+
+    void dodgeHasOneBriefInvisibleFrameAndMatchingIdleEnds() {
+        const auto cfg=character("Orochi");
+        QCOMPARE(cfg.dodge.interval,35);
+        QCOMPARE(cfg.dodge.sheetColumns,8);
+        QImage atlas(QStringLiteral(FIGHTGAME_SOURCE_DIR "/images/character/Orochi/DodgeSmoothAtlas.png"));
+        QCOMPARE(atlas.size(),QSize(3072,1024));
+        auto tile=[&](int i) { return atlas.copy((i%8)*384,(i/8)*512,384,512); };
+        QCOMPARE(tile(0),tile(15));
+        int invisible=0;
+        for (int i=0;i<16;++i) {
+            const auto f=tile(i);
+            bool visible=false;
+            for (int y=0;y<f.height() && !visible;++y)
+                for (int x=0;x<f.width();++x)
+                    if(qAlpha(f.pixel(x,y))) { visible=true;break; }
+            if(!visible) { ++invisible;QCOMPARE(i,8); }
+        }
+        QCOMPARE(invisible,1);
+        CharacterModel model;
+        model.configure(cfg);model.playStand();model.playLightPunch();
+        model.playDodge(true);QCOMPARE(model.state(),CharacterModel::LightPunch);
+        model.playStand();model.playCrouch();model.playDodge(true);
+        QCOMPARE(model.state(),CharacterModel::Crouch);
+    }
+
     void qqCrouchAttacksNeverMakeTheCharacterGiant() {
         for(const QString &name:{"Orochi","Yagami","Kusanagi"}) {
             const auto cfg=character(name);
