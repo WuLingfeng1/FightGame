@@ -14,6 +14,15 @@ FightDirector::FightDirector(QObject *parent)
     m_p1Model = new CharacterModel(this);
     m_p2Model = new CharacterModel(this);
     m_keyBindings = new KeyBindingConfig(this);
+    m_cameraTimer.setInterval(16);m_cameraTimer.setTimerType(Qt::PreciseTimer);
+    connect(&m_cameraTimer,&QTimer::timeout,this,&FightDirector::onCameraTick);
+    m_projectileTimer.setInterval(16);
+    m_projectileTimer.setTimerType(Qt::PreciseTimer);
+    connect(&m_projectileTimer,&QTimer::timeout,this,[this]() {
+        advanceDarkParticles(int(m_projectileClock.restart()));
+    });
+    connect(m_p1Model,&CharacterModel::darkParticleReleased,this,[this]() {spawnDarkParticle(1);});
+    connect(m_p2Model,&CharacterModel::darkParticleReleased,this,[this]() {spawnDarkParticle(2);});
 
     connect(m_p1Model, &CharacterModel::openingFinished, this, &FightDirector::onP1OpeningFinished);
     connect(m_p2Model, &CharacterModel::openingFinished, this, &FightDirector::onP2OpeningFinished);
@@ -56,6 +65,8 @@ void FightDirector::setRootHeight(double h)
 // 开始战斗: 加载双方角色配置, 先播放P1开场动画
 void FightDirector::start(const QString &p1CharId, const QString &p2CharId)
 {
+    m_cameraTimer.stop();m_cameraTarget=0;m_cameraOffset=0;
+    clearDarkParticles();
     qDebug() << "[FightDirector] Starting fight:" << p1CharId << "vs" << p2CharId;
 
     loadConfig(p1CharId, m_p1Model);
@@ -73,6 +84,7 @@ void FightDirector::start(const QString &p1CharId, const QString &p2CharId)
     m_p2Model->setPosXRatio(0.78);
     m_p2Model->setFacingLeft(true);
 
+    m_cameraTimer.stop();m_cameraTarget=0;m_cameraOffset=0;emit cameraOffsetChanged();
     m_phase = Opening_P1;
     emit phaseChanged();
 
@@ -88,6 +100,8 @@ void FightDirector::start(const QString &p1CharId, const QString &p2CharId)
 // 回合重置: 加载配置, 直接进入战斗阶段, 跳过开场动画
 void FightDirector::resetForNewRound(const QString &p1CharId, const QString &p2CharId)
 {
+    m_cameraTimer.stop();m_cameraTarget=0;m_cameraOffset=0;
+    clearDarkParticles();
     qDebug() << "[FightDirector] Reset for new round:" << p1CharId << "vs" << p2CharId;
 
     loadConfig(p1CharId, m_p1Model);
@@ -107,6 +121,7 @@ void FightDirector::resetForNewRound(const QString &p1CharId, const QString &p2C
 
     // 直接进入战斗阶段，跳过开场动画
     m_phase = Fighting;
+    m_cameraTimer.stop();m_cameraTarget=0;
     m_cameraOffset = 0; // 重置镜头位置
 
     // 让角色进入站立状态
@@ -172,33 +187,28 @@ void FightDirector::onP2WinFinished()
 // 小幅抖动通过平滑插值消除, 大幅移动直接跟随
 void FightDirector::updateCamera()
 {
-    if (!m_p1Model || !m_p2Model) return;
+    if(!m_p1Model || !m_p2Model) return;
+    const double left=std::min(m_p1Model->posXRatio(),m_p2Model->posXRatio());
+    const double right=std::max(m_p1Model->posXRatio(),m_p2Model->posXRatio());
+    const double lo=right-.92,hi=left-.08;
+    // Keep the existing composition while both fighters are safely visible.
+    // Teleporting inside the viewport must not recenter the stage in two jolts.
+    double target=hi>=lo ? std::clamp(m_cameraOffset,lo,hi) : (left+right)/2-.5;
+    target=std::clamp(target,0.0,kStageWidth-1.0);
+    m_cameraTarget=target;
+    if(std::abs(target-m_cameraOffset)<.5/900.0) return;
+    if(!m_cameraTimer.isActive())m_cameraTimer.start();
+}
 
-    double p1 = m_p1Model->posXRatio();
-    double p2 = m_p2Model->posXRatio();
-    double maxPos = std::max(p1, p2);
-    double minPos = std::min(p1, p2);
-
-    double target = (p1 + p2) / 2.0 - 0.5;
-
-    double keepRight = maxPos - 0.95;
-    double keepLeft = minPos - 0.05;
-
-    if (keepLeft >= keepRight) {
-        target = std::max(target, keepRight);
-        target = std::min(target, keepLeft);
+void FightDirector::onCameraTick()
+{
+    const double diff=m_cameraTarget-m_cameraOffset;
+    if(std::abs(diff)<.5/900.0) {
+        m_cameraTimer.stop();
+        if(m_cameraOffset!=m_cameraTarget) {m_cameraOffset=m_cameraTarget;emit cameraOffsetChanged();}
+        return;
     }
-
-    target = std::max(0.0, std::min(target, kStageWidth - 1.0));
-
-    double diff = target - m_cameraOffset;
-    double factor;
-    if (std::abs(diff) < 0.015)
-        factor = 0.2;
-    else
-        factor = 0.7;
-    m_cameraOffset += diff * factor;
-
+    m_cameraOffset+=diff*.28;
     emit cameraOffsetChanged();
 }
 
@@ -226,13 +236,17 @@ bool FightDirector::checkCollision()
         double hitPx = hitNormX * windowW;
         double hurtPx = hurtNormX * windowW;
 
-        bool hitX = (hitPx + hitR >= hurtPx - hurtW / 2) && (hitPx - hitR <= hurtPx + hurtW / 2);
-        bool hitYRange = (hitY + hitR >= hurtY - hurtH / 2) && (hitY - hitR <= hurtY + hurtH / 2);
+        const bool fullScreen = m_p1Model->state() == CharacterModel::Sunshine;
+        bool hitX = fullScreen || ((hitPx + hitR >= hurtPx - hurtW / 2) && (hitPx - hitR <= hurtPx + hurtW / 2));
+        bool hitYRange = fullScreen || ((hitY + hitR >= hurtY - hurtH / 2) && (hitY - hitR <= hurtY + hurtH / 2));
 
         if (hitX && hitYRange) {
-            m_p1Model->m_hitThisAttack = true;
-            int finalDamage = m_p1Model->m_currentAnim.damage;
-            int finalKnockback = m_p1Model->m_currentAnim.knockbackDistance;
+            const int part = fullScreen ? m_p1Model->sunshineHitPart() : 0;
+            if (fullScreen) m_p1Model->m_sunshineHitMask |= 1 << (part-1);
+            else m_p1Model->m_hitThisAttack = true;
+            const int totalDamage = m_p1Model->m_currentAnim.damage;
+            int finalDamage = fullScreen ? totalDamage/6 + (part==6 ? totalDamage%6 : 0) : totalDamage;
+            int finalKnockback = fullScreen ? 0 : m_p1Model->m_currentAnim.knockbackDistance;
             if (m_p2Model->isBlocking()) {
                 finalDamage = std::max(1, finalDamage / 2); // 50%减伤
                 finalKnockback /= 2;
@@ -244,6 +258,7 @@ bool FightDirector::checkCollision()
             } else {
                 VoiceManager::instance().play(m_p1Model->charId(), QStringLiteral("hit") + m_p1Model->attackAction());
             }
+            setLastHitContext(m_p1Model->state(),part);
             emit hitDetected(1, finalDamage);
             anyHit = true;
         }
@@ -265,13 +280,17 @@ bool FightDirector::checkCollision()
         double hitPx = hitNormX * windowW;
         double hurtPx = hurtNormX * windowW;
 
-        bool hitX = (hitPx + hitR >= hurtPx - hurtW / 2) && (hitPx - hitR <= hurtPx + hurtW / 2);
-        bool hitYRange = (hitY + hitR >= hurtY - hurtH / 2) && (hitY - hitR <= hurtY + hurtH / 2);
+        const bool fullScreen = m_p2Model->state() == CharacterModel::Sunshine;
+        bool hitX = fullScreen || ((hitPx + hitR >= hurtPx - hurtW / 2) && (hitPx - hitR <= hurtPx + hurtW / 2));
+        bool hitYRange = fullScreen || ((hitY + hitR >= hurtY - hurtH / 2) && (hitY - hitR <= hurtY + hurtH / 2));
 
         if (hitX && hitYRange) {
-            m_p2Model->m_hitThisAttack = true;
-            int finalDamage = m_p2Model->m_currentAnim.damage;
-            int finalKnockback = m_p2Model->m_currentAnim.knockbackDistance;
+            const int part = fullScreen ? m_p2Model->sunshineHitPart() : 0;
+            if (fullScreen) m_p2Model->m_sunshineHitMask |= 1 << (part-1);
+            else m_p2Model->m_hitThisAttack = true;
+            const int totalDamage = m_p2Model->m_currentAnim.damage;
+            int finalDamage = fullScreen ? totalDamage/6 + (part==6 ? totalDamage%6 : 0) : totalDamage;
+            int finalKnockback = fullScreen ? 0 : m_p2Model->m_currentAnim.knockbackDistance;
             if (m_p1Model->isBlocking()) {
                 finalDamage = std::max(1, finalDamage / 2); // 50%减伤
                 finalKnockback /= 2;
@@ -283,10 +302,121 @@ bool FightDirector::checkCollision()
             } else {
                 VoiceManager::instance().play(m_p2Model->charId(), QStringLiteral("hit") + m_p2Model->attackAction());
             }
+            setLastHitContext(m_p2Model->state(),part);
             emit hitDetected(2, finalDamage);
             anyHit = true;
         }
     }
 
     return anyHit;
+}
+
+QVariantList FightDirector::darkParticles() const
+{
+    QVariantList result;
+    for (const auto &p : m_darkParticles)
+        result.append(QVariantMap{{"id",p.id},{"owner",p.owner},{"x",p.x},
+            {"height",p.height},{"direction",p.direction},{"age",p.age},
+            {"hits",p.hits},{"pulse",p.pulse},{"dying",p.dying}});
+    return result;
+}
+
+void FightDirector::setLastHitContext(int state, int part)
+{
+    m_lastHitState = state;
+    m_lastHitPart = part;
+    emit hitContextChanged();
+}
+
+void FightDirector::clearDarkParticles()
+{
+    m_darkParticles.clear();m_projectileTimer.stop();
+    emit darkParticlesChanged();
+}
+
+void FightDirector::spawnDarkParticle(int owner)
+{
+    if (!m_authoritative || m_phase != Fighting) return;
+    auto caster = owner == 1 ? m_p1Model : m_p2Model;
+    if (caster->state() != CharacterModel::DarkParticle) return;
+    // At most one wave per player. A later cast can start after recovery,
+    // but its release waits for the existing wave to leave the arena.
+    for (const auto &p : m_darkParticles) if (p.owner == owner) return;
+    DarkWave wave;
+    wave.id = ++m_nextProjectileId;wave.owner = owner;
+    wave.direction = caster->facingLeft() ? -1.0 : 1.0;
+    wave.x = caster->posXRatio() + wave.direction * .18;
+    m_darkParticles.append(wave);
+    if (!m_projectileTimer.isActive()) { m_projectileClock.restart();m_projectileTimer.start(); }
+    emit darkParticlesChanged();
+}
+
+void FightDirector::syncDarkParticles(const QVariantList &snapshot)
+{
+    if (m_authoritative) return;
+    m_darkParticles.clear();
+    for (const auto &value : snapshot) {
+        const auto data = value.toMap();DarkWave p;
+        p.id=data.value("id").toInt();p.owner=data.value("owner").toInt();
+        if (p.owner != 1 && p.owner != 2) continue;
+        p.x=data.value("x").toDouble();p.height=data.value("height").toDouble();
+        p.direction=data.value("direction").toDouble();p.age=data.value("age").toInt();
+        p.hits=data.value("hits").toInt();p.pulse=data.value("pulse").toInt();
+        p.dying=data.value("dying").toInt();m_darkParticles.append(p);
+    }
+    if (m_darkParticles.isEmpty()) m_projectileTimer.stop();
+    else if (!m_projectileTimer.isActive()) { m_projectileClock.restart();m_projectileTimer.start(); }
+    emit darkParticlesChanged();
+}
+
+void FightDirector::advanceDarkParticles(int elapsedMs)
+{
+    // Fixed upper step prevents tunnelling after a delayed frame. Tests and
+    // network clients use the same simulation, only the host applies damage.
+    const int dt=std::clamp(elapsedMs,1,50);
+    for (int index=0;index<m_darkParticles.size();) {
+        auto &p=m_darkParticles[index];p.age+=dt;p.pulse-=dt;
+        auto target=p.owner==1 ? m_p2Model : m_p1Model;
+        if (p.dying>0) {
+            p.dying-=dt;
+            if(p.dying<=0) {m_darkParticles.removeAt(index);continue;}
+        } else {
+            const double oldX=p.x;
+            if(p.hits==0) p.x+=p.direction*.72*dt/1000.0;
+            else p.x=target->posXRatio()-p.direction*.045;
+            const double fb=target->m_currentAnim.feetBottom>0
+                ? target->m_currentAnim.feetBottom : target->m_stand.feetBottom;
+            const double feet=target->m_posY+target->m_frameHeight
+                +(fb-target->m_frameHeight)*target->m_visualScale;
+            const double centerHeight=target->m_rootHeight-feet+target->m_hurtboxH/2.0;
+            const double waveHeight=target->m_stand.feetMargin+p.height;
+            const double reach=(32.0+target->m_hurtboxW/2.0)/900.0;
+            const bool hitX=target->posXRatio()>=std::min(oldX,p.x)-reach
+                && target->posXRatio()<=std::max(oldX,p.x)+reach;
+            const bool hitY=std::abs(centerHeight-waveHeight)<=145.0+target->m_hurtboxH/2.0;
+            const bool immune=target->state()==CharacterModel::Dodge
+                ||target->state()==CharacterModel::Rise||target->m_flyActive;
+            if(m_authoritative && m_phase==Fighting && p.pulse<=0 && hitX && hitY && !immune) {
+                const bool air=target->isAirborne();
+                const bool blocked=target->isBlocking();
+                p.hits=air ? 3 : p.hits+1;p.pulse=110;
+                if(p.hits>=3) p.dying=120;
+                const int owner=p.owner;const int part=p.hits;
+                // All wave state is committed before emitting: QML may reset
+                // the round synchronously in response to lethal damage.
+                setLastHitContext(CharacterModel::DarkParticle,part);
+                if(blocked) {
+                    target->setPosXRatio(std::clamp(target->posXRatio()+p.direction*.015,0.0,3.0));
+                    VoiceManager::instance().play(target->charId(),QStringLiteral("step"));
+                }
+                emit hitDetected(owner,blocked ? 2 : (air ? 24 : 8));
+                emit darkParticlesChanged();
+                return;
+            }
+        }
+        if(p.age>2600 || p.x<-.2 || p.x>kStageWidth+.2) {m_darkParticles.removeAt(index);continue;}
+        ++index;
+    }
+    if(m_darkParticles.isEmpty()) m_projectileTimer.stop();
+    emit darkParticlesChanged();
 }

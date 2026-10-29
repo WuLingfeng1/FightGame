@@ -8,7 +8,25 @@
       "fh": 512,
       "interval": 50,
       "path": "qrc:/images/character/Orochi/opening.png",
-      "openingVoiceMs": 3600
+      "openingVoiceMs": 3600,
+      "feetBottom": 489,
+      "feetMargin": 82
+    },
+    "sunshine": {
+      "cols": 64,
+      "sheetColumns": 8,
+      "fw": 384,
+      "fh": 512,
+      "interval": 50,
+      "path": "qrc:/images/character/Orochi/SunshineAtlas.png",
+      "loop": false,
+      "visualScale": 2.1,
+      "feetBottom": 376,
+      "feetMargin": 82,
+      "offsetX": 58,
+      "attackFrames": "28-49",
+      "damage": 36,
+      "knockbackDistance": 180
     },
     "stand": {
       "cols": 27,
@@ -16,7 +34,7 @@
       "fh": 335,
       "interval": 100,
       "path": "qrc:/images/character/Orochi/Stand.png",
-      "feetBottom": 327,
+      "feetBottom": 331,
       "feetMargin": 82
     },
     "forward": {
@@ -37,25 +55,35 @@
     },
     "jump": {
       "cols": 23,
-      "fw": 251,
-      "fh": 335,
+      "fw": 256,
+      "fh": 256,
       "interval": 30,
-      "path": "qrc:/images/character/Orochi/Jump.png",
+      "path": "qrc:/images/character/Orochi/Motion_jump.png",
       "loop": false,
-      "jumpHeight": 450
+      "jumpHeight": 240,
+      "sheetColumns": 8,
+      "visualScale": 2.4,
+      "feetBottom": 224,
+      "feetMargin": 82,
+      "highJumpHeight": 450,
+      "offsetX": 0
     },
     "diagonalJump": {
       "cols": 42,
-      "fw": 251,
-      "fh": 335,
+      "fw": 256,
+      "fh": 256,
       "interval": 30,
-      "path": "qrc:/images/character/Orochi/DiagonalJump.png",
+      "path": "qrc:/images/character/Orochi/Motion_diagonalJump.png",
       "loop": false,
-      "jumpHeight": 480,
+      "jumpHeight": 260,
       "jumpDistance": 0.4,
       "divFrame": 21,
-      "feetBottom": 327,
-      "feetMargin": 82
+      "feetBottom": 224,
+      "feetMargin": 82,
+      "sheetColumns": 8,
+      "visualScale": 2.4,
+      "highJumpHeight": 480,
+      "offsetX": 0
     },
     "lightPunch": {
       "cols": 12,
@@ -65,7 +93,7 @@
       "path": "qrc:/images/character/Orochi/LightPunch.png",
       "loop": false,
       "visualScale": 1.3,
-      "feetBottom": 283,
+      "feetBottom": 297,
       "feetMargin": 82,
       "attackPointX": 0.05,
       "attackPointY": 24,
@@ -82,7 +110,7 @@
       "path": "qrc:/images/character/Orochi/LightKick.png",
       "loop": false,
       "visualScale": 1.92,
-      "feetBottom": 240,
+      "feetBottom": 272,
       "feetMargin": 82,
       "attackPointX": 0.05,
       "attackPointY": -20,
@@ -99,7 +127,7 @@
       "path": "qrc:/images/character/Orochi/HeavyPunch.png",
       "loop": false,
       "visualScale": 1.97,
-      "feetBottom": 218,
+      "feetBottom": 254,
       "feetMargin": 82,
       "attackPointX": 0.05,
       "attackPointY": -40,
@@ -116,7 +144,7 @@
       "path": "qrc:/images/character/Orochi/HeavyKick.png",
       "loop": false,
       "visualScale": 1.42,
-      "feetBottom": 308,
+      "feetBottom": 311,
       "feetMargin": 82,
       "attackPointX": 0.06,
       "attackPointY": 36,
@@ -133,8 +161,8 @@
       "path": "qrc:/images/character/Orochi/HeavyStrike.png",
       "loop": false,
       "visualScale": 0.8,
-      "feetBottom": 335,
-      "feetMargin": 75,
+      "feetBottom": 489,
+      "feetMargin": 82,
       "offsetX": 25,
       "attackPointX": 0.1,
       "attackPointY": 0,
@@ -144,15 +172,16 @@
       "damage": 20
     },
     "hurt": {
-      "cols": 4,
+      "cols": 6,
       "fw": 384,
       "fh": 512,
-      "interval": 60,
-      "path": "qrc:/images/character/Orochi/Hurt.png",
+      "interval": 75,
+      "path": "qrc:/images/character/Orochi/ReviewHurt.png",
       "loop": false,
       "visualScale": 1.95,
-      "feetBottom": 310,
-      "feetMargin": 82
+      "feetBottom": 371,
+      "feetMargin": 82,
+      "sheetColumns": 8
     },
     "crouch": {
       "cols": 1,
@@ -162,43 +191,45 @@
       "path": "qrc:/images/character/Orochi/Crouch.png",
       "loop": false,
       "visualScale": 1.3,
-      "feetBottom": 207,
+      "feetBottom": 258,
       "feetMargin": 82
     },
     "crouchAttack": {
       "cols": 10,
-      "fw": 384,
-      "fh": 512,
+      "sheetColumns": 8,
+      "fw": 256,
+      "fh": 256,
       "interval": 50,
-      "path": "qrc:/images/character/Orochi/CrouchAttack.png",
+      "path": "qrc:/images/character/Orochi/Imported/crouchKick.png",
       "loop": false,
-      "visualScale": 2.0,
-      "feetBottom": 335,
-      "feetMargin": 75,
-      "attackPointX": 0.15,
-      "attackPointY": 0,
-      "attackRadius": 150,
-      "attackFrames": "3-7",
-      "knockbackDistance": 80,
-      "damage": 10
+      "visualScale": 2.4,
+      "feetBottom": 224,
+      "feetMargin": 82,
+      "attackFrames": "3-6",
+      "attackPointX": 0.09,
+      "attackPointY": 75,
+      "attackRadius": 80,
+      "damage": 5,
+      "knockbackDistance": 20
     },
     "dodge": {
       "cols": 16,
       "fw": 384,
       "fh": 512,
-      "interval": 60,
-      "path": "qrc:/images/character/Orochi/Dodge.png",
+      "interval": 35,
+      "path": "qrc:/images/character/Orochi/DodgeSmoothAtlas.png",
       "loop": false,
       "visualScale": 1.0,
-      "feetBottom": 476,
+      "feetBottom": 424,
       "feetMargin": 82,
       "dodgeStartFrame": 8,
       "dodgeEndFrame": 15,
       "dodgeDistance": 0.3,
-      "offsetX": 60,
-      "offsetXPost": 17,
-      "offsetXEnd": 4,
-      "dodgeSwitchFrame": 8
+      "offsetX": 0,
+      "offsetXPost": 0,
+      "offsetXEnd": 0,
+      "dodgeSwitchFrame": 8,
+      "sheetColumns": 8
     },
     "standBlock": {
       "cols": 3,
@@ -208,7 +239,7 @@
       "path": "qrc:/images/character/Orochi/StandBlock.png",
       "loop": false,
       "visualScale": 2.0,
-      "feetBottom": 280,
+      "feetBottom": 368,
       "feetMargin": 82,
       "offsetX": 15,
       "blockHoldFrame": 2
@@ -234,6 +265,211 @@
       "loop": false,
       "visualScale": 1.0,
       "feetBottom": 347,
+      "feetMargin": 82
+    },
+    "darkParticle": {
+      "cols": 34,
+      "sheetColumns": 8,
+      "fw": 384,
+      "fh": 512,
+      "interval": 40,
+      "path": "qrc:/images/character/Orochi/DarkParticleActor.png",
+      "loop": false,
+      "visualScale": 1.85,
+      "feetBottom": 367,
+      "feetMargin": 82,
+      "offsetX": 0,
+      "attackFrames": "14",
+      "damage": 0,
+      "knockbackDistance": 0
+    },
+    "crouchKick": {
+      "cols": 10,
+      "sheetColumns": 8,
+      "fw": 256,
+      "fh": 256,
+      "interval": 50,
+      "path": "qrc:/images/character/Orochi/Imported/crouchKick.png",
+      "loop": false,
+      "visualScale": 2.4,
+      "feetBottom": 224,
+      "feetMargin": 82,
+      "attackFrames": "3-6",
+      "attackPointX": 0.09,
+      "attackPointY": 75,
+      "attackRadius": 80,
+      "damage": 7,
+      "knockbackDistance": 30
+    },
+    "airPunch": {
+      "cols": 10,
+      "sheetColumns": 8,
+      "fw": 256,
+      "fh": 256,
+      "interval": 35,
+      "path": "qrc:/images/character/Orochi/Motion_airPunch.png",
+      "loop": false,
+      "visualScale": 2.4,
+      "feetBottom": 224,
+      "feetMargin": 82,
+      "attackFrames": "2-5",
+      "attackPointX": 0.07,
+      "attackPointY": -30,
+      "attackRadius": 34,
+      "damage": 8,
+      "knockbackDistance": 30,
+      "attackContacts": [
+        [
+          43.2,
+          192.0
+        ],
+        [
+          43.2,
+          192.0
+        ],
+        [
+          127.2,
+          175.2
+        ],
+        [
+          127.2,
+          168.0
+        ],
+        [
+          144.0,
+          153.6
+        ],
+        [
+          144.0,
+          156.0
+        ],
+        [
+          141.6,
+          165.6
+        ],
+        [
+          129.6,
+          172.8
+        ],
+        [
+          52.8,
+          268.8
+        ],
+        [
+          31.2,
+          160.8
+        ]
+      ],
+      "offsetX": 0
+    },
+    "airKick": {
+      "cols": 9,
+      "sheetColumns": 8,
+      "fw": 256,
+      "fh": 256,
+      "interval": 35,
+      "path": "qrc:/images/character/Orochi/Motion_airKick.png",
+      "loop": false,
+      "visualScale": 2.4,
+      "feetBottom": 224,
+      "feetMargin": 82,
+      "attackFrames": "3-5",
+      "attackPointX": 0.09,
+      "attackPointY": 0,
+      "attackRadius": 38,
+      "damage": 10,
+      "knockbackDistance": 45,
+      "attackContacts": [
+        [
+          33.6,
+          171.6
+        ],
+        [
+          64.8,
+          225.6
+        ],
+        [
+          62.4,
+          157.2
+        ],
+        [
+          158.4,
+          129.6
+        ],
+        [
+          158.4,
+          129.6
+        ],
+        [
+          158.4,
+          129.6
+        ],
+        [
+          62.4,
+          157.2
+        ],
+        [
+          38.4,
+          216.0
+        ],
+        [
+          52.8,
+          268.8
+        ]
+      ],
+      "offsetX": 0
+    },
+    "run": {
+      "cols": 5,
+      "sheetColumns": 8,
+      "fw": 256,
+      "fh": 256,
+      "interval": 40,
+      "path": "qrc:/images/character/Orochi/Imported/run.png",
+      "loop": true,
+      "visualScale": 2.4,
+      "feetBottom": 224,
+      "feetMargin": 82
+    },
+    "backstep": {
+      "cols": 8,
+      "sheetColumns": 8,
+      "fw": 256,
+      "fh": 256,
+      "interval": 40,
+      "path": "qrc:/images/character/Orochi/Imported/backstep.png",
+      "loop": false,
+      "visualScale": 2.4,
+      "feetBottom": 224,
+      "feetMargin": 82
+    },
+    "hurt3": {
+      "cols": 8,
+      "sheetColumns": 8,
+      "fw": 256,
+      "fh": 256,
+      "interval": 160,
+      "path": "qrc:/images/character/Orochi/Imported/hurt3.png",
+      "loop": false,
+      "visualScale": 2.45,
+      "feetBottom": 224,
+      "feetMargin": 82,
+      "flyHeight": 150,
+      "flyPeakT": 0.28,
+      "flyLandT": 0.72,
+      "flyDistance": 0.5,
+      "riseFollowUp": 1
+    },
+    "rise": {
+      "cols": 4,
+      "sheetColumns": 8,
+      "fw": 256,
+      "fh": 256,
+      "interval": 80,
+      "path": "qrc:/images/character/Orochi/Imported/rise.png",
+      "loop": false,
+      "visualScale": 2.45,
+      "feetBottom": 224,
       "feetMargin": 82
     }
   },
@@ -266,7 +502,7 @@
       "feetBottom": 355,
       "feetMargin": 72,
       "loop": true,
-      "visualScale": 0.85
+      "visualScale": 0.8
     },
     "backward": {
       "cols": 6,
@@ -277,7 +513,7 @@
       "feetBottom": 355,
       "feetMargin": 72,
       "loop": true,
-      "visualScale": 0.85
+      "visualScale": 0.8
     },
     "jump": {
       "cols": 19,
@@ -482,7 +718,7 @@
       "path": "qrc:/images/character/Kusanagi/standblock.png",
       "loop": false,
       "visualScale": 0.9,
-      "feetBottom": 355,
+      "feetBottom": 336,
       "feetMargin": 72,
       "blockHoldFrame": 3
     },
@@ -521,7 +757,9 @@
       "path": "qrc:/images/character/Yagami/opening.png",
       "pauseFrame": 1,
       "pauseDuration": 600,
-      "openingVoiceMs": 0
+      "openingVoiceMs": 0,
+      "feetBottom": 334,
+      "feetMargin": 82
     },
     "stand": {
       "cols": 9,
@@ -555,31 +793,39 @@
     },
     "jump": {
       "cols": 13,
-      "fw": 251,
-      "fh": 335,
+      "fw": 256,
+      "fh": 256,
       "interval": 50,
-      "path": "qrc:/images/character/Yagami/Jump.png",
+      "path": "qrc:/images/character/Yagami/Motion_jump.png",
       "loop": false,
-      "jumpHeight": 450,
-      "visualScale": 1.28
+      "jumpHeight": 240,
+      "visualScale": 2.8,
+      "sheetColumns": 8,
+      "feetBottom": 224,
+      "feetMargin": 82,
+      "highJumpHeight": 450,
+      "offsetX": 0
     },
     "diagonalJump": {
       "cols": 32,
-      "fw": 251,
-      "fh": 335,
-      "feetBottom": 335,
+      "fw": 256,
+      "fh": 256,
+      "feetBottom": 224,
       "feetMargin": 82,
       "interval": 50,
-      "path": "qrc:/images/character/Yagami/DiagonalJump.png",
+      "path": "qrc:/images/character/Yagami/Motion_diagonalJump.png",
       "loop": false,
-      "jumpHeight": 480,
+      "jumpHeight": 260,
       "jumpDistance": 0.45,
-      "visualScale": 1.15,
+      "visualScale": 2.8,
       "divFrame": 17,
       "offsetXFwd": 0,
       "offsetXLast": 0,
       "offsetXBwd": 0,
-      "offsetXBwdLast": 0
+      "offsetXBwdLast": 0,
+      "sheetColumns": 8,
+      "highJumpHeight": 480,
+      "offsetX": 0
     },
     "lightPunch": {
       "cols": 6,
@@ -673,36 +919,39 @@
     },
     "hurt": {
       "cols": 8,
-      "fw": 72,
-      "fh": 112,
-      "interval": 60,
-      "path": "qrc:/images/character/Yagami/Hurt1_std.png",
+      "fw": 128,
+      "fh": 160,
+      "interval": 70,
+      "path": "qrc:/images/character/Yagami/ReviewHurt1.png",
       "loop": false,
-      "visualScale": 2.99,
-      "feetBottom": 112,
-      "feetMargin": 82
+      "visualScale": 2.6,
+      "feetBottom": 144,
+      "feetMargin": 82,
+      "sheetColumns": 8
     },
     "hurt1": {
       "cols": 8,
-      "fw": 72,
-      "fh": 112,
-      "interval": 60,
-      "path": "qrc:/images/character/Yagami/Hurt1_std.png",
+      "fw": 128,
+      "fh": 160,
+      "interval": 70,
+      "path": "qrc:/images/character/Yagami/ReviewHurt1.png",
       "loop": false,
-      "visualScale": 2.79,
-      "feetBottom": 112,
-      "feetMargin": 82
+      "visualScale": 2.6,
+      "feetBottom": 144,
+      "feetMargin": 82,
+      "sheetColumns": 8
     },
     "hurt2": {
       "cols": 7,
-      "fw": 72,
-      "fh": 100,
-      "interval": 60,
-      "path": "qrc:/images/character/Yagami/Hurt2_std.png",
+      "fw": 128,
+      "fh": 160,
+      "interval": 70,
+      "path": "qrc:/images/character/Yagami/ReviewHurt2.png",
       "loop": false,
-      "visualScale": 3.0,
-      "feetBottom": 100,
-      "feetMargin": 82
+      "visualScale": 2.8,
+      "feetBottom": 144,
+      "feetMargin": 82,
+      "sheetColumns": 8
     },
     "hurt3": {
       "cols": 30,
@@ -790,6 +1039,156 @@
       "loop": false,
       "visualScale": 0.8,
       "feetBottom": 345,
+      "feetMargin": 82
+    },
+    "crouchAttack": {
+      "cols": 7,
+      "sheetColumns": 8,
+      "fw": 256,
+      "fh": 256,
+      "interval": 50,
+      "path": "qrc:/images/character/Yagami/Imported/crouchAttack.png",
+      "loop": false,
+      "visualScale": 2.8,
+      "feetBottom": 224,
+      "feetMargin": 82,
+      "attackFrames": "2-3",
+      "attackPointX": 0.075,
+      "attackPointY": 65,
+      "attackRadius": 65,
+      "damage": 5,
+      "knockbackDistance": 18
+    },
+    "crouchKick": {
+      "cols": 8,
+      "sheetColumns": 8,
+      "fw": 256,
+      "fh": 256,
+      "interval": 50,
+      "path": "qrc:/images/character/Yagami/Imported/crouchKick.png",
+      "loop": false,
+      "visualScale": 2.8,
+      "feetBottom": 224,
+      "feetMargin": 82,
+      "attackFrames": "2-4",
+      "attackPointX": 0.1,
+      "attackPointY": 90,
+      "attackRadius": 75,
+      "damage": 6,
+      "knockbackDistance": 25
+    },
+    "airPunch": {
+      "cols": 6,
+      "sheetColumns": 8,
+      "fw": 256,
+      "fh": 256,
+      "interval": 40,
+      "path": "qrc:/images/character/Yagami/Motion_airPunch.png",
+      "loop": false,
+      "visualScale": 2.8,
+      "feetBottom": 224,
+      "feetMargin": 82,
+      "attackFrames": "1-3",
+      "attackPointX": 0.055,
+      "attackPointY": -40,
+      "attackRadius": 34,
+      "damage": 7,
+      "knockbackDistance": 25,
+      "attackContacts": [
+        [
+          71.4,
+          229.6
+        ],
+        [
+          53.2,
+          134.4
+        ],
+        [
+          131.6,
+          131.6
+        ],
+        [
+          131.6,
+          131.6
+        ],
+        [
+          134.4,
+          128.8
+        ],
+        [
+          142.8,
+          123.2
+        ]
+      ],
+      "offsetX": 0
+    },
+    "airKick": {
+      "cols": 6,
+      "sheetColumns": 8,
+      "fw": 256,
+      "fh": 256,
+      "interval": 40,
+      "path": "qrc:/images/character/Yagami/Motion_airKick.png",
+      "loop": false,
+      "visualScale": 2.8,
+      "feetBottom": 224,
+      "feetMargin": 82,
+      "attackFrames": "1-3",
+      "attackPointX": 0.1,
+      "attackPointY": -10,
+      "attackRadius": 38,
+      "damage": 8,
+      "knockbackDistance": 35,
+      "attackContacts": [
+        [
+          33.6,
+          156.8
+        ],
+        [
+          196.0,
+          140.0
+        ],
+        [
+          196.0,
+          140.0
+        ],
+        [
+          196.0,
+          140.0
+        ],
+        [
+          100.8,
+          274.4
+        ],
+        [
+          100.8,
+          274.4
+        ]
+      ],
+      "offsetX": 0
+    },
+    "run": {
+      "cols": 8,
+      "sheetColumns": 8,
+      "fw": 256,
+      "fh": 256,
+      "interval": 50,
+      "path": "qrc:/images/character/Yagami/Imported/run.png",
+      "loop": true,
+      "visualScale": 2.8,
+      "feetBottom": 224,
+      "feetMargin": 82
+    },
+    "backstep": {
+      "cols": 9,
+      "sheetColumns": 8,
+      "fw": 256,
+      "fh": 256,
+      "interval": 40,
+      "path": "qrc:/images/character/Yagami/Imported/backstep.png",
+      "loop": false,
+      "visualScale": 2.8,
+      "feetBottom": 224,
       "feetMargin": 82
     }
   }

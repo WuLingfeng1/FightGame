@@ -7,6 +7,7 @@ static AnimParams parseAnim(const QJsonObject &obj)
     AnimParams a;
     if (obj.isEmpty()) return a;
     a.cols = obj.value("cols").toInt(0);
+    a.sheetColumns = obj.value("sheetColumns").toInt(0);
     a.fw = obj.value("fw").toInt(0);
     a.fh = obj.value("fh").toInt(0);
     a.interval = obj.value("interval").toInt(50);
@@ -16,6 +17,7 @@ static AnimParams parseAnim(const QJsonObject &obj)
     a.pauseDuration = obj.value("pauseDuration").toInt(0);
     a.feetBottom = obj.value("feetBottom").toInt(0);
     a.feetMargin = obj.value("feetMargin").toInt(0);
+    a.highJumpHeight = obj.value("highJumpHeight").toInt(450);
     a.jumpHeight = obj.value("jumpHeight").toInt(200);
     a.divFrame = obj.value("divFrame").toInt(0);
     a.jumpDistance = obj.value("jumpDistance").toDouble(0.15);
@@ -28,6 +30,9 @@ static AnimParams parseAnim(const QJsonObject &obj)
     a.attackPointX = obj.value("attackPointX").toDouble(0.0);
     a.attackPointY = obj.value("attackPointY").toInt(0);
     a.attackRadius = obj.value("attackRadius").toInt(60);
+    for(const auto &value:obj.value("attackContacts").toArray()) {
+        const auto xy=value.toArray();if(xy.size()==2)a.attackContacts.append(QPointF(xy[0].toDouble(),xy[1].toDouble()));
+    }
     a.attackFrames = obj.value("attackFrames").toString();
     a.knockbackDistance = obj.value("knockbackDistance").toInt(0);
     a.damage = obj.value("damage").toInt(0);
@@ -69,6 +74,13 @@ CharacterData CharacterConfig::load(const QJsonObject &json, const QString &id)
     cfg.heavyPunch = parseAnim(json.value("heavyPunch").toObject());
     cfg.heavyKick = parseAnim(json.value("heavyKick").toObject());
     cfg.heavyStrike = parseAnim(json.value("heavyStrike").toObject());
+    cfg.darkParticle = parseAnim(json.value("darkParticle").toObject());
+    cfg.crouchKick = parseAnim(json.value("crouchKick").toObject());
+    cfg.airPunch = parseAnim(json.value("airPunch").toObject());
+    cfg.airKick = parseAnim(json.value("airKick").toObject());
+    cfg.run = parseAnim(json.value("run").toObject());
+    cfg.backstep = parseAnim(json.value("backstep").toObject());
+    cfg.sunshine = parseAnim(json.value("sunshine").toObject());
     cfg.hurt = parseAnim(json.value("hurt").toObject());
     cfg.hurt1 = parseAnim(json.value("hurt1").toObject());
     cfg.hurt2 = parseAnim(json.value("hurt2").toObject());

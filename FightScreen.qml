@@ -23,6 +23,7 @@
 import QtQuick
 import QtQuick.Controls
 import FightGame
+import "FighterGeometry.js" as FighterGeometry
 
 Item {
     id: root
@@ -90,6 +91,58 @@ Item {
     property real p1SyncStep: 0.0
     property int  p1SyncFramesLeft: 0
 
+    property bool p1Running: false
+    property bool p2Running: false
+    property real p1LastTap: 0
+    property real p2LastTap: 0
+    property int p1LastTapDirection: 0
+    property int p2LastTapDirection: 0
+
+    function hasContactVfx(state) {
+        return state >= CharacterModel.LightPunch && state <= CharacterModel.HeavyStrike
+            || state === CharacterModel.CrouchAttack || state === CharacterModel.CrouchKick
+            || state === CharacterModel.AirPunch || state === CharacterModel.AirKick
+    }
+
+    function tryContextAttack(isP1, kick, heavy) {
+        var model = isP1 ? director.p1Model : director.p2Model
+        if (!model.airborne && model.state !== CharacterModel.Crouch
+            && model.state !== CharacterModel.CrouchAttack && model.state !== CharacterModel.CrouchKick) return false
+        if (model.playContextAttack(kick, heavy)) {
+            if (isP1) { p1Attacking = true; stopMove1Timers() }
+            else { p2Attacking = true; stopMove2Timers() }
+        }
+        return true
+    }
+
+    function tryMobility(isP1, right) {
+        var now = Date.now()
+        var direction = right ? 1 : -1
+        var previous = isP1 ? p1LastTap : p2LastTap
+        var previousDirection = isP1 ? p1LastTapDirection : p2LastTapDirection
+        if (isP1) { p1LastTap = now; p1LastTapDirection = direction }
+        else { p2LastTap = now; p2LastTapDirection = direction }
+        if (direction !== previousDirection || now - previous > 250) return false
+        var model = isP1 ? director.p1Model : director.p2Model
+        var forward = right !== model.facingLeft
+        if (forward && model.playRun()) {
+            if (isP1) {
+                p1Running = true; isMoving = true; p1CurrentAnim = "run"
+                moveTimer.moveRight = right; moveTimer.moveLeft = !right; moveTimer.start()
+            } else {
+                p2Running = true; isMoving2 = true; p2CurrentAnim = "run"
+                moveTimer2.moveRight = right; moveTimer2.moveLeft = !right; moveTimer2.start()
+            }
+            return true
+        }
+        if (!forward && model.playBackstep()) {
+            if (isP1) { p1Attacking = true; p1Running = false; stopMove1Timers() }
+            else { p2Attacking = true; p2Running = false; stopMove2Timers() }
+            return true
+        }
+        return false
+    }
+
     // 键位工具
     function getKeyCode(keyName) {
         var keyMap = {
@@ -132,8 +185,8 @@ Item {
 
     // 输入处理
     function handleKeyEvent(event, pressed) {
-        var keyAct   = ["moveRight","moveLeft","crouch","jump","lightPunch","lightKick","heavyPunch","heavyKick","heavyStrike","block"]
-        var protoAct = ["move_right","move_left","crouch","jump","light_punch","light_kick","heavy_punch","heavy_kick","heavy_strike","block"]
+        var keyAct   = ["moveRight","moveLeft","crouch","jump","lightPunch","lightKick","heavyPunch","heavyKick","heavyStrike","block","sunshine","darkParticle"]
+        var protoAct = ["move_right","move_left","crouch","jump","light_punch","light_kick","heavy_punch","heavy_kick","heavy_strike","block","sunshine","darkParticle"]
         for (var i = 0; i < keyAct.length; i++) {
             if (isKeyMatch(event, "P1", keyAct[i])) {
                 if (pressed || keyAct[i] !== "lightPunch" && keyAct[i] !== "lightKick") {
@@ -183,6 +236,10 @@ Item {
             if (isP1) startAttackHeavyKick1(); else startAttackHeavyKick2()
         } else if (action === "heavy_strike") {
             if (isP1) startAttackHeavyStrike1(); else startAttackHeavyStrike2()
+        } else if (action === "darkParticle") {
+            if (pressed) startDarkParticle(isP1)
+        } else if (action === "sunshine") {
+            if (pressed) startSunshine(isP1)
         } else if (action === "block") {
             if (pressed) {
                 if (isP1) {
@@ -218,6 +275,11 @@ Item {
 
     function handleP1LightPunch() {
         p1LightPunchPressed = true
+        if(director.p1Model.airborne || director.p1Model.state===CharacterModel.Crouch) {
+            p1WaitingCombo=false;p1ComboTimer.stop()
+            tryContextAttack(true, false, false)
+            return
+        }
         if (p1WaitingCombo && p1LightKickPressed && (moveRightPressed || moveLeftPressed)) {
             p1ComboTimer.stop()
             p1WaitingCombo = false
@@ -230,6 +292,11 @@ Item {
     }
     function handleP1LightKick() {
         p1LightKickPressed = true
+        if(director.p1Model.airborne || director.p1Model.state===CharacterModel.Crouch) {
+            p1WaitingCombo=false;p1ComboTimer.stop()
+            tryContextAttack(true, true, false)
+            return
+        }
         if (p1WaitingCombo && p1LightPunchPressed && (moveRightPressed || moveLeftPressed)) {
             p1ComboTimer.stop()
             p1WaitingCombo = false
@@ -242,6 +309,11 @@ Item {
     }
     function handleP2LightPunch() {
         p2LightPunchPressed = true
+        if(director.p2Model.airborne || director.p2Model.state===CharacterModel.Crouch) {
+            p2WaitingCombo=false;p2ComboTimer.stop()
+            tryContextAttack(false, false, false)
+            return
+        }
         var dir1 = moveRight2Pressed || moveLeft2Pressed
         if (p2WaitingCombo && p2LightKickPressed) {
             p2ComboTimer.stop()
@@ -255,6 +327,11 @@ Item {
     }
     function handleP2LightKick() {
         p2LightKickPressed = true
+        if(director.p2Model.airborne || director.p2Model.state===CharacterModel.Crouch) {
+            p2WaitingCombo=false;p2ComboTimer.stop()
+            tryContextAttack(false, true, false)
+            return
+        }
         var dir2 = moveRight2Pressed || moveLeft2Pressed
         if (p2WaitingCombo && p2LightPunchPressed) {
             p2ComboTimer.stop()
@@ -269,16 +346,16 @@ Item {
 
     function handleRemoteInput(action, pressed) {
         if (isHost) {
-            p2Jumping = (director.p2Model.state === 5 || director.p2Model.state === 6)
+            p2Jumping = director.p2Model.airborne
             var p2state = director.p2Model.state
-            p2Attacking = (p2state >= 7 && p2state <= 12) || p2state === 14 || p2state === 15
+            p2Attacking = director.p2Model.attacking || p2state === CharacterModel.Hurt || p2state === CharacterModel.Dodge || p2state === CharacterModel.Backstep
             p2Blocking = (p2state === 16)
             p2Crouching = (p2state === 13)
             performAction("P2", action, pressed)
         } else {
-            p1Jumping = (director.p1Model.state === 5 || director.p1Model.state === 6)
+            p1Jumping = director.p1Model.airborne
             var p1state = director.p1Model.state
-            p1Attacking = (p1state >= 7 && p1state <= 12) || p1state === 14 || p1state === 15
+            p1Attacking = director.p1Model.attacking || p1state === CharacterModel.Hurt || p1state === CharacterModel.Dodge || p1state === CharacterModel.Backstep
             p1Blocking = (p1state === 16)
             p1Crouching = (p1state === 13)
             performAction("P1", action, pressed)
@@ -321,6 +398,7 @@ Item {
         moveRightPressed = true
         if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16 || director.p1Model.state === 12 || director.p1Model.state === 17) return
         updateFacing()
+        if (tryMobility(true, true)) return
         moveTimer.moveLeft = false
         moveTimer.moveRight = true
         if (!isMoving) {
@@ -339,6 +417,7 @@ Item {
         moveLeftPressed = true
         if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16 || director.p1Model.state === 12 || director.p1Model.state === 17) return
         updateFacing()
+        if (tryMobility(true, false)) return
         moveTimer.moveRight = false
         moveTimer.moveLeft = true
         if (!isMoving) {
@@ -355,6 +434,7 @@ Item {
     }
     function stopMoveRight() {
         moveRightPressed = false
+        p1Running = false
         if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16 || director.p1Model.state === 12 || director.p1Model.state === 17) return
         updateFacing()
         if (moveLeftPressed) {
@@ -378,6 +458,7 @@ Item {
     }
     function stopMoveLeft() {
         moveLeftPressed = false
+        p1Running = false
         if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16 || director.p1Model.state === 12 || director.p1Model.state === 17) return
         updateFacing()
         if (moveRightPressed) {
@@ -411,8 +492,8 @@ Item {
         moveTimer.stop()
         isMoving = false
         p1CurrentAnim = ""
-        if (wasMoving && (animBeforeJump === "forward" || animBeforeJump === "backward")) {
-            director.p1Model.playDiagonalJump(animBeforeJump === "forward")
+        if (wasMoving && (animBeforeJump === "forward" || animBeforeJump === "backward" || animBeforeJump === "run")) {
+            director.p1Model.playDiagonalJump(animBeforeJump !== "backward")
         } else {
             director.p1Model.playJump()
         }
@@ -420,6 +501,7 @@ Item {
 
     // P1 攻击
     function startAttack1() {
+        if (tryContextAttack(true, false, false)) return
         if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16 || director.p1Model.state === 12 || director.p1Model.state === 17) return
         p1Attacking = true
         moveTimer.moveRight = false
@@ -430,6 +512,7 @@ Item {
         director.p1Model.playLightPunch()
     }
     function startAttackLightKick1() {
+        if (tryContextAttack(true, true, false)) return
         if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16 || director.p1Model.state === 12 || director.p1Model.state === 17) return
         p1Attacking = true
         moveTimer.moveRight = false
@@ -440,6 +523,7 @@ Item {
         director.p1Model.playLightKick()
     }
     function startAttackHeavyPunch1() {
+        if (tryContextAttack(true, false, true)) return
         if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16 || director.p1Model.state === 12 || director.p1Model.state === 17) return
         p1Attacking = true
         moveTimer.moveRight = false
@@ -450,6 +534,7 @@ Item {
         director.p1Model.playHeavyPunch()
     }
     function startAttackHeavyKick1() {
+        if (tryContextAttack(true, true, true)) return
         if (p1Jumping || p1Attacking || p1Crouching || p1Blocking || director.p1Model.state === 16 || director.p1Model.state === 12 || director.p1Model.state === 17) return
         p1Attacking = true
         moveTimer.moveRight = false
@@ -469,8 +554,44 @@ Item {
         p1CurrentAnim = ""
         director.p1Model.playHeavyStrike()
     }
+    function startDarkParticle(isP1) {
+        if (director.phase !== FightDirector.Fighting || roundEnding || resettingRound) return
+        var model = isP1 ? director.p1Model : director.p2Model
+        if (director.hasDarkParticle(isP1 ? 1 : 2)) return
+        if (isP1 ? (p1Jumping || p1Attacking || p1Crouching || p1Blocking)
+                 : (p2Jumping || p2Attacking || p2Crouching || p2Blocking)) return
+        if (!model.playDarkParticle()) return
+        if (isP1) {
+            p1Attacking = true; p1WaitingCombo = false; p1ComboTimer.stop(); stopMove1Timers()
+        } else {
+            p2Attacking = true; p2WaitingCombo = false; p2ComboTimer.stop(); stopMove2Timers()
+        }
+    }
+
+    function startSunshine(isP1) {
+        if (director.phase !== FightDirector.Fighting || roundEnding || resettingRound) return
+        var model = isP1 ? director.p1Model : director.p2Model
+        if (isP1 ? (p1Jumping || p1Attacking || p1Crouching || p1Blocking)
+                 : (p2Jumping || p2Attacking || p2Crouching || p2Blocking)) return
+        if (!model.playSunshine()) return
+        if (isP1) {
+            p1Attacking = true
+            p1WaitingCombo = false
+            p1ComboTimer.stop()
+            stopMove1Timers()
+        } else {
+            p2Attacking = true
+            p2WaitingCombo = false
+            p2ComboTimer.stop()
+            stopMove2Timers()
+        }
+    }
+
     function startDodge1(forward) {
-        if (p1Jumping) return
+        if (p1Jumping || p1Attacking || p1Crouching || p1Blocking
+            || (director.p1Model.state !== CharacterModel.Stand
+                && director.p1Model.state !== CharacterModel.Forward
+                && director.p1Model.state !== CharacterModel.Backward)) return
         p1Attacking = true
         moveTimer.moveRight = false
         moveTimer.moveLeft = false
@@ -496,6 +617,7 @@ Item {
     function stopCrouch1() {
         p1Crouching = false
         director.p1Model.stopCrouch()
+        if (director.p1Model.state === CharacterModel.CrouchAttack || director.p1Model.state === CharacterModel.CrouchKick || director.p1Model.state === CharacterModel.Crouch) return
         if (moveRightPressed && !moveLeftPressed) startMoveRight()
         else if (moveLeftPressed && !moveRightPressed) startMoveLeft()
     }
@@ -505,6 +627,7 @@ Item {
         moveRight2Pressed = true
         if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16 || director.p2Model.state === 12 || director.p2Model.state === 17) return
         updateFacing()
+        if (tryMobility(false, true)) return
         moveTimer2.moveLeft = false
         moveTimer2.moveRight = true
         if (!isMoving2) {
@@ -523,6 +646,7 @@ Item {
         moveLeft2Pressed = true
         if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16 || director.p2Model.state === 12 || director.p2Model.state === 17) return
         updateFacing()
+        if (tryMobility(false, false)) return
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = true
         if (!isMoving2) {
@@ -539,6 +663,7 @@ Item {
     }
     function stopMoveRight2() {
         moveRight2Pressed = false
+        p2Running = false
         if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16 || director.p2Model.state === 12 || director.p2Model.state === 17) return
         updateFacing()
         if (moveLeft2Pressed) {
@@ -562,6 +687,7 @@ Item {
     }
     function stopMoveLeft2() {
         moveLeft2Pressed = false
+        p2Running = false
         if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16 || director.p2Model.state === 12 || director.p2Model.state === 17) return
         updateFacing()
         if (moveRight2Pressed) {
@@ -595,8 +721,8 @@ Item {
         moveTimer2.stop()
         isMoving2 = false
         p2CurrentAnim = ""
-        if (wasMoving && (animBeforeJump === "forward" || animBeforeJump === "backward")) {
-            director.p2Model.playDiagonalJump(animBeforeJump === "forward")
+        if (wasMoving && (animBeforeJump === "forward" || animBeforeJump === "backward" || animBeforeJump === "run")) {
+            director.p2Model.playDiagonalJump(animBeforeJump !== "backward")
         } else {
             director.p2Model.playJump()
         }
@@ -604,6 +730,7 @@ Item {
 
     // P2 攻击
     function startAttack2() {
+        if (tryContextAttack(false, false, false)) return
         if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16 || director.p2Model.state === 12 || director.p2Model.state === 17) return
         p2Attacking = true
         moveTimer2.moveRight = false
@@ -614,6 +741,7 @@ Item {
         director.p2Model.playLightPunch()
     }
     function startAttackLightKick2() {
+        if (tryContextAttack(false, true, false)) return
         if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16 || director.p2Model.state === 12 || director.p2Model.state === 17) return
         p2Attacking = true
         moveTimer2.moveRight = false
@@ -624,6 +752,7 @@ Item {
         director.p2Model.playLightKick()
     }
     function startAttackHeavyPunch2() {
+        if (tryContextAttack(false, false, true)) return
         if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16 || director.p2Model.state === 12 || director.p2Model.state === 17) return
         p2Attacking = true
         moveTimer2.moveRight = false
@@ -634,6 +763,7 @@ Item {
         director.p2Model.playHeavyPunch()
     }
     function startAttackHeavyKick2() {
+        if (tryContextAttack(false, true, true)) return
         if (p2Jumping || p2Attacking || p2Crouching || p2Blocking || director.p2Model.state === 16 || director.p2Model.state === 12 || director.p2Model.state === 17) return
         p2Attacking = true
         moveTimer2.moveRight = false
@@ -654,7 +784,10 @@ Item {
         director.p2Model.playHeavyStrike()
     }
     function startDodge2(forward) {
-        if (p2Jumping) return
+        if (p2Jumping || p2Attacking || p2Crouching || p2Blocking
+            || (director.p2Model.state !== CharacterModel.Stand
+                && director.p2Model.state !== CharacterModel.Forward
+                && director.p2Model.state !== CharacterModel.Backward)) return
         p2Attacking = true
         moveTimer2.moveRight = false
         moveTimer2.moveLeft = false
@@ -680,20 +813,27 @@ Item {
     function stopCrouch2() {
         p2Crouching = false
         director.p2Model.stopCrouch()
+        if (director.p2Model.state === CharacterModel.CrouchAttack || director.p2Model.state === CharacterModel.CrouchKick || director.p2Model.state === CharacterModel.Crouch) return
         if (moveRight2Pressed && !moveLeft2Pressed) startMoveRight2()
         else if (moveLeft2Pressed && !moveRight2Pressed) startMoveLeft2()
     }
 
     // 回合逻辑
     function updateFacing() {
-        director.p1Model.facingLeft = (director.p1Model.posXRatio > director.p2Model.posXRatio)
-        director.p2Model.facingLeft = (director.p2Model.posXRatio > director.p1Model.posXRatio)
+        var left=director.p1Model.posXRatio>director.p2Model.posXRatio
+        function freeToTurn(model) {
+            return model.state===CharacterModel.Stand || model.state===CharacterModel.Forward
+                || model.state===CharacterModel.Backward || model.state===CharacterModel.Run
+        }
+        if(freeToTurn(director.p1Model))director.p1Model.facingLeft=left
+        if(freeToTurn(director.p2Model))director.p2Model.facingLeft=!left
     }
 
     function checkRoundEnd() {
         if (roundEnding) return
         if (p1Health <= 0 || p2Health <= 0 || timerSeconds <= 0) {
             roundEnding = true
+            director.clearDarkParticles()
 
             moveTimer.stop()
             moveTimer.moveRight = false
@@ -787,6 +927,7 @@ Item {
     function resetRound() {
         if (resettingRound || roundEnding === false) return
         resettingRound = true
+        p1LastTap = 0; p2LastTap = 0; p1Running = false; p2Running = false
         currentRound++
         p1Health = 100
         p2Health = 100
@@ -910,12 +1051,22 @@ Item {
     // 战斗导演
     FightDirector {
         id: director
+        authoritative: !root.isOnline || root.isHost
         rootHeight: root.height
         onHitDetected: function(attacker, damage) {
+            var hitState = director.lastHitState
+            var hitPart = director.lastHitPart
+            var defenderWasBlocking = attacker === 1 ? director.p2Model.isBlocking() : director.p1Model.isBlocking()
             function playHurtByAttackType(targetModel, attackerState) {
-                if (attackerState === 7 || attackerState === 8) {
+                if (targetModel.airborne && attackerState !== CharacterModel.DarkParticle && attackerState !== CharacterModel.Sunshine) {
+                    targetModel.playDarkParticleHurt(3)
+                } else if (attackerState === CharacterModel.DarkParticle) {
+                    targetModel.playDarkParticleHurt(hitPart)
+                } else if (attackerState === CharacterModel.Sunshine) {
+                    targetModel.playSunshineHurt()
+                } else if (attackerState === 7 || attackerState === 8 || attackerState === CharacterModel.AirPunch || attackerState === CharacterModel.CrouchAttack) {
                     targetModel.playHurt1()
-                } else if (attackerState === 9 || attackerState === 10) {
+                } else if (attackerState === 9 || attackerState === 10 || attackerState === CharacterModel.AirKick || attackerState === CharacterModel.CrouchKick) {
                     targetModel.playHurt2()
                 } else if (attackerState === 11) {
                     targetModel.playHurt3()
@@ -927,16 +1078,20 @@ Item {
             if (attacker === 1) {
                 p2Health = Math.max(0, p2Health - damage)
                 if (!director.p2Model.isBlocking()) {
-                    playHurtByAttackType(director.p2Model, director.p1Model.state)
+                    playHurtByAttackType(director.p2Model, hitState)
+                } else if (hitState === CharacterModel.Sunshine) {
+                    director.p2Model.playSunshineBlock()
                 }
-                if (director.p1Model.state >= 7 && director.p1Model.state <= 11)
+                if (hasContactVfx(hitState))
                     attackVfx.play(director.p1Model, director.p2Model)
             } else {
                 p1Health = Math.max(0, p1Health - damage)
                 if (!director.p1Model.isBlocking()) {
-                    playHurtByAttackType(director.p1Model, director.p2Model.state)
+                    playHurtByAttackType(director.p1Model, hitState)
+                } else if (hitState === CharacterModel.Sunshine) {
+                    director.p1Model.playSunshineBlock()
                 }
-                if (director.p2Model.state >= 7 && director.p2Model.state <= 11)
+                if (hasContactVfx(hitState))
                     attackVfx.play(director.p2Model, director.p1Model)
             }
             checkRoundEnd()
@@ -945,11 +1100,12 @@ Item {
                 networkMgr.sendMessage({
                     "type": "hit",
                     "attacker": attacker,
-                    "attackerState": attacker === 1 ? director.p1Model.state : director.p2Model.state,
+                    "attackerState": hitState,
+                    "hitPart": hitPart,
                     "damage": damage,
                     "p1Health": p1Health,
                     "p2Health": p2Health,
-                    "defenderBlocking": attacker === 1 ? director.p2Model.isBlocking() : director.p1Model.isBlocking()
+                    "defenderBlocking": defenderWasBlocking
                 })
             }
         }
@@ -988,6 +1144,7 @@ Item {
                     "type": "sync",
                     "p1Health": p1Health,
                     "p2Health": p2Health,
+                    "darkParticles": director.darkParticles,
                     "p1x": director.p1Model.posXRatio,
                     "p2x": director.p2Model.posXRatio,
                     "timerSeconds": timerSeconds,
@@ -1031,21 +1188,24 @@ Item {
             if (moveRight) {
                 var maxPos = (p1 < p2) ? p2 - bodyCollisionDist : p2 + 0.95
                 maxPos = Math.min(maxPos, director.maxCameraOffset + 1.0)
-                director.p1Model.posXRatio = Math.min(p1 + moveStep, maxPos)
+                director.p1Model.posXRatio = Math.max(p1, Math.min(p1 + moveStep * (p1Running ? 1.65 : 1), maxPos))
             }
             if (moveLeft) {
                 var minPos = (p1 > p2) ? p2 + bodyCollisionDist : p2 - 0.95
                 minPos = Math.max(minPos, 0)
-                director.p1Model.posXRatio = Math.max(p1 - moveStep, minPos)
+                director.p1Model.posXRatio = Math.min(p1, Math.max(p1 - moveStep * (p1Running ? 1.65 : 1), minPos))
             }
             director.updateCamera()
             updateFacing()
             var desired = ""
             if (moveRight) desired = director.p1Model.facingLeft ? "backward" : "forward"
             if (moveLeft)  desired = director.p1Model.facingLeft ? "forward" : "backward"
+            if (p1Running && desired === "forward") desired = "run"
+            else if (desired === "backward") p1Running = false
             if (desired !== "" && desired !== p1CurrentAnim) {
                 p1CurrentAnim = desired
-                if (desired === "forward") director.p1Model.playForward()
+                if (desired === "run") director.p1Model.playRun()
+                else if (desired === "forward") director.p1Model.playForward()
                 else director.p1Model.playBackward()
             }
         }
@@ -1065,21 +1225,24 @@ Item {
             if (moveRight) {
                 var maxPos = (p2 < p1) ? p1 - bodyCollisionDist : p1 + 0.95
                 maxPos = Math.min(maxPos, director.maxCameraOffset + 1.0)
-                director.p2Model.posXRatio = Math.min(p2 + moveStep, maxPos)
+                director.p2Model.posXRatio = Math.max(p2, Math.min(p2 + moveStep * (p2Running ? 1.65 : 1), maxPos))
             }
             if (moveLeft) {
                 var minPos = (p2 > p1) ? p1 + bodyCollisionDist : p1 - 0.95
                 minPos = Math.max(minPos, 0)
-                director.p2Model.posXRatio = Math.max(p2 - moveStep, minPos)
+                director.p2Model.posXRatio = Math.min(p2, Math.max(p2 - moveStep * (p2Running ? 1.65 : 1), minPos))
             }
             director.updateCamera()
             updateFacing()
             var desired = ""
             if (moveRight) desired = director.p2Model.facingLeft ? "backward" : "forward"
             if (moveLeft)  desired = director.p2Model.facingLeft ? "forward" : "backward"
+            if (p2Running && desired === "forward") desired = "run"
+            else if (desired === "backward") p2Running = false
             if (desired !== "" && desired !== p2CurrentAnim) {
                 p2CurrentAnim = desired
-                if (desired === "forward") director.p2Model.playForward()
+                if (desired === "run") director.p2Model.playRun()
+                else if (desired === "forward") director.p2Model.playForward()
                 else director.p2Model.playBackward()
             }
         }
@@ -1087,7 +1250,7 @@ Item {
 
     Timer {
         id: p1ComboTimer
-        interval: 100
+        interval: 70
         onTriggered: {
             if (p1WaitingCombo) {
                 p1WaitingCombo = false
@@ -1104,7 +1267,7 @@ Item {
 
     Timer {
         id: p2ComboTimer
-        interval: 100
+        interval: 70
         onTriggered: {
             if (p2WaitingCombo) {
                 p2WaitingCombo = false
@@ -1163,6 +1326,7 @@ Item {
                        || isKeyMatch(event, "P1", "heavyKick")
                        || isKeyMatch(event, "P1", "heavyStrike")
                        || isKeyMatch(event, "P1", "block")
+                       || isKeyMatch(event, "P1", "sunshine")
             if (isHost && !isP1Key) return
             if (!isHost && isP1Key) return
         }
@@ -1181,6 +1345,7 @@ Item {
                        || isKeyMatch(event, "P1", "heavyKick")
                        || isKeyMatch(event, "P1", "heavyStrike")
                        || isKeyMatch(event, "P1", "block")
+                       || isKeyMatch(event, "P1", "sunshine")
             if (isHost && !isP1Key) return
             if (!isHost && isP1Key) return
         }
@@ -1221,13 +1386,14 @@ Item {
     // 角色渲染
     Item {
         id: p1Layer
+        visible: true // P1 remains standing while P2 performs the intro.
         x: root.width * (director.p1Model.posXRatio - director.cameraOffset) - width / 2 + director.p1Model.animOffsetX * fitScale * director.p1Model.visualScale * (director.p1Model.facingLeft ? -1 : 1)
-        y: director.p1Model.positionY
+        y: FighterGeometry.spriteY(director.p1Model.positionY, root.height, height, fitScale)
         width: director.p1Model.frameWidth
         height: director.p1Model.frameHeight
         transformOrigin: Item.Bottom
         clip: true
-        z: 1
+        z: director.p1Model.state === CharacterModel.Sunshine ? 1 : 2
 
         transform: [
             Scale {
@@ -1239,11 +1405,13 @@ Item {
         ]
 
         Image {
-            source: director.p1Model.sourcePath
-            width: director.p1Model.totalFrames * director.p1Model.frameWidth
-            height: director.p1Model.frameHeight
-            x: -(director.p1Model.currentFrame * director.p1Model.frameWidth)
-            y: 0
+            source: director.p1Model.state === CharacterModel.Sunshine
+                    ? "qrc:/images/character/Orochi/SunshineForeground.png"
+                    : director.p1Model.sourcePath
+            width: director.p1Model.sheetColumns * director.p1Model.frameWidth
+            height: Math.ceil(director.p1Model.totalFrames / director.p1Model.sheetColumns) * director.p1Model.frameHeight
+            x: -(director.p1Model.currentFrame % director.p1Model.sheetColumns) * director.p1Model.frameWidth
+            y: -Math.floor(director.p1Model.currentFrame / director.p1Model.sheetColumns) * director.p1Model.frameHeight
             fillMode: Image.Stretch
             smooth: false
             mipmap: false
@@ -1254,13 +1422,14 @@ Item {
 
     Item {
         id: p2Layer
+        visible: director.phase === FightDirector.Opening_P2 || director.phase === FightDirector.Fighting
         x: root.width * (director.p2Model.posXRatio - director.cameraOffset) - width / 2 + director.p2Model.animOffsetX * fitScale * director.p2Model.visualScale * (director.p2Model.facingLeft ? -1 : 1)
-        y: director.p2Model.positionY
+        y: FighterGeometry.spriteY(director.p2Model.positionY, root.height, height, fitScale)
         width: director.p2Model.frameWidth
         height: director.p2Model.frameHeight
         transformOrigin: Item.Bottom
         clip: true
-        z: 1
+        z: director.p2Model.state === CharacterModel.Sunshine ? 1 : 2
 
         transform: [
             Scale {
@@ -1272,17 +1441,135 @@ Item {
         ]
 
         Image {
-            source: director.p2Model.sourcePath
-            width: director.p2Model.totalFrames * director.p2Model.frameWidth
-            height: director.p2Model.frameHeight
-            x: -(director.p2Model.currentFrame * director.p2Model.frameWidth)
-            y: 0
+            source: director.p2Model.state === CharacterModel.Sunshine
+                    ? "qrc:/images/character/Orochi/SunshineForeground.png"
+                    : director.p2Model.sourcePath
+            width: director.p2Model.sheetColumns * director.p2Model.frameWidth
+            height: Math.ceil(director.p2Model.totalFrames / director.p2Model.sheetColumns) * director.p2Model.frameHeight
+            x: -(director.p2Model.currentFrame % director.p2Model.sheetColumns) * director.p2Model.frameWidth
+            y: -Math.floor(director.p2Model.currentFrame / director.p2Model.sheetColumns) * director.p2Model.frameHeight
             fillMode: Image.Stretch
             smooth: false
             mipmap: false
             cache: true
             asynchronous: false
         }
+    }
+
+    // Decode the selected super sheet during the opening, before first use.
+    Image {
+        visible: false
+        asynchronous: true
+        cache: true
+        source: p1CharId === "Orochi" || p2CharId === "Orochi" ? "qrc:/images/character/Orochi/SunshineForeground.png" : ""
+    }
+    Repeater {
+        model: director.p1Model.preloadSources
+        delegate: Image {
+            required property string modelData
+            visible: false
+            source: modelData
+            asynchronous: true
+            cache: true
+        }
+    }
+    Repeater {
+        model: director.p2Model.preloadSources
+        delegate: Image {
+            required property string modelData
+            visible: false
+            source: modelData
+            asynchronous: true
+            cache: true
+        }
+    }
+    SunshineEffect {
+        anchors.fill: parent
+        caster: director.p1Model
+        cameraOffset: director.cameraOffset
+        fitScale: root.fitScale
+        z: 0.5
+    }
+    SunshineEffect {
+        anchors.fill: parent
+        caster: director.p2Model
+        cameraOffset: director.cameraOffset
+        fitScale: root.fitScale
+        z: 0.5
+    }
+    Row {
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 44
+        spacing: 24 * root.fitScale
+        z: 16
+        Text {
+            visible: director.p1Model.hasSunshine
+            text: "P1 " + director.keyBindings.getBinding("P1", "sunshine") + " 阳光普照  "
+                  + (director.p1Model.sunshineCooldown > 0 ? director.p1Model.sunshineCooldown + "s" : "就绪")
+            color: "#ffe6a2"
+            font.pixelSize: Math.max(9, 13 * root.fitScale)
+        }
+        Text {
+            visible: director.p2Model.hasSunshine
+            text: "P2 " + director.keyBindings.getBinding("P2", "sunshine").replace("NumPad", "小键盘") + " 阳光普照  "
+                  + (director.p2Model.sunshineCooldown > 0 ? director.p2Model.sunshineCooldown + "s" : "就绪")
+            color: "#ffe6a2"
+            font.pixelSize: Math.max(9, 13 * root.fitScale)
+        }
+    }
+
+    Repeater {
+        model: director.darkParticles
+        delegate: DarkParticleEffect {
+            required property var modelData
+            wave: modelData
+            fitScale: root.fitScale
+            cameraOffset: director.cameraOffset
+            z: 3
+        }
+    }
+    Image {
+        visible: false
+        asynchronous: true
+        source: p1CharId === "Orochi" || p2CharId === "Orochi"
+                ? "qrc:/images/character/Orochi/DarkParticleFlight.png" : ""
+    }
+    Row {
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 27
+        spacing: 24 * root.fitScale
+        z: 16
+        Text {
+            visible: director.p1Model.hasDarkParticle
+            text: "P1 " + director.keyBindings.getBinding("P1", "darkParticle") + " 黑粒子"
+            color: "#a9dfff"
+            font.pixelSize: Math.max(9, 13 * root.fitScale)
+        }
+        Text {
+            visible: director.p2Model.hasDarkParticle
+            text: "P2 " + director.keyBindings.getBinding("P2", "darkParticle").replace("NumPad", "小键盘") + " 黑粒子"
+            color: "#a9dfff"
+            font.pixelSize: Math.max(9, 13 * root.fitScale)
+        }
+    }
+
+    SunshineGuardEffect {
+        anchors.fill: parent
+        defender: director.p1Model
+        caster: director.p2Model
+        cameraOffset: director.cameraOffset
+        fitScale: root.fitScale
+        z: 4
+    }
+    SunshineGuardEffect {
+        anchors.fill: parent
+        defender: director.p2Model
+        caster: director.p1Model
+        cameraOffset: director.cameraOffset
+        fitScale: root.fitScale
+        z: 4
     }
 
     // 攻击特效
@@ -1322,7 +1609,8 @@ Item {
         function play(atkModel, defModel) {
             var midX = atkModel.posXRatio * 0.3 + defModel.posXRatio * 0.7
             // 以防御方视觉身体中心为基准定位攻击特效
-            var topY = defModel.positionY + defModel.frameHeight * (1 - fitScale * defModel.visualScale)
+            var layerY = FighterGeometry.spriteY(defModel.positionY, root.height, defModel.frameHeight, fitScale)
+            var topY = layerY + defModel.frameHeight * (1 - fitScale * defModel.visualScale)
             var centerY = topY + defModel.frameHeight * fitScale * defModel.visualScale / 2
             var s = atkModel.state
             var offset = 0
@@ -1330,7 +1618,11 @@ Item {
             else if (s === 14) offset = 40              // 下蹲攻击特效更低
             else if (s === 7 || s === 9) offset = -10   // 拳击特效略高
             x = root.width * (midX - director.cameraOffset) - width / 2
-            y = centerY - height / 2 + offset
+            y = centerY - height / 2 + offset * fitScale
+            if (s === CharacterModel.AirPunch || s === CharacterModel.AirKick) {
+                x = root.width * (atkModel.hitboxCenterX - director.cameraOffset) - width / 2
+                y = root.height + (atkModel.hitboxCenterY - root.height) * fitScale - height / 2
+            }
             visible = true
             vfx1.visible = false
             vfx2.visible = false
@@ -1698,6 +1990,7 @@ Item {
     }
 
     Component.onDestruction: {
+        director.clearDarkParticles()
         collisionTimer.stop()
         countdownTimer.stop()
         moveTimer.stop()
@@ -1715,24 +2008,26 @@ Item {
     // 信号连接
     Connections {
         target: director.p1Model
-        function onJumpFinished() { p1Jumping = false; resumeP1Movement() }
-        function onAttackFinished() { p1Attacking = false; resumeP1Movement() }
+        function onJumpFinished() { p1Jumping = false; p1Attacking = false; resumeP1Movement() }
+        function onAttackFinished() { p1Attacking = false; if (!director.p1Model.airborne && !p1Jumping) resumeP1Movement() }
         function onHurtFinished() { p1Attacking = false; p1Jumping = false; p1Crouching = false; resumeP1Movement() }
         function onDodgeFinished() { p1Attacking = false; resumeP1Movement() }
+        function onControlRecovered() { resumeP1Movement() }
         function onWinFinished() { matchWinnerDone = true; checkMatchEndDone() }
         function onLoseFinished() { matchLoserDone = true; checkMatchEndDone() }
-        function onPosXRatioChanged() { director.updateCamera() }
+        function onPosXRatioChanged() { director.updateCamera(); updateFacing() }
     }
 
     Connections {
         target: director.p2Model
-        function onJumpFinished() { p2Jumping = false; resumeP2Movement() }
-        function onAttackFinished() { p2Attacking = false; resumeP2Movement() }
+        function onJumpFinished() { p2Jumping = false; p2Attacking = false; resumeP2Movement() }
+        function onAttackFinished() { p2Attacking = false; if (!director.p2Model.airborne && !p2Jumping) resumeP2Movement() }
         function onHurtFinished() { p2Attacking = false; p2Jumping = false; p2Crouching = false; resumeP2Movement() }
         function onDodgeFinished() { p2Attacking = false; resumeP2Movement() }
+        function onControlRecovered() { resumeP2Movement() }
         function onWinFinished() { matchWinnerDone = true; checkMatchEndDone() }
         function onLoseFinished() { matchLoserDone = true; checkMatchEndDone() }
-        function onPosXRatioChanged() { director.updateCamera() }
+        function onPosXRatioChanged() { director.updateCamera(); updateFacing() }
     }
 
     Connections {
@@ -1749,9 +2044,15 @@ Item {
 
                 var attackerState = msg.attackerState
                 var playHurt = function(targetModel, atkState) {
-                    if (atkState === 7 || atkState === 8) {
+                    if (targetModel.airborne && atkState !== CharacterModel.DarkParticle && atkState !== CharacterModel.Sunshine) {
+                        targetModel.playDarkParticleHurt(3)
+                    } else if (atkState === CharacterModel.DarkParticle) {
+                        targetModel.playDarkParticleHurt(msg.hitPart || 1)
+                    } else if (atkState === CharacterModel.Sunshine) {
+                        targetModel.playSunshineHurt()
+                    } else if (atkState === 7 || atkState === 8 || atkState === CharacterModel.AirPunch || atkState === CharacterModel.CrouchAttack) {
                         targetModel.playHurt1()
-                    } else if (atkState === 9 || atkState === 10) {
+                    } else if (atkState === 9 || atkState === 10 || atkState === CharacterModel.AirKick || atkState === CharacterModel.CrouchKick) {
                         targetModel.playHurt2()
                     } else if (atkState === 11) {
                         targetModel.playHurt3()
@@ -1762,14 +2063,18 @@ Item {
                 if (msg.attacker === 1) {
                     if (!msg.defenderBlocking) {
                         playHurt(director.p2Model, attackerState)
+                    } else if (attackerState === CharacterModel.Sunshine) {
+                        director.p2Model.playSunshineBlock()
                     }
-                    if (attackerState >= 7 && attackerState <= 11)
+                    if (hasContactVfx(attackerState))
                         attackVfx.play(director.p1Model, director.p2Model)
                 } else {
                     if (!msg.defenderBlocking) {
                         playHurt(director.p1Model, attackerState)
+                    } else if (attackerState === CharacterModel.Sunshine) {
+                        director.p1Model.playSunshineBlock()
                     }
-                    if (attackerState >= 7 && attackerState <= 11)
+                    if (hasContactVfx(attackerState))
                         attackVfx.play(director.p2Model, director.p1Model)
                 }
                 checkRoundEnd()
@@ -1814,6 +2119,7 @@ Item {
                     moveRight2Pressed = false
                     p2CurrentAnim = ""
                 }
+                if (msg.darkParticles !== undefined) director.syncDarkParticles(msg.darkParticles)
                 if (msg.roundEnding !== undefined) roundEnding = msg.roundEnding
                 if (!roundEnding) {
                     roundResetTimer.stop()

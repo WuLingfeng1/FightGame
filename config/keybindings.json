@@ -9,7 +9,9 @@
         "lightKick": "K",
         "lightPunch": "J",
         "moveLeft": "A",
-        "moveRight": "D"
+        "moveRight": "D",
+        "sunshine": "O",
+        "darkParticle": "P"
     },
     "P2": {
         "block": "NumPad4",
@@ -21,6 +23,8 @@
         "lightKick": "NumPad2",
         "lightPunch": "NumPad1",
         "moveLeft": "Left",
-        "moveRight": "Right"
+        "moveRight": "Right",
+        "sunshine": "NumPad6",
+        "darkParticle": "NumPad7"
     }
 }

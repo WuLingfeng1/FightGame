@@ -8,10 +8,13 @@
 #include <QObject>
 #include <QString>
 #include <QJsonObject>
+#include <QPointF>
+#include <QVector>
 
 // 动画参数: 描述一个动作的精灵表(sprite sheet)元数据
 struct AnimParams
 {
+    int sheetColumns = 0;      // Atlas columns (0 = legacy single-row sheet).
     int cols = 0;               // 帧数(精灵表列数)
     int fw = 0;                 // 单帧宽度(像素)
     int fh = 0;                 // 单帧高度(像素)
@@ -22,6 +25,7 @@ struct AnimParams
     int pauseDuration = 0;      // 暂停时长(毫秒)
     int feetBottom = 0;         // 站立时脚底到精灵表底部的距离(用于脚部对齐)
     int feetMargin = 0;         // 站立时脚底到窗口底部的边距(用于脚部对齐)
+    int highJumpHeight = 450;
     int jumpHeight = 200;       // 跳跃抛物线峰值高度(像素)
     int divFrame = 0;           // 方向帧分割点(对角跳用, 左半=前跳 右半=后跳)
     double jumpDistance = 0.15; // 对角跳水平距离(归一化坐标)
@@ -34,6 +38,7 @@ struct AnimParams
     double attackPointX = 0;    // 攻击点X偏移(相对于角色中心, 正值=前方)
     int attackPointY = 0;       // 攻击点Y偏移(相对于角色中心, 正值=下方)
     int attackRadius = 60;      // 攻击范围半径
+    QVector<QPointF> attackContacts; // Reference pixels: forward offset and height above feet.
     QString attackFrames;       // 攻击生效帧范围(如 "3-5" 表示帧3到帧5生效)
     int knockbackDistance = 0;  // 击退距离(归一化坐标×1000, 如50=0.05)
     int damage = 0;             // 攻击伤害值
@@ -72,6 +77,13 @@ struct CharacterData
     AnimParams lightKick;    // 轻腿攻击动画参数
     AnimParams heavyPunch;   // 重拳攻击动画参数
     AnimParams heavyKick;    // 重腿攻击动画参数
+    AnimParams darkParticle;
+    AnimParams crouchKick;
+    AnimParams airPunch;
+    AnimParams airKick;
+    AnimParams run;
+    AnimParams backstep;
+    AnimParams sunshine;
     AnimParams heavyStrike;  // 超重击动画参数
     AnimParams hurt;         // 受击动画参数(通用)
     AnimParams hurt1;        // 轻度受击动画参数

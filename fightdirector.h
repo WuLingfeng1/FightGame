@@ -2,6 +2,9 @@
 
 #include <QObject>
 #include <QTimer>
+#include <QElapsedTimer>
+#include <QVariantList>
+#include <QList>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QFile>
@@ -24,11 +27,27 @@ class FightDirector : public QObject
     Q_PROPERTY(double maxCameraOffset READ maxCameraOffset CONSTANT)
     Q_PROPERTY(bool previewWin READ previewWin WRITE setPreviewWin NOTIFY previewWinChanged) // 调试: 开场阶段播放胜利动画
 
+    Q_PROPERTY(QVariantList darkParticles READ darkParticles NOTIFY darkParticlesChanged)
+    Q_PROPERTY(bool authoritative READ authoritative WRITE setAuthoritative)
+    Q_PROPERTY(int lastHitState READ lastHitState NOTIFY hitContextChanged)
+    Q_PROPERTY(int lastHitPart READ lastHitPart NOTIFY hitContextChanged)
     QML_ELEMENT
 public:
     enum Phase { Opening_P1, Opening_P2, Fighting };
     Q_ENUM(Phase)
 
+    QVariantList darkParticles() const;
+    bool authoritative() const { return m_authoritative; }
+    void setAuthoritative(bool on) { m_authoritative=on; }
+    int lastHitState() const { return m_lastHitState; }
+    int lastHitPart() const { return m_lastHitPart; }
+    Q_INVOKABLE bool hasDarkParticle(int owner) const {
+        for(const auto &wave:m_darkParticles) if(wave.owner==owner) return true;
+        return false;
+    }
+    Q_INVOKABLE void advanceDarkParticles(int elapsedMs=16);
+    Q_INVOKABLE void clearDarkParticles();
+    Q_INVOKABLE void syncDarkParticles(const QVariantList &snapshot);
     explicit FightDirector(QObject *parent = nullptr);
 
     CharacterModel *p1Model() const { return m_p1Model; }
@@ -49,6 +68,8 @@ public:
     Q_INVOKABLE void reloadKeyBindings();                                                // 重新加载键位配置
 
 signals:
+    void darkParticlesChanged();
+    void hitContextChanged();
     void phaseChanged();
     void rootHeightChanged();
     void cameraOffsetChanged();
@@ -56,12 +77,26 @@ signals:
     void hitDetected(int attacker, int damage); // 命中信号: attacker=1或2, damage=伤害值
 
 private slots:
+    void onCameraTick();
     void onP1OpeningFinished(); // P1开场完毕 - 触发P2开场
     void onP2OpeningFinished(); // P2开场完毕 - 进入战斗阶段
     void onP1WinFinished();     // 预览模式: P1胜行动画完毕 - 播放P2胜行动画
     void onP2WinFinished();     // 预览模式: P2胜行动画完毕 - 进入战斗阶段
 
 private:
+    struct DarkWave {
+        int id=0,owner=1,age=0,hits=0,pulse=0,dying=0;
+        double x=0,height=270,direction=1;
+    };
+    QList<DarkWave> m_darkParticles;
+    QTimer m_cameraTimer;
+    double m_cameraTarget=0;
+    QTimer m_projectileTimer;
+    QElapsedTimer m_projectileClock;
+    int m_nextProjectileId=0,m_lastHitState=0,m_lastHitPart=0;
+    bool m_authoritative=true;
+    void spawnDarkParticle(int owner);
+    void setLastHitContext(int state,int part=0);
     void loadConfig(const QString &charId, CharacterModel *model); // 从JSON加载角色配置
 
     CharacterModel *m_p1Model; // P1角色模型

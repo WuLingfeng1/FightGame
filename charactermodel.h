@@ -6,8 +6,10 @@
 #pragma once
 
 #include <QObject>
+#include <QElapsedTimer>
 #include <QTimer>
 #include <QString>
+#include <QStringList>
 #include <QtQml/qqmlregistration.h>
 #include "characterconfig.h"
 #include "voicemanager.h"
@@ -22,9 +24,18 @@ class CharacterModel : public QObject
     Q_PROPERTY(QString sourcePath READ sourcePath NOTIFY sourcePathChanged)                // 精灵表图片路径
     Q_PROPERTY(int frameWidth READ frameWidth NOTIFY sizeChanged)                          // 单帧宽度
     Q_PROPERTY(int frameHeight READ frameHeight NOTIFY sizeChanged)                        // 单帧高度
+    Q_PROPERTY(int sheetColumns READ sheetColumns NOTIFY sizeChanged)
+    Q_PROPERTY(QStringList preloadSources READ preloadSources NOTIFY preloadSourcesChanged)
+    Q_PROPERTY(bool hasDarkParticle READ hasDarkParticle NOTIFY sizeChanged)
+    Q_PROPERTY(bool canAirAttack READ canAirAttack NOTIFY frameChanged)
+    Q_PROPERTY(double landingX READ landingX NOTIFY stateChanged)
+    Q_PROPERTY(bool airborne READ isAirborne NOTIFY stateChanged)
+    Q_PROPERTY(bool sunshineGuarded READ sunshineGuarded NOTIFY sunshineGuardChanged)
+    Q_PROPERTY(bool hasSunshine READ hasSunshine NOTIFY sizeChanged)
+    Q_PROPERTY(int sunshineCooldown READ sunshineCooldown NOTIFY sunshineCooldownChanged)
     Q_PROPERTY(int totalFrames READ totalFrames NOTIFY sizeChanged)                        // 总帧数
     Q_PROPERTY(int refFrameWidth READ refFrameWidth NOTIFY sizeChanged)                    // 参考帧宽(站立), 用于居中
-    Q_PROPERTY(int animOffsetX READ animOffsetX NOTIFY sizeChanged)                        // 当前动画水平偏移
+    Q_PROPERTY(int animOffsetX READ animOffsetX NOTIFY frameChanged)                        // 当前动画水平偏移
     Q_PROPERTY(double visualScale READ visualScale NOTIFY sizeChanged)                     // 视觉缩放补偿
     Q_PROPERTY(double positionX READ positionX NOTIFY positionChanged)                     // 像素X坐标
     Q_PROPERTY(double positionY READ positionY NOTIFY positionChanged)                     // 像素Y坐标(底部对齐)
@@ -61,7 +72,10 @@ public:
         StandBlock,
         Rise,
         Win,
-        Lose
+        Lose,
+        Sunshine,
+        DarkParticle,
+        CrouchKick, AirPunch, AirKick, Run, Backstep
     };
     Q_ENUM(State)
 
@@ -74,6 +88,22 @@ public:
     int frameWidth() const { return m_frameWidth; }
     int frameHeight() const { return m_frameHeight; }
     int totalFrames() const { return m_totalFrames; }
+    int sheetColumns() const { return m_sheetColumns > 0 ? m_sheetColumns : (m_totalFrames > 0 ? m_totalFrames : 1); }
+    QStringList preloadSources() const;
+    bool hasDarkParticle() const { return m_darkParticle.cols > 0; }
+    bool canAirAttack() const;
+    double landingX() const { return m_jumpLandingX; }
+    int sunshineHitPart() const;
+    // The same elapsed-time integrator is used by the 16ms runtime tick and tests.
+    void advanceJump(int elapsedMs);
+    void advanceKnockdown(int elapsedMs);
+    bool hasKnockdownMotion() const { return m_state==Hurt && m_flyActive; }
+    int animationInterval() const { return m_currentAnim.interval; }
+    double jumpProgress() const { return m_jumpProgress; }
+    bool isAirborne() const { return m_state==Jump || m_state==DiagonalJump || m_airActive || m_attackJumping; }
+    bool sunshineGuarded() const { return m_sunshineGuard; }
+    bool hasSunshine() const { return m_sunshine.cols > 0; }
+    int sunshineCooldown() const { return m_sunshineCooldown; }
     int refFrameWidth() const { return m_refFrameWidth; }
     int animOffsetX() const { return m_animOffsetX; }
     double visualScale() const { return m_visualScale; }
@@ -82,12 +112,14 @@ public:
     double posXRatio() const { return m_cfgPosX; }
     void setPosXRatio(double r)
     {
+        if (qFuzzyCompare(m_cfgPosX+1.0,r+1.0)) return;
         m_cfgPosX = r;
         emit posXRatioChanged();
     }
     bool facingLeft() const { return m_facingLeft; }
     void setFacingLeft(bool f)
     {
+        if(m_facingLeft==f) return;
         m_facingLeft = f;
         emit facingChanged();
     }
@@ -104,6 +136,11 @@ public:
     Q_INVOKABLE void playLightKick();                // 切换到轻腿攻击动画
     Q_INVOKABLE void playHeavyPunch();               // 切换到重拳攻击动画
     Q_INVOKABLE void playHeavyKick();                // 切换到重腿攻击动画
+    Q_INVOKABLE bool playDarkParticle();
+    Q_INVOKABLE void playDarkParticleHurt(int hit);
+    Q_INVOKABLE bool playSunshine();
+    Q_INVOKABLE void playSunshineHurt();
+    Q_INVOKABLE void playSunshineBlock();
     Q_INVOKABLE void playHeavyStrike();              // 切换到超重击动画
     Q_INVOKABLE void playHurt();                     // 切换到受击动画(通用)
     Q_INVOKABLE void playHurt1();                    // 切换到轻度受击动画
@@ -111,6 +148,10 @@ public:
     Q_INVOKABLE void playHurt3();                    // 切换到重度受击动画(击飞)
     Q_INVOKABLE void playRise();                     // 切换到起身动画(击飞倒地后)
     Q_INVOKABLE void playCrouch();                   // 切换到下蹲动画
+    Q_INVOKABLE bool playRun();
+    Q_INVOKABLE bool playBackstep();
+    Q_INVOKABLE bool playContextAttack(bool kick,bool heavy=false);
+    Q_INVOKABLE void playCrouchKick();
     Q_INVOKABLE void playCrouchAttack();             // 切换到下蹲攻击动画
     Q_INVOKABLE void stopCrouch();                   // 退出下蹲状态
     Q_INVOKABLE void playDodge(bool forward);        // 切换到闪避动画
@@ -152,10 +193,15 @@ signals:
     void openingFinished();   // 开场动画播放完毕
     void jumpFinished();      // 跳跃动画播放完毕
     void attackFinished();    // 攻击动画播放完毕
+    void sunshineGuardChanged();
+    void darkParticleReleased();
+    void controlRecovered();
+    void preloadSourcesChanged();
     void hurtFinished();      // 受击动画播放完毕
     void dodgeFinished();     // 闪避动画播放完毕
     void winFinished();       // 胜利动画播放完毕
     void loseFinished();      // 失败动画播放完毕
+    void sunshineCooldownChanged();
     void stateChanged();      // 状态变更
 
 private slots:
@@ -164,8 +210,53 @@ private slots:
 private:
     void applyAnim(const AnimParams &p);
     void setPosY();
+    void launchSunshineHurt();
+    double planLanding(double desired) const;
+    void updateJumpPosition();
+    double m_jumpStartX=0,m_jumpLandingX=0;
+    int m_sunshineHitMask=0;
+    void finishLanding(bool attacked);
+    bool playAirAttack(bool kick,bool heavy);
+    void beginJumpMotion(State kind, const AnimParams &anim, int count);
+    void recoverAirAttack();
+    QElapsedTimer m_jumpClock;
+    qint64 m_jumpLastTickMs=0;
+    double m_jumpProgress=0;
+    int m_jumpElapsedMs=0,m_jumpDurationMs=1,m_airAttackElapsedMs=0;
+    bool m_jumpHadAttack=false;
+    bool m_airActive=false,m_airUsed=false;
+    State m_airJumpState=Jump;
+    int m_airJumpFrame=0,m_airJumpInterval=40;
+    AnimParams m_airJumpAnim;
+    double m_backstepStartX=0,m_backstepDirection=-1;
+    bool tickSunshineBlock();
+    bool tickSunshineRecoil();
     bool tryFinishState(); // 尝试结束当前状态(帧播完时), 返回true表示已处理
 
+    bool m_sunshineGuard = false;
+    bool m_sunshineRecoil = false;
+    bool m_sunshineTracksCaster = false;
+    int m_sunshineRecoilElapsed = 0;
+    int m_sunshineRecoilDuration = 1100;
+    double m_sunshineRecoilStartX = 0;
+    double m_sunshineRecoilDistance = 0;
+    double m_sunshineRecoilDirection = 1;
+    QTimer m_sunshineCooldownTimer;
+    int m_sunshineCooldown = 0;
+    int m_sheetColumns = 0;
+    AnimParams m_crouchKick;
+    AnimParams m_airPunch;
+    AnimParams m_airKick;
+    AnimParams m_run;
+    AnimParams m_backstep;
+    AnimParams m_darkParticle;
+    bool m_darkParticleReleased = false;
+    double m_flyStartHeight = 0;
+    QElapsedTimer m_flyClock;
+    qint64 m_flyLastTickMs=0;
+    int m_flyElapsedMs=0;
+    double m_flyProgress=0;
+    AnimParams m_sunshine;
     QTimer m_timer;            // 动画计时器
     State m_state = Waiting;   // 当前状态
     int m_currentFrame = 0;    // 当前帧索引
@@ -224,7 +315,6 @@ private:
     int m_dodgeSwitchFrame = 0;         // 闪避offsetX切换帧(Orochi专用)
     int m_dodgeOffsetXPost = 0;         // 闪避瞬移后段水平偏移(Orochi专用)
     int m_dodgeOffsetXEnd = 0;          // 闪避尾帧目标水平偏移(Orochi专用)
-    bool m_dodgeStandPending = false;   // 延迟playStand标志
     bool m_attackJumping = false;       // 攻击中是否带小跳(heavyKick专用)
     int m_flyHeight = 0;                // 受击击飞高度(从配置加载)
     bool m_flyActive = false;           // 当前受击动画是否带击飞抛物线

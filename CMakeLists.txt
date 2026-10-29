@@ -16,6 +16,10 @@ qt_add_qml_module(appFightGame
     QML_FILES SelectScreen.qml
     QML_FILES StageSelectScreen.qml
     QML_FILES FightScreen.qml
+    QML_FILES FighterGeometry.js
+    QML_FILES SunshineEffect.qml
+    QML_FILES SunshineGuardEffect.qml
+    QML_FILES DarkParticleEffect.qml
     QML_FILES OnlineLobby.qml
     QML_FILES KeyBindingScreen.qml
     SOURCES charactermodel.h charactermodel.cpp
@@ -47,7 +51,40 @@ qt_add_resources(appFightGame "appresources"
         images/portrait/Orochi.jpg
         images/portrait/Shiranui.jpg
         images/portrait/Yagami.jpg
+        images/character/Yagami/Imported/crouchAttack.png
+        images/character/Yagami/Imported/crouchKick.png
+        images/character/Yagami/Imported/airPunch.png
+        images/character/Yagami/Imported/airKick.png
+        images/character/Yagami/Imported/run.png
+        images/character/Yagami/Imported/backstep.png
+        images/character/Orochi/Imported/crouchKick.png
+        images/character/Orochi/Imported/airPunch.png
+        images/character/Orochi/Imported/airKick.png
+        images/character/Orochi/Imported/run.png
+        images/character/Orochi/Imported/backstep.png
+        images/character/Orochi/Imported/hurt3.png
+        images/character/Orochi/Imported/rise.png
+        images/character/Orochi/Imported/jump.png
+        images/character/Orochi/Imported/diagonalJump.png
+        images/character/Yagami/Imported/jump.png
+        images/character/Yagami/Imported/diagonalJump.png
+        images/character/Orochi/ReviewHurt.png
+        images/character/Yagami/ReviewHurt1.png
+        images/character/Yagami/ReviewHurt2.png
+        images/character/Orochi/Motion_jump.png
+        images/character/Orochi/Motion_diagonalJump.png
+        images/character/Orochi/Motion_airPunch.png
+        images/character/Orochi/Motion_airKick.png
+        images/character/Yagami/Motion_jump.png
+        images/character/Yagami/Motion_diagonalJump.png
+        images/character/Yagami/Motion_airPunch.png
+        images/character/Yagami/Motion_airKick.png
         images/character/Orochi/Stand.png
+        images/character/Orochi/DarkParticleActor.png
+        images/character/Orochi/DarkParticleFlight.png
+        images/character/Orochi/SunshineAtlas.png
+        images/character/Orochi/SunshineForeground.png
+        images/character/Orochi/SunshineBackground.png
         images/character/Orochi/opening.png
         images/character/Orochi/Forward.png
         images/character/Orochi/Backward.png
@@ -62,6 +99,7 @@ qt_add_resources(appFightGame "appresources"
         images/character/Orochi/CrouchAttack.png
         images/character/Orochi/Crouch.png
         images/character/Orochi/Dodge.png
+        images/character/Orochi/DodgeSmoothAtlas.png
         images/character/Orochi/StandBlock.png
         images/character/Orochi/win.png
         images/character/Orochi/lose.png
@@ -195,13 +233,26 @@ install(TARGETS appFightGame
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
-# C++ Modules support
-set(FIGHTGAME_MODULE_FILES
-    # math.cppm                             # 模块文件
-)
-source_group("FightGame" FILES ${FIGHTGAME_MODULE_FILES})
-target_sources(appFightGame
-    PRIVATE FILE_SET cxx_modules TYPE CXX_MODULES
-        BASE_DIRS   ${CMAKE_CURRENT_SOURCE_DIR}
-        FILES  ${FIGHTGAME_MODULE_FILES}
-)
+option(FIGHTGAME_BUILD_TESTS "Build character animation regression tests" OFF)
+if(FIGHTGAME_BUILD_TESTS)
+    enable_testing()
+    find_package(Qt6 REQUIRED COMPONENTS Test)
+    qt_add_executable(fightgame_animation_tests
+        tests/animation_regression_test.cpp
+        fightdirector.h fightdirector.cpp
+        keybindingconfig.h keybindingconfig.cpp
+        charactermodel.h charactermodel.cpp
+        characterconfig.h characterconfig.cpp
+        voicemanager.h voicemanager.cpp
+    )
+    target_include_directories(fightgame_animation_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    target_compile_definitions(fightgame_animation_tests PRIVATE FIGHTGAME_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+    target_compile_features(fightgame_animation_tests PRIVATE cxx_std_23)
+    target_link_libraries(fightgame_animation_tests PRIVATE Qt6::Test Qt6::Qml Qt6::Multimedia)
+    qt_add_resources(fightgame_animation_tests regression_config
+        PREFIX "/"
+        BASE "${CMAKE_CURRENT_SOURCE_DIR}"
+        FILES config/characters.json config/keybindings.json
+    )
+    add_test(NAME animation_regressions COMMAND fightgame_animation_tests)
+endif()

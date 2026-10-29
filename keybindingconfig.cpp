@@ -7,6 +7,17 @@
 #include <QFile>
 #include <QJsonDocument>
 #include <QDebug>
+#include <QCoreApplication>
+#include <QDir>
+#include <QFileInfo>
+
+// Resolve external settings beside the executable, independent of the launch directory.
+static QString settingsPath(const QString &path)
+{
+    if (path.startsWith(":") || QDir::isAbsolutePath(path))
+        return path;
+    return QDir(QCoreApplication::applicationDirPath()).filePath(path);
+}
 
 KeyBindingConfig::KeyBindingConfig(QObject *parent)
     : QObject(parent)
@@ -28,6 +39,8 @@ void KeyBindingConfig::setDefaultBindings()
     m_p1Bindings["heavyKick"] = "L";
     m_p1Bindings["heavyStrike"] = "I";
     m_p1Bindings["block"] = "G";
+    m_p1Bindings["sunshine"] = "O";
+    m_p1Bindings["darkParticle"] = "P";
 
     // P2 默认键位
     m_p2Bindings["moveLeft"] = "Left";
@@ -40,12 +53,14 @@ void KeyBindingConfig::setDefaultBindings()
     m_p2Bindings["heavyKick"] = "NumPad0";
     m_p2Bindings["heavyStrike"] = "NumPad5";
     m_p2Bindings["block"] = "NumPad4";
+    m_p2Bindings["sunshine"] = "NumPad6";
+    m_p2Bindings["darkParticle"] = "NumPad7";
 }
 
 // 从 JSON 文件加载配置
 bool KeyBindingConfig::loadFromFile(const QString &filePath)
 {
-    QFile file(filePath);
+    QFile file(settingsPath(filePath));
     if (!file.open(QIODevice::ReadOnly)) {
         qWarning() << "[KeyBindingConfig] Cannot open file:" << filePath;
         return false;
@@ -134,7 +149,10 @@ bool KeyBindingConfig::saveToFile(const QString &filePath)
 
     QJsonDocument doc(root);
 
-    QFile file(filePath);
+    const QString destination = settingsPath(filePath);
+    if (!QDir().mkpath(QFileInfo(destination).absolutePath()))
+        return false;
+    QFile file(destination);
     if (!file.open(QIODevice::WriteOnly)) {
         qWarning() << "[KeyBindingConfig] Cannot write file:" << filePath;
         return false;

@@ -30,11 +30,11 @@ Item {
     property var actionNames: {
         "moveLeft": "左移", "moveRight": "右移", "jump": "跳跃", "crouch": "下蹲",
         "lightPunch": "轻拳", "lightKick": "轻腿", "heavyPunch": "重拳", "heavyKick": "重腿",
-        "heavyStrike": "超重击", "block": "防御"
+        "heavyStrike": "超重击", "block": "防御", "sunshine": "阳光普照", "darkParticle": "黑粒子"
     }
 
     // 功能列表
-    property var actionList: ["moveLeft", "moveRight", "jump", "crouch", "lightPunch", "lightKick", "heavyPunch", "heavyKick", "heavyStrike", "block"]
+    property var actionList: ["moveLeft", "moveRight", "jump", "crouch", "lightPunch", "lightKick", "heavyPunch", "heavyKick", "heavyStrike", "block", "sunshine", "darkParticle"]
 
     // 键位显示名称映射
     function keyDisplayName(key) {
@@ -114,7 +114,7 @@ Item {
         anchors.leftMargin: 80
         anchors.top: parent.top
         anchors.topMargin: 100
-        spacing: 10
+        spacing: 6
 
         Text {
             text: "P1 键位"
@@ -160,7 +160,7 @@ Item {
         anchors.rightMargin: 80
         anchors.top: parent.top
         anchors.topMargin: 100
-        spacing: 10
+        spacing: 6
 
         Text {
             text: "P2 键位"
