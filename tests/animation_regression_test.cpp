@@ -401,6 +401,80 @@ private slots:
         QCOMPARE(model.state(),CharacterModel::Crouch);
     }
 
+    void crouchLoopsAndHoldsRecoverForAllCharacters() {
+        for (const QString &name : {"Orochi","Yagami","Kusanagi"}) {
+            CharacterModel model;const auto cfg=character(name);
+            model.configure(cfg);model.playStand();model.playCrouch();
+            tick(model,cfg.crouch.cols*3+2);
+            QCOMPARE(model.state(),CharacterModel::Crouch);
+            QVERIFY(model.currentFrame()<model.totalFrames());
+            model.stopCrouch();
+            for(int i=0;i<20 && model.state()!=CharacterModel::Stand;++i)tick(model);
+            QCOMPARE(model.state(),CharacterModel::Stand);
+            model.playForward();QCOMPARE(model.state(),CharacterModel::Forward);
+        }
+    }
+
+    void crouchAttackReturnsToHeldPoseAndCanBeRepeated() {
+        CharacterModel model;const auto cfg=character("Orochi");
+        model.configure(cfg);model.playStand();model.playCrouch();
+        QSignalSpy finished(&model,&CharacterModel::attackFinished);
+        for(int attempt=0;attempt<3;++attempt) {
+            model.playCrouchAttack();tick(model,cfg.crouchAttack.cols);
+            QCOMPARE(model.state(),CharacterModel::Crouch);
+            QCOMPARE(model.currentFrame(),0);
+        }
+        QCOMPARE(finished.count(),3);
+        model.playCrouchAttack();tick(model,2);model.stopCrouch();
+        QCOMPARE(model.state(),CharacterModel::CrouchAttack);
+        tick(model,cfg.crouchAttack.cols-2);
+        QCOMPARE(model.state(),CharacterModel::Stand);
+        QCOMPARE(finished.count(),4);
+    }
+
+    void fullHitsBreakCrouchAndRecoverForEveryCharacter() {
+        for (const QString &name : {"Orochi","Yagami","Kusanagi"}) {
+            CharacterModel model;model.configure(character(name));model.playStand();model.playCrouch();
+            model.playHurt1();QCOMPARE(model.state(),CharacterModel::Hurt);
+            tick(model,model.totalFrames());QCOMPARE(model.state(),CharacterModel::Stand);
+            model.playLightPunch();QCOMPARE(model.state(),CharacterModel::LightPunch);
+        }
+    }
+
+    void blockStartsAtTheFirstPoseAndRecoversOnRelease() {
+        for(const QString &name : {"Orochi","Yagami","Kusanagi"}) {
+            CharacterModel model;model.configure(character(name));model.playStand();model.playStandBlock();
+            QCOMPARE(model.currentFrame(),0);
+            tick(model,model.totalFrames()+2);QCOMPARE(model.state(),CharacterModel::StandBlock);
+            model.releaseStandBlock();
+            for(int i=0;i<20 && model.state()!=CharacterModel::Stand;++i)tick(model);
+            QCOMPARE(model.state(),CharacterModel::Stand);
+        }
+    }
+
+    void preloadListsAreUniqueAndPointAtExistingAssets() {
+        for(const QString &name : {"Orochi","Yagami","Kusanagi"}) {
+            CharacterModel model;model.configure(character(name));
+            const auto paths=model.preloadSources();QVERIFY(paths.size()>=10);
+            auto unique=paths;unique.removeDuplicates();QCOMPARE(unique,paths);
+            for(const auto &path:paths) QVERIFY(QFile::exists(QStringLiteral(FIGHTGAME_SOURCE_DIR "/")+path.mid(5)));
+        }
+    }
+
+    void releasedGuardAndCrouchSignalThatMovementCanResume() {
+        for(const QString &name : {"Orochi","Yagami","Kusanagi"}) {
+            CharacterModel model;model.configure(character(name));model.playStand();
+            QSignalSpy ready(&model,&CharacterModel::controlRecovered);
+            model.playStandBlock();tick(model,model.totalFrames()+2);
+            model.releaseStandBlock();
+            for(int i=0;i<20 && model.state()!=CharacterModel::Stand;++i)tick(model);
+            QCOMPARE(ready.count(),1);
+            model.playCrouch();tick(model,model.totalFrames()+2);model.stopCrouch();
+            for(int i=0;i<20 && model.state()!=CharacterModel::Stand;++i)tick(model);
+            QCOMPARE(ready.count(),2);
+        }
+    }
+
     void qqCrouchAttacksNeverMakeTheCharacterGiant() {
         for(const QString &name:{"Orochi","Yagami","Kusanagi"}) {
             const auto cfg=character(name);
