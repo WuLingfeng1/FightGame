@@ -669,6 +669,91 @@ private slots:
         QVERIFY(!target.sunshineGuarded());
     }
 
+    void qqCrouchPunchAndKickCanChainAndRecoverForEveryCharacter() {
+        for(const QString &name:{"Orochi","Yagami"}) {
+            CharacterModel model;model.configure(character(name));model.playStand();model.playCrouch();
+            QSignalSpy done(&model,&CharacterModel::attackFinished);
+            for(bool kick:{false,true,false,true}) {
+                QVERIFY(model.playContextAttack(kick));
+                QCOMPARE(model.state(),kick?CharacterModel::CrouchKick:CharacterModel::CrouchAttack);
+                tick(model,model.totalFrames());QCOMPARE(model.state(),CharacterModel::Crouch);
+            }
+            QCOMPARE(done.count(),4);model.stopCrouch();
+            for(int i=0;i<15 && model.state()!=CharacterModel::Stand;++i)tick(model);
+            QCOMPARE(model.state(),CharacterModel::Stand);
+        }
+    }
+
+    void qqAirAttackPreservesJumpHeightAndOnlyFiresOncePerJump() {
+        for(const QString &name:{"Orochi","Yagami"}) {
+            const auto cfg=character(name);
+            for(bool kick:{false,true}) {
+                CharacterModel model;model.configure(cfg);model.playStand();model.playJump();tick(model,(model.totalFrames()-1)/2);
+                const double fb=cfg.jump.feetBottom>0?cfg.jump.feetBottom:cfg.stand.feetBottom;
+                const double feet=model.positionY()+model.frameHeight()+(fb-model.frameHeight())*model.visualScale();
+                QVERIFY(model.playContextAttack(kick));QVERIFY(model.isAirborne());
+                const double attackFeet=model.positionY()+model.frameHeight()+(224-model.frameHeight())*model.visualScale();
+                QVERIFY(std::abs(feet-attackFeet)<.001);
+                QVERIFY(!model.playContextAttack(!kick));
+                QSignalSpy land(&model,&CharacterModel::jumpFinished);
+                QSignalSpy attack(&model,&CharacterModel::attackFinished);
+                connect(&model,&CharacterModel::jumpFinished,&model,&CharacterModel::playStand);
+                for(int i=0;i<80 && model.state()!=CharacterModel::Stand;++i)tick(model);
+                QCOMPARE(model.state(),CharacterModel::Stand);QCOMPARE(land.count(),1);QCOMPARE(attack.count(),1);
+                model.playJump();tick(model,(model.totalFrames()-1)/2);QVERIFY(model.playContextAttack(kick));
+            }
+        }
+    }
+
+    void qqAirAttacksRetainDiagonalTravelAndCanBeInterrupted() {
+        for(const QString &name:{"Orochi","Yagami"}) {
+            CharacterModel model;model.configure(character(name));model.setPosXRatio(.3);model.setFacingLeft(false);model.playStand();
+            model.playDiagonalJump(true);while(!model.canAirAttack())tick(model);const double x=model.posXRatio();
+            QVERIFY(model.playContextAttack(true));tick(model,2);QVERIFY(model.posXRatio()>x);
+            model.playHurt1();QVERIFY(!model.isAirborne());
+            tick(model,model.totalFrames());QCOMPARE(model.state(),CharacterModel::Stand);
+        }
+    }
+
+    void qqRunLoopsAndBackstepIsAMovingVulnerableAction() {
+        for(const QString &name:{"Orochi","Yagami"}) {
+            CharacterModel model;model.configure(character(name));model.setPosXRatio(.6);model.setFacingLeft(false);model.playStand();
+            QVERIFY(model.playRun());tick(model,model.totalFrames()*3+1);QCOMPARE(model.state(),CharacterModel::Run);
+            QVERIFY(model.playBackstep());QCOMPARE(model.state(),CharacterModel::Backstep);
+            QVERIFY(model.state()!=CharacterModel::Dodge);tick(model,2);QVERIFY(model.posXRatio()<.6);
+            QSignalSpy recovered(&model,&CharacterModel::dodgeFinished);
+            for(int i=0;i<30 && model.state()!=CharacterModel::Stand;++i)tick(model);
+            QCOMPARE(model.state(),CharacterModel::Stand);QCOMPARE(recovered.count(),1);
+        }
+    }
+
+    void qqOrochiAndKyoHaveKnockdownAndGetUpSequences() {
+        for(const QString &name:{"Orochi"}) {
+            CharacterModel model;model.configure(character(name));model.playStand();model.playHurt3();
+            QVERIFY(model.sourcePath().contains("/Imported/hurt3.png"));
+            tick(model,model.totalFrames());QCOMPARE(model.state(),CharacterModel::Rise);
+            QVERIFY(model.sourcePath().contains("/Imported/rise.png"));tick(model,model.totalFrames());
+            QCOMPARE(model.state(),CharacterModel::Stand);
+        }
+    }
+
+    void qqImportedActionsHaveValidFramesAndActiveWindows() {
+        for(const QString &name:{"Orochi","Yagami","Kusanagi"}) {
+            const auto cfg=character(name);
+            for(const auto *anim:{&cfg.crouchAttack,&cfg.crouchKick,&cfg.airPunch,&cfg.airKick,&cfg.run,&cfg.backstep}) {
+                if(anim->cols<=0)continue;if(anim->path.contains("/Imported/"))QCOMPARE(anim->sheetColumns,8);
+                QImage sheet(QStringLiteral(FIGHTGAME_SOURCE_DIR "/")+anim->path.mid(5));QVERIFY(!sheet.isNull());
+                QVERIFY(sheet.width()<=4096 && sheet.height()<=4096);
+                for(int i=0;i<anim->cols;++i) {
+                    const int columns=anim->sheetColumns>0?anim->sheetColumns:anim->cols;
+                    const QImage f=sheet.copy((i%columns)*anim->fw,(i/columns)*anim->fh,anim->fw,anim->fh);
+                    bool visible=false;for(int y=0;y<f.height()&&!visible;++y)for(int x=0;x<f.width();++x)if(qAlpha(f.pixel(x,y))) {visible=true;break;}
+                    QVERIFY(visible);
+                }
+            }
+        }
+    }
+
     void qqCrouchAttacksNeverMakeTheCharacterGiant() {
         for(const QString &name:{"Orochi","Yagami","Kusanagi"}) {
             const auto cfg=character(name);
