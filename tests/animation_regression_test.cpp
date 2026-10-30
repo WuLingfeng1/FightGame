@@ -605,6 +605,70 @@ private slots:
         const auto cfg=character("Orochi");QCOMPARE(cfg.darkParticle.cols,34);QCOMPARE(cfg.darkParticle.sheetColumns,8);
     }
 
+    void kusanagiBlockActualFeetMatchIdleAcrossWindowSizes() {
+        const auto cfg=character("Kusanagi");
+        QImage idle(QStringLiteral(FIGHTGAME_SOURCE_DIR "/")+cfg.stand.path.mid(5));
+        QImage block(QStringLiteral(FIGHTGAME_SOURCE_DIR "/")+cfg.standBlock.path.mid(5));
+        auto foot=[](const QImage &sheet,int frame,int fw,int fh) {
+            for(int y=fh-1;y>=0;--y) for(int x=0;x<fw;++x)
+                if(qAlpha(sheet.pixel((frame%8)*fw+x,(frame/8)*fh+y))>8) return y+1;
+            return 0;
+        };
+        CharacterModel a,b;a.configure(cfg);b.configure(cfg);a.playStand();b.playStand();b.playStandBlock();
+        for(const auto &size:QList<QSize>{{450,320},{640,360},{640,640},{900,640},{1280,720},{1920,1080}}) {
+            a.updateRootHeight(size.height());b.updateRootHeight(size.height());
+            const double fit=std::min(size.width()/900.0,size.height()/640.0);
+            auto rendered=[&](const CharacterModel &model,int pixelFoot) {
+                const double fh=model.frameHeight();
+                const double y=size.height()+(model.positionY()-size.height()+fh)*fit-fh;
+                return y+fh+(pixelFoot-fh)*fit*model.visualScale();
+            };
+            for(int i=0;i<cfg.standBlock.cols;++i)
+                QVERIFY(std::abs(rendered(a,foot(idle,0,cfg.stand.fw,cfg.stand.fh))
+                       -rendered(b,foot(block,i,cfg.standBlock.fw,cfg.standBlock.fh)))<fit+.001);
+        }
+    }
+
+    void sunshineGuardRecoilsWithoutLiftingOrRepeatedDamage() {
+        for(const QString &name:{"Orochi","Yagami","Kusanagi"}) {
+            FightDirector director;director.resetForNewRound("Orochi",name);
+            auto caster=director.p1Model();auto target=director.p2Model();
+            target->playStandBlock();QVERIFY(caster->playSunshine());tick(*caster,28);
+            QSignalSpy hits(&director,&FightDirector::hitDetected);
+            connect(&director,&FightDirector::hitDetected,target,[&](int,int) {target->playSunshineBlock();});
+            QVERIFY(director.checkCollision());QCOMPARE(hits.count(),1);QCOMPARE(hits[0][1].toInt(),3);
+            QVERIFY(target->sunshineGuarded());const double y=target->positionY();const double x=target->posXRatio();
+            for(int i=0;i<30;++i) {
+                tick(*target);QCOMPARE(target->state(),CharacterModel::StandBlock);
+                QCOMPARE(target->positionY(),y);QVERIFY(target->posXRatio()>=x);
+                QVERIFY(target->posXRatio()-x<=.02801);QVERIFY(!director.checkCollision());
+            }
+            tick(*caster,22);tick(*target);
+            QVERIFY(!target->sunshineGuarded());QCOMPARE(target->state(),CharacterModel::StandBlock);
+            QCOMPARE(hits.count(),1);
+            target->releaseStandBlock();
+            for(int i=0;i<20 && target->state()!=CharacterModel::Stand;++i)tick(*target);
+            QCOMPARE(target->state(),CharacterModel::Stand);
+        }
+    }
+
+    void releasingSunshineGuardWaitsForTheEndOfTheLight() {
+        CharacterModel caster,target;caster.configure(character("Orochi"));target.configure(character("Kusanagi"));
+        caster.setOpponent(&target);target.setOpponent(&caster);caster.setPosXRatio(.2);target.setPosXRatio(.7);
+        caster.playStand();target.playStand();target.playStandBlock();
+        QVERIFY(caster.playSunshine());tick(caster,28);target.playSunshineBlock();
+        target.releaseStandBlock();tick(target,50);
+        QVERIFY(target.sunshineGuarded());QCOMPARE(target.state(),CharacterModel::StandBlock);
+        QSignalSpy recovered(&target,&CharacterModel::controlRecovered);
+        tick(caster,22);tick(target);
+        for(int i=0;i<20 && target.state()!=CharacterModel::Stand;++i)tick(target);
+        QCOMPARE(target.state(),CharacterModel::Stand);QCOMPARE(recovered.count(),1);
+        target.playStandBlock();target.playSunshineBlock();target.playStand();
+        QVERIFY(!target.sunshineGuarded());tick(target,50);QCOMPARE(target.state(),CharacterModel::Stand);
+        target.playStandBlock();target.playSunshineBlock();target.configure(character("Orochi"));target.playStand();
+        QVERIFY(!target.sunshineGuarded());
+    }
+
     void qqCrouchAttacksNeverMakeTheCharacterGiant() {
         for(const QString &name:{"Orochi","Yagami","Kusanagi"}) {
             const auto cfg=character(name);
