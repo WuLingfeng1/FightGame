@@ -441,6 +441,39 @@ private slots:
         }
     }
 
+    void riseOnlyPublishesRecoveryAfterTheGetUpFinishes() {
+        CharacterModel model;model.configure(character("Yagami"));model.playStand();
+        QSignalSpy recovered(&model,&CharacterModel::hurtFinished);
+        model.playHurt3();tick(model,model.totalFrames());
+        QCOMPARE(model.state(),CharacterModel::Rise);QCOMPARE(recovered.count(),0);
+        tick(model,model.totalFrames());
+        QCOMPARE(model.state(),CharacterModel::Stand);QCOMPARE(recovered.count(),1);
+        model.playForward();QCOMPARE(model.state(),CharacterModel::Forward);
+        model.playHurt3();model.setStayDown(true);tick(model,model.totalFrames());
+        QCOMPARE(model.state(),CharacterModel::Hurt);
+    }
+
+    void jumpAndWalkPublishStateAndDoNotInheritAttackOffsets() {
+        for(const QString &name : {"Orochi","Yagami","Kusanagi"}) {
+            CharacterModel model;model.configure(character(name));model.playStand();
+            QSignalSpy states(&model,&CharacterModel::stateChanged);
+            model.playForward();QCOMPARE(states.count(),1);
+            model.playBackward();QCOMPARE(states.count(),2);
+            model.playJump();QCOMPARE(states.count(),3);
+            QCOMPARE(model.animOffsetX(),character(name).jump.offsetX);
+            model.playStand();model.playDiagonalJump(true);
+            const auto y=model.positionY();model.updateRootHeight(640);
+            QCOMPARE(model.positionY(),y); // First render uses the final scale.
+        }
+    }
+
+    void interruptedHopDoesNotLiftTheHurtOrIdlePose() {
+        CharacterModel model;model.configure(character("Kusanagi"));model.playStand();
+        model.playHeavyKick();tick(model,2);model.playHurt1();
+        const double y=model.positionY();tick(model,2);QCOMPARE(model.positionY(),y);
+        tick(model,model.totalFrames());QCOMPARE(model.state(),CharacterModel::Stand);
+    }
+
     void blockStartsAtTheFirstPoseAndRecoversOnRelease() {
         for(const QString &name : {"Orochi","Yagami","Kusanagi"}) {
             CharacterModel model;model.configure(character(name));model.playStand();model.playStandBlock();
