@@ -508,6 +508,103 @@ private slots:
         }
     }
 
+    void darkParticleOnlyOrochiCanCastAndReleaseOccursOnce() {
+        for(const QString &name : {"Yagami","Kusanagi"}) {
+            CharacterModel model;model.configure(character(name));model.playStand();
+            QVERIFY(!model.hasDarkParticle());QVERIFY(!model.playDarkParticle());
+        }
+        CharacterModel model;model.configure(character("Orochi"));model.playStand();
+        QSignalSpy release(&model,&CharacterModel::darkParticleReleased);
+        QSignalSpy finish(&model,&CharacterModel::attackFinished);
+        QVERIFY(model.playDarkParticle());QVERIFY(!model.playDarkParticle());
+        QVERIFY(model.isAttacking());QVERIFY(!model.isAttackActive());
+        tick(model,13);QCOMPARE(release.count(),0);
+        tick(model);QCOMPARE(release.count(),1);
+        tick(model,20);QCOMPARE(model.state(),CharacterModel::Stand);
+        QCOMPARE(release.count(),1);QCOMPARE(finish.count(),1);
+        model.playJump();QVERIFY(!model.playDarkParticle());
+    }
+
+    void darkParticleTravelsAndStillHitsAfterCasterRecovers() {
+        for(bool p1 : {true,false}) {
+            FightDirector director;director.resetForNewRound(p1?"Orochi":"Yagami",p1?"Yagami":"Orochi");
+            auto caster=p1?director.p1Model():director.p2Model();
+            auto target=p1?director.p2Model():director.p1Model();
+            caster->setPosXRatio(p1?.2:.8);target->setPosXRatio(p1?.8:.2);
+            caster->setFacingLeft(!p1);
+            QSignalSpy hits(&director,&FightDirector::hitDetected);
+            connect(&director,&FightDirector::hitDetected,target,[&](int,int) {
+                QCOMPARE(director.lastHitState(),int(CharacterModel::DarkParticle));
+                target->playDarkParticleHurt(director.lastHitPart());
+            });
+            QVERIFY(caster->playDarkParticle());tick(*caster,14);
+            QCOMPARE(director.darkParticles().size(),1);
+            for(int i=0;i<15;++i)director.advanceDarkParticles(16);
+            QCOMPARE(hits.count(),0); // No instant full-screen/body-box hit.
+            tick(*caster,20);QCOMPARE(caster->state(),CharacterModel::Stand);
+            for(int i=0;i<200;++i)director.advanceDarkParticles(16);
+            QCOMPARE(hits.count(),3);
+            int damage=0;for(const auto &hit:hits) {QCOMPARE(hit[0].toInt(),p1?1:2);damage+=hit[1].toInt();}
+            QCOMPARE(damage,24);QVERIFY(director.darkParticles().isEmpty());
+            QCOMPARE(target->state(),CharacterModel::Hurt);
+            tick(*target,target->totalFrames());QCOMPARE(target->state(),CharacterModel::Stand);
+        }
+    }
+
+    void darkParticleGuardChipsAndPushesButDodgePassesThrough() {
+        for(bool guard : {true,false}) {
+            FightDirector director;director.resetForNewRound("Orochi","Yagami");
+            auto a=director.p1Model();auto b=director.p2Model();
+            if(guard)b->playStandBlock();else b->playDodge(true);
+            const auto start=b->posXRatio();QSignalSpy hits(&director,&FightDirector::hitDetected);
+            QVERIFY(a->playDarkParticle());tick(*a,14);
+            for(int i=0;i<200;++i)director.advanceDarkParticles(16);
+            QCOMPARE(hits.count(),guard?3:0);
+            if(guard) {for(const auto &hit:hits)QCOMPARE(hit[1].toInt(),2);QVERIFY(b->posXRatio()>start);QCOMPARE(b->state(),CharacterModel::StandBlock);}
+            QVERIFY(director.darkParticles().isEmpty());
+        }
+    }
+
+    void darkParticleMissesHighJumpsAndAirHitKeepsTheCurrentHeight() {
+        FightDirector director;director.resetForNewRound("Orochi","Yagami");
+        auto a=director.p1Model();auto b=director.p2Model();
+        QVERIFY(b->playRun());b->playJump();tick(*b,b->totalFrames()/2);
+        QSignalSpy hits(&director,&FightDirector::hitDetected);
+        QVERIFY(a->playDarkParticle());tick(*a,14);
+        for(int i=0;i<200;++i)director.advanceDarkParticles(16);
+        QCOMPARE(hits.count(),0);
+        for(const QString &name : {"Orochi","Yagami","Kusanagi"}) {
+            CharacterModel target;const auto cfg=character(name);target.configure(cfg);target.playStand();target.playJump();tick(target);
+            auto feet=[&]() {double fb=target.state()==CharacterModel::Jump?(cfg.jump.feetBottom>0?cfg.jump.feetBottom:cfg.stand.feetBottom):(cfg.hurt3.cols>0?cfg.hurt3.feetBottom:cfg.hurt.feetBottom);
+                return target.positionY()+target.frameHeight()+(fb-target.frameHeight())*target.visualScale();};
+            const double before=feet();target.playDarkParticleHurt(3);
+            QVERIFY(std::abs(feet()-before)<.001);QCOMPARE(target.state(),CharacterModel::Hurt);
+        }
+    }
+
+    void darkParticleRoundResetAndClientAuthorityAreSafe() {
+        FightDirector host;host.resetForNewRound("Orochi","Yagami");
+        QVERIFY(host.p1Model()->playDarkParticle());tick(*host.p1Model(),14);
+        const auto snapshot=host.darkParticles();QCOMPARE(snapshot.size(),1);
+        FightDirector client;client.setAuthoritative(false);client.resetForNewRound("Orochi","Yagami");
+        QVERIFY(client.p1Model()->playDarkParticle());tick(*client.p1Model(),14);
+        QVERIFY(client.darkParticles().isEmpty());client.syncDarkParticles(snapshot);
+        QSignalSpy hits(&client,&FightDirector::hitDetected);
+        for(int i=0;i<200;++i)client.advanceDarkParticles(16);
+        QCOMPARE(hits.count(),0);
+        host.resetForNewRound("Orochi","Kusanagi");QVERIFY(host.darkParticles().isEmpty());
+        client.syncDarkParticles({});QVERIFY(client.darkParticles().isEmpty());
+    }
+
+    void darkParticleTexturesAndDefaultBindings() {
+        QImage actor(QStringLiteral(FIGHTGAME_SOURCE_DIR "/images/character/Orochi/DarkParticleActor.png"));
+        QImage wave(QStringLiteral(FIGHTGAME_SOURCE_DIR "/images/character/Orochi/DarkParticleFlight.png"));
+        QCOMPARE(actor.size(),QSize(3072,2560));QCOMPARE(wave.size(),QSize(1024,384));
+        KeyBindingConfig keys;QCOMPARE(keys.getBinding("P1","darkParticle"),QString("P"));
+        QCOMPARE(keys.getBinding("P2","darkParticle"),QString("NumPad7"));
+        const auto cfg=character("Orochi");QCOMPARE(cfg.darkParticle.cols,34);QCOMPARE(cfg.darkParticle.sheetColumns,8);
+    }
+
     void qqCrouchAttacksNeverMakeTheCharacterGiant() {
         for(const QString &name:{"Orochi","Yagami","Kusanagi"}) {
             const auto cfg=character(name);
