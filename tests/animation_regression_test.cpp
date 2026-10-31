@@ -894,6 +894,106 @@ private slots:
         }
     }
 
+    void reviewedAirAndCrouchInputsBypassTheDodgeComboDelay() {
+        QFile file(QStringLiteral(FIGHTGAME_SOURCE_DIR "/FightScreen.qml"));QVERIFY(file.open(QIODevice::ReadOnly));
+        const auto qml=QString::fromUtf8(file.readAll());
+        for(int player:{1,2})for(const QString &action:{"Punch","Kick"})for(bool airborne:{true,false}) {
+            const QString name=QString("handleP%1Light%2").arg(player).arg(action);
+            const int start=qml.indexOf("    function "+name+"()");QVERIFY(start>=0);
+            const int end=qml.indexOf("\n    }",start);QVERIFY(end>start);
+            QJSEngine engine;
+            const QString setup=QString("var CharacterModel={Crouch:13};var calls=0,restarts=0;"
+                "var director={p1Model:{airborne:%1,state:13},p2Model:{airborne:%1,state:13}};"
+                "var p1ComboTimer={stop:function(){},restart:function(){restarts++}};"
+                "var p2ComboTimer=p1ComboTimer;function tryContextAttack(p,k,h){calls++}").arg(airborne?"true":"false");
+            QVERIFY(!engine.evaluate(setup).isError());
+            QVERIFY(!engine.evaluate(qml.mid(start,end-start+6)).isError());
+            auto result=engine.globalObject().property(name).call();QVERIFY(!result.isError());
+            QCOMPARE(engine.globalObject().property("calls").toInt(),1);
+            QCOMPARE(engine.globalObject().property("restarts").toInt(),0);
+        }
+    }
+
+    void kyoExactlyMatchesThePreQQConfiguration() {
+        QFile f(QStringLiteral(FIGHTGAME_SOURCE_DIR "/tests/fixtures/kusanagi_pre_qq.json"));
+        QVERIFY(f.open(QIODevice::ReadOnly));
+        QCOMPARE(characters.value("Kusanagi").toObject(),QJsonDocument::fromJson(f.readAll()).object());
+        CharacterModel k;k.configure(character("Kusanagi"));k.playStand();
+        QVERIFY(!k.playRun());QVERIFY(!k.playBackstep());k.playJump();
+        for(int i=0;i<k.totalFrames()-1;++i){QVERIFY(!k.canAirAttack());QVERIFY(!k.playContextAttack(true));tick(k);}
+    }
+
+    void plannedLandingIsContinuousAndDoesNotTeleportAtRecovery() {
+        for(const QString &name:{"Orochi","Yagami","Kusanagi"})for(bool left:{false,true})
+        for(bool forward:{false,true})for(bool attack:{false,true})for(double start:{.02,.3,2.98}) {
+            if(attack && name=="Kusanagi")continue;
+            CharacterModel a,b;a.configure(character(name));b.configure(character("Yagami"));
+            a.setOpponent(&b);a.setPosXRatio(start);b.setPosXRatio(left?start-.2:start+.2);
+            a.playStand();a.setFacingLeft(left);a.playDiagonalJump(forward);
+            const double end=a.landingX();QVERIFY(end>=0 && end<=3);
+            const int count=forward?character(name).diagonalJump.divFrame:
+                character(name).diagonalJump.cols-character(name).diagonalJump.divFrame;
+            const double maxStep=std::abs(end-start)/std::max(1,count-1);
+            double previous=start;bool recovered=false;
+            connect(&a,&CharacterModel::jumpFinished,&a,[&](){recovered=true;QCOMPARE(a.posXRatio(),end);});
+            for(int i=0;i<100 && a.state()!=CharacterModel::Stand;++i) {
+                if(attack && a.canAirAttack())QVERIFY(a.playContextAttack(true));
+                tick(a);
+                QVERIFY2(std::abs(a.posXRatio()-previous)<=maxStep*2+.00001,"Landing produced an extra horizontal correction");
+                previous=a.posXRatio();
+            }
+            QVERIFY(recovered);QCOMPARE(a.posXRatio(),end);
+        }
+    }
+
+    void sixteenMillisecondMotionHasNoExtraLandingStep() {
+        for(const QString &name:{"Orochi","Yagami"})for(bool left:{false,true})for(bool attack:{false,true}) {
+            CharacterModel a;const auto cfg=character(name);a.configure(cfg);a.setPosXRatio(1.0);a.playStand();a.setFacingLeft(left);a.playDiagonalJump(true);
+            const double maxStep=cfg.diagonalJump.jumpDistance*16/((cfg.diagonalJump.divFrame-1)*cfg.diagonalJump.interval);
+            double previous=a.posXRatio();if(attack)QVERIFY(a.playContextAttack(true));
+            while(a.isAirborne()){a.advanceJump(16);QVERIFY(std::abs(a.posXRatio()-previous)<=maxStep+.000001);previous=a.posXRatio();}
+            QCOMPARE(a.posXRatio(),a.landingX());
+        }
+    }
+
+    void newJumpAtlasesMatchTheIdleSizeAndCenterAtBothEnds() {
+        for(const QString &name:{"Orochi","Yagami"}) {
+            const auto cfg=character(name);
+            auto bounds=[](const QImage &im) {QRect r;for(int y=0;y<im.height();++y)for(int x=0;x<im.width();++x)
+                if(qAlpha(im.pixel(x,y))>64)r=r.united(QRect(x,y,1,1));return r;};
+            QImage stand(QStringLiteral(FIGHTGAME_SOURCE_DIR "/")+cfg.stand.path.mid(5));
+            const QRect idle=bounds(stand.copy(0,0,cfg.stand.fw,cfg.stand.fh));
+            for(const auto *anim:{&cfg.jump,&cfg.diagonalJump}) {
+                QImage sheet(QStringLiteral(FIGHTGAME_SOURCE_DIR "/")+anim->path.mid(5));
+                QList<int> ids={0,anim->cols-1};if(anim->divFrame>0){ids<<anim->divFrame-1<<anim->divFrame;}
+                for(int i:ids) {
+                    const QRect r=bounds(sheet.copy((i%8)*256,(i/8)*256,256,256));
+                    QVERIFY(std::abs(r.height()*anim->visualScale-idle.height()*cfg.stand.visualScale)<5);
+                    const double x=(r.center().x()-128)*anim->visualScale;
+                    const double sx=(idle.center().x()-cfg.stand.fw/2.0)*cfg.stand.visualScale;
+                    QVERIFY(std::abs(x-sx)<4);
+                }
+            }
+        }
+    }
+
+    void walkingAfterLandingCannotPushAPlayerBackwardsOrExceedOneStep() {
+        QFile f(QStringLiteral(FIGHTGAME_SOURCE_DIR "/FightScreen.qml"));QVERIFY(f.open(QIODevice::ReadOnly));
+        const auto qml=QString::fromUtf8(f.readAll());QJSEngine js;
+        for(int player:{1,2})for(bool right:{false,true})for(bool running:{false,true})for(double other:{.1,.39,.4,.41,.7,1.5}) {
+            const QString pos=QString("p%1").arg(player);
+            const QString search="director."+pos+"Model.posXRatio = ";
+            int start=qml.indexOf(search,qml.indexOf(player==1?"id: moveTimer":"id: moveTimer2"));QVERIFY(start>=0);
+            if(!right)start=qml.indexOf(search,start+search.size());
+            const QString expr=qml.mid(start+search.size()).section('\n',0,0).trimmed();
+            const double current=.4;const double limit=right?(current<other?other-.15:other+.95):(current>other?other+.15:other-.95);
+            const QString setup=QString("var %1=.4,moveStep=.008,%1Running=%2,maxPos=%3,minPos=%3;").arg(pos).arg(running?"true":"false").arg(limit,0,'f',6);
+            QVERIFY(!js.evaluate(setup).isError());const auto value=js.evaluate(expr);QVERIFY(!value.isError());
+            const double delta=value.toNumber()-current;const double step=.008*(running?1.65:1);
+            QVERIFY(std::abs(delta)<=step+.000001);QVERIFY(right?delta>=0:delta<=0);
+        }
+    }
+
 };
 
 QTEST_GUILESS_MAIN(AnimationRegressionTest)
