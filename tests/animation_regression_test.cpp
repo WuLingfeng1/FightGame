@@ -946,6 +946,54 @@ private slots:
         }
     }
 
+    void airAttackInputsWorkOnAscentApexAndDescentAndNeverRepeat() {
+        for(const QString &name:{"Orochi","Yagami"})for(bool diagonal:{false,true})for(bool forward:{false,true}) {
+            const auto cfg=character(name);
+            const int n=diagonal?(forward?cfg.diagonalJump.divFrame:cfg.diagonalJump.cols-cfg.diagonalJump.divFrame):cfg.jump.cols;
+            for(int frame=0;frame<n-1;++frame)for(bool kick:{false,true}) {
+                CharacterModel a;a.configure(cfg);a.playStand();
+                if(diagonal)a.playDiagonalJump(forward);else a.playJump();tick(a,frame);
+                QVERIFY(a.canAirAttack());QVERIFY(a.playContextAttack(kick));
+                QVERIFY(!a.playContextAttack(!kick));
+                while(a.isAirborne()){a.advanceJump(16);QVERIFY(!a.playContextAttack(!kick));}
+                QVERIFY(!a.isAttackActive());QCOMPARE(a.state(),CharacterModel::Stand);
+            }
+        }
+    }
+
+    void completedIntroRemainsVisibleAndStandingDuringTheNextIntro() {
+        FightDirector d;d.start("Kusanagi","Orochi");
+        QFile f(QStringLiteral(FIGHTGAME_SOURCE_DIR "/FightScreen.qml"));QVERIFY(f.open(QIODevice::ReadOnly));
+        const QString qml=QString::fromUtf8(f.readAll());QJSEngine js;
+        for(int phase=0;phase<3;++phase) {
+            QCOMPARE(d.phase(),phase);
+            if(phase>=1)QCOMPARE(d.p1Model()->state(),CharacterModel::Stand);
+            if(phase==1)QCOMPARE(d.p2Model()->state(),CharacterModel::Opening);
+            if(phase==2)QCOMPARE(d.p2Model()->state(),CharacterModel::Stand);
+            for(int player=1;player<=2;++player) {
+                const int pos=qml.indexOf(QString("id: p%1Layer").arg(player));QVERIFY(pos>=0);
+                const QString expression=qml.mid(pos).section("visible:",1,1).section('\n',0,0).trimmed();
+                QVERIFY(!js.evaluate(QString("var director={phase:%1};var FightDirector={Opening_P1:0,Opening_P2:1,Fighting:2}").arg(phase)).isError());
+                QCOMPARE(js.evaluate(expression).toBool(),player==1 || phase>=1);
+            }
+            if(phase<2) {auto a=phase==0?d.p1Model():d.p2Model();for(int i=0;i<300 && d.phase()==phase;++i)tick(*a);}
+        }
+    }
+
+    void movingOpponentDoesNotChangeTheLandingPlanAtTheLastFrame() {
+        for(bool diagonal:{false,true})for(bool attack:{false,true}) {
+            CharacterModel a,b;a.configure(character("Orochi"));b.configure(character("Yagami"));
+            a.setOpponent(&b);b.setPosXRatio(.7);a.setPosXRatio(.3);a.playStand();
+            if(diagonal)a.playDiagonalJump(true);else a.playJump();
+            const double planned=a.landingX();
+            if(attack){while(!a.canAirAttack())tick(a);QVERIFY(a.playContextAttack(true));}
+            // Defender moves beneath the planned endpoint after takeoff.
+            b.setPosXRatio(planned);
+            for(int i=0;i<80 && a.state()!=CharacterModel::Stand;++i){QCOMPARE(a.landingX(),planned);tick(a);}
+            QCOMPARE(a.state(),CharacterModel::Stand);QCOMPARE(a.posXRatio(),planned);
+        }
+    }
+
     void sixteenMillisecondMotionHasNoExtraLandingStep() {
         for(const QString &name:{"Orochi","Yagami"})for(bool left:{false,true})for(bool attack:{false,true}) {
             CharacterModel a;const auto cfg=character(name);a.configure(cfg);a.setPosXRatio(1.0);a.playStand();a.setFacingLeft(left);a.playDiagonalJump(true);
