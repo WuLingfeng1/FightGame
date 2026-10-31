@@ -802,6 +802,98 @@ private slots:
         }
     }
 
+    void reviewedCameraStaysStillForAnOnScreenTeleport() {
+        FightDirector director;director.resetForNewRound("Orochi","Yagami");
+        connect(director.p1Model(),&CharacterModel::posXRatioChanged,&director,&FightDirector::updateCamera);
+        QSignalSpy camera(&director,&FightDirector::cameraOffsetChanged);
+        director.p1Model()->playDodge(true);tick(*director.p1Model(),16);director.updateCamera();
+        for(int i=0;i<30;++i)QVERIFY(QMetaObject::invokeMethod(&director,"onCameraTick",Qt::DirectConnection));
+        QCOMPARE(director.cameraOffset(),0.0);QCOMPARE(camera.count(),0);
+        director.p2Model()->setPosXRatio(1.2);director.updateCamera();
+        double previous=0;
+        for(int i=0;i<40;++i) {QVERIFY(QMetaObject::invokeMethod(&director,"onCameraTick",Qt::DirectConnection));QVERIFY(director.cameraOffset()>=previous);previous=director.cameraOffset();}
+        QVERIFY(director.cameraOffset()>0);
+    }
+
+    void completedAirAttackRecoversToJumpWithoutUnlockingOrTurningMidair() {
+        for(const QString &name:{"Orochi","Yagami"}) {
+            CharacterModel a,b;const auto cfg=character(name);a.configure(cfg);b.configure(cfg);
+            a.setOpponent(&b);a.setPosXRatio(.3);b.setPosXRatio(.7);a.playStand();a.playJump();
+            QVERIFY(a.playContextAttack(true));b.setPosXRatio(.1);
+            QSignalSpy land(&a,&CharacterModel::jumpFinished),attack(&a,&CharacterModel::attackFinished);
+            bool recovered=false;
+            while(a.isAirborne()) {
+                a.advanceJump(16);
+                if(a.isAirborne()) {
+                    QVERIFY(!a.facingLeft());QCOMPARE(land.count(),0);QCOMPARE(attack.count(),0);
+                    if(a.state()==CharacterModel::Jump){recovered=true;QVERIFY(!a.isAttackActive());QVERIFY(!a.canAirAttack());}
+                }
+            }
+            QVERIFY(recovered);QVERIFY(a.facingLeft());QCOMPARE(land.count(),1);QCOMPARE(attack.count(),1);
+        }
+    }
+
+    void reviewedPlainLandingFacesBeforePublishingRecovery() {
+        for(const QString &name:{"Orochi","Yagami","Kusanagi"}) {
+            for(bool diagonal:{false,true}) {
+                CharacterModel model,other;model.configure(character(name));other.configure(character(name));
+                model.setOpponent(&other);model.setPosXRatio(.3);other.setPosXRatio(.7);model.playStand();
+                if(diagonal)model.playDiagonalJump(true);else model.playJump();
+                other.setPosXRatio(.1);bool correct=false;
+                connect(&model,&CharacterModel::jumpFinished,&model,[&]() {correct=model.state()==CharacterModel::Stand && model.facingLeft();});
+                for(int i=0;i<80 && model.state()!=CharacterModel::Stand;++i)tick(model);
+                QVERIFY(correct);
+            }
+        }
+    }
+
+    void reviewedAirContactPointsFollowTheVisibleAttack() {
+        for(const QString &name:{"Orochi","Yagami","Kusanagi"}) {
+            const auto cfg=character(name);
+            for(const auto *anim:{&cfg.airPunch,&cfg.airKick}) {
+                QCOMPARE(anim->attackContacts.size(),anim->cols);
+                QImage image(QStringLiteral(FIGHTGAME_SOURCE_DIR "/")+anim->path.mid(5));
+                for(int i=0;i<anim->cols;++i) {
+                    const auto contact=anim->attackContacts[i];
+                    const int px=qRound(128+contact.x()/anim->visualScale),py=qRound(224-contact.y()/anim->visualScale);
+                    bool visible=false;
+                    for(int y=std::max(0,py-3);y<std::min(256,py+4);++y)
+                        for(int x=std::max(0,px-3);x<std::min(256,px+4);++x)
+                            if(qAlpha(image.pixel((i%8)*256+x,(i/8)*256+y))>32)visible=true;
+                    QVERIFY2(visible,qPrintable(name+QString(" frame %1").arg(i)));
+                }
+            }
+        }
+    }
+
+    void reviewedAirKickCanHitNearTheGroundAndMissAtLongRange() {
+        for(const QString &name:{"Orochi","Yagami"}) {
+            bool found=false;
+            for(int start=1;start<character(name).jump.cols-2 && !found;++start) {
+                FightDirector director;director.resetForNewRound(name,"Yagami");
+                auto a=director.p1Model();auto b=director.p2Model();a->setPosXRatio(.3);b->setPosXRatio(.49);
+                a->playJump();tick(*a,start);if(!a->canAirAttack())continue;QVERIFY(a->playContextAttack(true));
+                for(int i=0;i<30 && a->isAirborne();++i) {
+                    if(director.checkCollision()){found=true;break;}tick(*a);
+                }
+            }
+            QVERIFY2(found,qPrintable(name+" never hits a nearby standing defender"));
+            FightDirector director;director.resetForNewRound(name,"Yagami");
+            director.p1Model()->setPosXRatio(.1);director.p2Model()->setPosXRatio(.9);
+            director.p1Model()->playJump();while(!director.p1Model()->canAirAttack())tick(*director.p1Model());QVERIFY(director.p1Model()->playContextAttack(true));
+            for(int i=0;i<30 && director.p1Model()->isAirborne();++i) {QVERIFY(!director.checkCollision());tick(*director.p1Model());}
+        }
+    }
+
+    void reviewedRunningJumpRetainsHeightWithoutOversizingNormalJumps() {
+        for(const QString &name:{"Orochi","Yagami"}) {
+            CharacterModel low,high;const auto cfg=character(name);low.configure(cfg);high.configure(cfg);
+            low.playStand();high.playStand();low.playJump();QVERIFY(high.playRun());high.playJump();
+            tick(low,cfg.jump.cols/2);tick(high,cfg.jump.cols/2);
+            QVERIFY(high.positionY()<low.positionY()-150);
+        }
+    }
+
 };
 
 QTEST_GUILESS_MAIN(AnimationRegressionTest)
