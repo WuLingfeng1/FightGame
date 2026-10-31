@@ -994,6 +994,49 @@ private slots:
         }
     }
 
+    void dodgedSunshineStageIsNeverChargedByALaterHit() {
+        FightDirector d;d.resetForNewRound("Orochi","Yagami");auto a=d.p1Model();auto b=d.p2Model();
+        QSignalSpy hits(&d,&FightDirector::hitDetected);QVERIFY(a->playSunshine());
+        tick(*a,28);b->playDodge(true);
+        for(int i=0;i<4;++i){QVERIFY(!d.checkCollision());tick(*a);}
+        b->playStand();int total=0;
+        for(int frame=32;frame<50;++frame){d.checkCollision();tick(*a);}
+        QCOMPARE(hits.count(),5);for(const auto &hit:hits)total+=hit[1].toInt();QCOMPARE(total,30);
+    }
+
+    void airAttacksNeverChangeTheTrajectoryOrTheLandingTime() {
+        for(const QString &name:{"Orochi","Yagami"})for(bool diagonal:{false,true})
+        for(bool left:{false,true})for(bool kick:{false,true})for(double timing:{0.0,.15,.45,.72,.9}) {
+            CharacterModel plain,attacked;const auto cfg=character(name);
+            for(auto m:{&plain,&attacked}){m->configure(cfg);m->setPosXRatio(.8);m->playStand();m->setFacingLeft(left);
+                if(diagonal)m->playDiagonalJump(true);else m->playJump();}
+            auto feet=[](CharacterModel &m,const AnimParams &anim){const double fb=anim.feetBottom;
+                return m.positionY()+m.frameHeight()+(fb-m.frameHeight())*m.visualScale();};
+            bool fired=false;
+            for(int step=0;step<100 && plain.isAirborne();++step) {
+                if(!fired && plain.jumpProgress()>=timing) {
+                    const double before=feet(attacked,diagonal?cfg.diagonalJump:cfg.jump);
+                    QVERIFY(attacked.playContextAttack(kick));fired=true;
+                    QVERIFY(std::abs(before-feet(attacked,kick?cfg.airKick:cfg.airPunch))<.001);
+                }
+                plain.advanceJump(16);attacked.advanceJump(16);
+                QCOMPARE(plain.posXRatio(),attacked.posXRatio());QCOMPARE(plain.isAirborne(),attacked.isAirborne());
+                const auto &current=attacked.state()==CharacterModel::AirKick?cfg.airKick:
+                    attacked.state()==CharacterModel::AirPunch?cfg.airPunch:diagonal?cfg.diagonalJump:cfg.jump;
+                if(plain.isAirborne())QVERIFY(std::abs(feet(plain,diagonal?cfg.diagonalJump:cfg.jump)-feet(attacked,current))<.001);
+            }
+            QVERIFY(fired);QCOMPARE(plain.posXRatio(),attacked.posXRatio());QVERIFY(!attacked.isAttackActive());
+        }
+    }
+
+    void straightJumpsDoNotSlideWhenTheOpponentIsOverlapping() {
+        for(const QString &name:{"Orochi","Yagami","Kusanagi"}) {
+            CharacterModel a,b;a.configure(character(name));b.configure(character("Yagami"));
+            a.setPosXRatio(.3);b.setPosXRatio(.31);a.setOpponent(&b);a.playStand();a.playJump();
+            while(a.isAirborne()){a.advanceJump(16);QCOMPARE(a.posXRatio(),.3);}
+        }
+    }
+
     void sixteenMillisecondMotionHasNoExtraLandingStep() {
         for(const QString &name:{"Orochi","Yagami"})for(bool left:{false,true})for(bool attack:{false,true}) {
             CharacterModel a;const auto cfg=character(name);a.configure(cfg);a.setPosXRatio(1.0);a.playStand();a.setFacingLeft(left);a.playDiagonalJump(true);
