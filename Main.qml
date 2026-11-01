@@ -15,7 +15,7 @@ ApplicationWindow {
     width: 900
     height: 640
     visible: true
-    title: "FIGHT GAME"
+    title: "Fightgame"
     color: "whitesmoke"
 
     component MenuButton: Button {

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(FightGame VERSION 0.1 LANGUAGES CXX)
+project(Fightgame VERSION 0.1 LANGUAGES CXX)
 set(QT_QML_GENERATE_QMLLS_INI ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Quick Network Widgets Multimedia)

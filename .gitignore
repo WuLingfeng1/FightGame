@@ -94,3 +94,12 @@ CMakeLists.txt.user*
 .qtcreator
 
 build/
+
+# Local build output, runtime distributions and editor caches
+/Build/
+/FightGame-Portable/
+/CMakeFiles/
+/CMakeCache.txt
+/Testing/
+/.cache/
+*.backup
