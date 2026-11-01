@@ -1085,6 +1085,50 @@ private slots:
         }
     }
 
+    void aLateAirAttackIsCancelledOnLandingWithoutAGroundHit() {
+        for(bool kick:{false,true})for(const QString &name:{"Orochi","Yagami"}) {
+            FightDirector d;d.resetForNewRound(name,"Yagami");auto a=d.p1Model();auto b=d.p2Model();
+            a->setPosXRatio(.3);b->setPosXRatio(.45);a->playJump();
+            const auto cfg=character(name);a->advanceJump((cfg.jump.cols-1)*cfg.jump.interval-16);
+            QVERIFY(a->playContextAttack(kick));QVERIFY(!d.checkCollision());a->advanceJump(16);
+            QCOMPARE(a->state(),CharacterModel::Stand);QVERIFY(!d.checkCollision());QVERIFY(!a->isAttackActive());
+        }
+    }
+
+    void orochiKnockdownTravelsTheSameDistanceAtAComparableSpeed() {
+        const auto cfg=character("Orochi");
+        QCOMPARE(cfg.hurt3.flyDistance,character("Kusanagi").hurt3.flyDistance);
+        QCOMPARE(cfg.hurt3.flyDistance,character("Yagami").hurt3.flyDistance);
+        const double landingMs=(cfg.hurt3.cols-1)*cfg.hurt3.interval*cfg.hurt3.flyLandT;
+        QVERIFY(landingMs>=750 && landingMs<=900);
+        CharacterModel a,b;a.configure(cfg);b.configure(character("Yagami"));
+        a.setOpponent(&b);a.setPosXRatio(1.0);b.setPosXRatio(.7);a.playStand();a.playHurt3();
+        QSignalSpy done(&a,&CharacterModel::hurtFinished);double previous=a.posXRatio();
+        const double maxStep=cfg.hurt3.flyDistance*16/landingMs;
+        for(int elapsed=16;elapsed<=800;elapsed+=16) {
+            const int oldFrame=a.currentFrame();a.advanceKnockdown(16);
+            QVERIFY(a.posXRatio()>previous);QVERIFY(a.posXRatio()-previous<=maxStep+.000001);
+            if(elapsed==16)QCOMPARE(a.currentFrame(),oldFrame); // Movement between sprite frames.
+            previous=a.posXRatio();QCOMPARE(done.count(),0);
+        }
+        QVERIFY(a.posXRatio()<1.5);a.advanceKnockdown(16);QCOMPARE(a.posXRatio(),1.5);
+        for(int i=0;i<40 && a.state()==CharacterModel::Hurt;++i)a.advanceKnockdown(16);
+        QCOMPARE(a.state(),CharacterModel::Rise);QCOMPARE(done.count(),0);
+        tick(a,a.totalFrames());QCOMPARE(a.state(),CharacterModel::Stand);QCOMPARE(done.count(),1);
+    }
+
+    void allKnockdownsKeepTheirConfiguredLandingDistanceAndArc() {
+        for(const QString &name:{"Orochi","Kusanagi","Yagami"})for(bool left:{false,true}) {
+            CharacterModel a,b;const auto cfg=character(name);a.configure(cfg);b.configure(character("Yagami"));
+            a.setPosXRatio(1.0);b.setPosXRatio(left?1.3:.7);a.setOpponent(&b);a.playStand();a.playHurt3();
+            const double ground=a.positionY();bool lifted=false;
+            const int landMs=qCeil((cfg.hurt3.cols-1)*cfg.hurt3.interval*cfg.hurt3.flyLandT);
+            for(int elapsed=0;elapsed<landMs;elapsed+=16){a.advanceKnockdown(16);if(a.positionY()<ground)lifted=true;}
+            QVERIFY(lifted);QVERIFY(std::abs(a.posXRatio()-(1+(left?-1:1)*cfg.hurt3.flyDistance))<.00001);
+            QVERIFY(std::abs(a.positionY()-ground)<.00001);
+        }
+    }
+
 };
 
 QTEST_GUILESS_MAIN(AnimationRegressionTest)
